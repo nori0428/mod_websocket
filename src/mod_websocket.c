@@ -318,7 +318,7 @@ static handler_t websocket_write_request(server *srv, handler_ctx *hctx) {
     size_t i;
     int pass = 0;
 
-#define WS_NEED_HEADER (4)
+#define WS_MANDATORY_HEADERS (4)
 	switch(hctx->state) {
 	case WEBSOCKET_STATE_INIT:
         /* check request header */
@@ -354,7 +354,7 @@ static handler_t websocket_write_request(server *srv, handler_ctx *hctx) {
             con->mode = DIRECT;
             return HANDLER_FINISHED;
         }
-#undef WS_NEED_HEADER
+#undef WS_MANDATORY_HEADERS
 
 #if defined(HAVE_IPV6) && defined(HAVE_INET_PTON)
 		if (strstr(hctx->host->ptr,":")) {
