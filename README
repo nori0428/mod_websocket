@@ -1,10 +1,12 @@
 // $Id$
 
 - 基本的な使い方
-  lighttpdが、192.168.0.10:80で、echo serverが192.168.0.10:8000で起動
-  しているとします。
+  lighttpdを、192.168.0.10:80で、echo serverを192.168.0.10:8000で起動
+  し、browserからWeb Socket経由で繋げたいとします。
 
-  この場合、lighttpd.confに、
+  この場合、まず何も考えずにecho serverを起動。
+
+  次に、lighttpd.confに、
   websocket.server => ( "/echo" =>
                        ("host" => 192.168.0.10, "port" => 8000) )
 
