@@ -1,5 +1,22 @@
 // $Id$
 
+- 基本的な使い方
+  lighttpdが、192.168.0.10:80で、echo serverが192.168.0.10:8000で起動
+  しているとします。
+
+  この場合、lighttpd.confに、
+  websocket.server => ( "/echo" =>
+                       ("host" => 192.168.0.10, "port" => 8000) )
+
+  と、記述してあげた上でlighttpdを起動します。
+
+  client側はjavascriptにて、
+
+  var ws = new WebSocket("ws://192.168.0.10:80/");
+
+  としてあげれば、echo serverまでつながります。Reverse Proxyとして動作
+  するイメージですね。
+
 - 現時点での注意点
   1. バックエンドのサーバのListen portには、現状Web Socketで規定されて
      いるframeがそのまま届きます。
