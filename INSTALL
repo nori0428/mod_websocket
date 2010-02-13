@@ -9,12 +9,12 @@
   $ tar xzvf lighttpd-1.4.x.tar.gz
 
 2.Patch the source
-  this patch contains a mod-connect.patch 
-
-  http://redmine.lighttpd.net/attachments/997/mod-connect.patch
 
   $ cd lighttpd-1.4.x/
   $ patch -p1 < mod_websocket.patch
+
+  note: this patch contains a mod-connect.patch 
+  ( http://redmine.lighttpd.net/attachments/997/mod-connect.patch )
 
 3.copy mod_websocket.c into src dir and make lighty.
 
