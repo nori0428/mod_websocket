@@ -1,0 +1,35 @@
+// $Id$
+
+- Install lighty with mod_websocket
+
+1.Get the lighttpd source from
+
+  http://www.lighttpd.net/download/
+
+  $ tar xzvf lighttpd-1.4.x.tar.gz
+
+2.Patch the source
+  this patch contains a mod-connect.patch 
+
+  http://redmine.lighttpd.net/attachments/997/mod-connect.patch
+
+  $ cd lighttpd-1.4.x/
+  $ patch -p1 < mod_websocket.patch
+
+3.copy mod_websocket.c into src dir and make lighty.
+
+  $ cp mod_websocket.c lighttd-1.4.x/src/
+  $ cd lighttpd-1.4.x
+  $ ./configure --with-your-options
+  $ make
+
+4.Format of mod_websocket for lighttpd.conf
+
+  websocket.server = (
+  		     "/echo" => ( "host" => "127.0.0.1",
+		                  "port" => 7 ),
+		     "/func" => ( "host" => "192.168.0.10",
+		                  "port" => 8000 )
+                     )
+
+// EOF

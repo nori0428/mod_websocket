@@ -1,0 +1,7 @@
+// $Id$
+
+- TODOs
+  1.handle allowed origin
+  2.dealing websocket frames in mod_websocket
+
+// EOF
