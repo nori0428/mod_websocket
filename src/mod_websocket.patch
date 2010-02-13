@@ -1,0 +1,152 @@
+diff -ur lighttpd-1.4.26/src/Makefile.am lighttpd-1.4.26.new/src/Makefile.am
+--- lighttpd-1.4.26/src/Makefile.am	2010-02-02 08:28:20.000000000 +0900
++++ lighttpd-1.4.26.new/src/Makefile.am	2010-02-13 20:44:21.000000000 +0900
+@@ -189,6 +189,11 @@
+ mod_proxy_la_LDFLAGS = -module -export-dynamic -avoid-version -no-undefined
+ mod_proxy_la_LIBADD = $(common_libadd)
+ 
++lib_LTLIBRARIES += mod_websocket.la
++mod_websocket_la_SOURCES = mod_websocket.c
++mod_websocket_la_LDFLAGS = -module -export-dynamic -avoid-version -no-undefined
++mod_websocket_la_LIBADD = $(common_libadd)
++
+ lib_LTLIBRARIES += mod_ssi.la
+ mod_ssi_la_SOURCES = mod_ssi_exprparser.c mod_ssi_expr.c mod_ssi.c
+ mod_ssi_la_LDFLAGS = -module -export-dynamic -avoid-version -no-undefined
+diff -ur lighttpd-1.4.26/src/base.h lighttpd-1.4.26.new/src/base.h
+--- lighttpd-1.4.26/src/base.h	2010-02-02 08:28:20.000000000 +0900
++++ lighttpd-1.4.26.new/src/base.h	2010-02-13 20:39:41.000000000 +0900
+@@ -331,7 +331,8 @@
+ 	CON_STATE_WRITE,
+ 	CON_STATE_RESPONSE_END,
+ 	CON_STATE_ERROR,
+-	CON_STATE_CLOSE
++	CON_STATE_CLOSE,
++	CON_STATE_READ_CONTINUOUS,
+ } connection_state_t;
+ 
+ typedef enum { COND_RESULT_UNSET, COND_RESULT_FALSE, COND_RESULT_TRUE } cond_result_t;
+diff -ur lighttpd-1.4.26/src/connections-glue.c lighttpd-1.4.26.new/src/connections-glue.c
+--- lighttpd-1.4.26/src/connections-glue.c	2010-02-02 08:28:20.000000000 +0900
++++ lighttpd-1.4.26.new/src/connections-glue.c	2010-02-13 20:39:41.000000000 +0900
+@@ -14,6 +14,7 @@
+ 	case CON_STATE_REQUEST_END: return "req-end";
+ 	case CON_STATE_RESPONSE_START: return "resp-start";
+ 	case CON_STATE_RESPONSE_END: return "resp-end";
++	case CON_STATE_READ_CONTINUOUS: return "read-continuous";
+ 	default: return "(unknown)";
+ 	}
+ }
+@@ -31,6 +32,7 @@
+ 	case CON_STATE_REQUEST_END: return "Q";
+ 	case CON_STATE_RESPONSE_START: return "s";
+ 	case CON_STATE_RESPONSE_END: return "S";
++	case CON_STATE_READ_CONTINUOUS: return "F";
+ 	default: return "x";
+ 	}
+ }
+diff -ur lighttpd-1.4.26/src/connections.c lighttpd-1.4.26.new/src/connections.c
+--- lighttpd-1.4.26/src/connections.c	2010-02-04 19:07:45.000000000 +0900
++++ lighttpd-1.4.26.new/src/connections.c	2010-02-13 20:39:41.000000000 +0900
+@@ -1155,6 +1155,8 @@
+ 		}
+ 
+ 		break;
++	case CON_STATE_READ_CONTINUOUS:
++		break;
+ 	default: break;
+ 	}
+ 
+@@ -1224,7 +1226,8 @@
+ 	}
+ 
+ 	if (con->state == CON_STATE_READ ||
+-	    con->state == CON_STATE_READ_POST) {
++	    con->state == CON_STATE_READ_POST ||
++	    con->state == CON_STATE_READ_CONTINUOUS) {
+ 		connection_handle_read_state(srv, con);
+ 	}
+ 
+@@ -1626,12 +1629,18 @@
+ 			break;
+ 		case CON_STATE_READ_POST:
+ 		case CON_STATE_READ:
++		case CON_STATE_READ_CONTINUOUS:
+ 			if (srv->srvconf.log_state_handling) {
+ 				log_error_write(srv, __FILE__, __LINE__, "sds",
+ 						"state for fd", con->fd, connection_get_state(con->state));
+ 			}
+ 
+ 			connection_handle_read_state(srv, con);
++
++			if (con->state == CON_STATE_READ_CONTINUOUS) {
++				plugins_call_read_continuous(srv, con);
++			}
++
+ 			break;
+ 		case CON_STATE_WRITE:
+ 			if (srv->srvconf.log_state_handling) {
+@@ -1795,6 +1804,9 @@
+ 			fdevent_event_del(srv->ev, &(con->fde_ndx), con->fd);
+ 		}
+ 		break;
++	case CON_STATE_READ_CONTINUOUS:
++		/* leave up to plugins */
++		break;
+ 	default:
+ 		fdevent_event_del(srv->ev, &(con->fde_ndx), con->fd);
+ 		break;
+diff -ur lighttpd-1.4.26/src/plugin.c lighttpd-1.4.26.new/src/plugin.c
+--- lighttpd-1.4.26/src/plugin.c	2010-02-02 08:28:20.000000000 +0900
++++ lighttpd-1.4.26.new/src/plugin.c	2010-02-13 20:39:41.000000000 +0900
+@@ -44,6 +44,7 @@
+ 		PLUGIN_FUNC_INIT,
+ 		PLUGIN_FUNC_CLEANUP,
+ 		PLUGIN_FUNC_SET_DEFAULTS,
++		PLUGIN_FUNC_READ_CONTINUOUS,
+ 
+ 		PLUGIN_FUNC_SIZEOF
+ } plugin_t;
+@@ -267,6 +268,7 @@
+ PLUGIN_TO_SLOT(PLUGIN_FUNC_HANDLE_DOCROOT, handle_docroot)
+ PLUGIN_TO_SLOT(PLUGIN_FUNC_HANDLE_PHYSICAL, handle_physical)
+ PLUGIN_TO_SLOT(PLUGIN_FUNC_CONNECTION_RESET, connection_reset)
++PLUGIN_TO_SLOT(PLUGIN_FUNC_READ_CONTINUOUS, read_continuous)
+ 
+ #undef PLUGIN_TO_SLOT
+ 
+@@ -396,6 +398,7 @@
+ 		PLUGIN_TO_SLOT(PLUGIN_FUNC_HANDLE_DOCROOT, handle_docroot);
+ 		PLUGIN_TO_SLOT(PLUGIN_FUNC_HANDLE_PHYSICAL, handle_physical);
+ 		PLUGIN_TO_SLOT(PLUGIN_FUNC_CONNECTION_RESET, connection_reset);
++		PLUGIN_TO_SLOT(PLUGIN_FUNC_READ_CONTINUOUS, read_continuous)
+ 		PLUGIN_TO_SLOT(PLUGIN_FUNC_CLEANUP, cleanup);
+ 		PLUGIN_TO_SLOT(PLUGIN_FUNC_SET_DEFAULTS, set_defaults);
+ #undef PLUGIN_TO_SLOT
+diff -ur lighttpd-1.4.26/src/plugin.h lighttpd-1.4.26.new/src/plugin.h
+--- lighttpd-1.4.26/src/plugin.h	2010-02-02 08:28:20.000000000 +0900
++++ lighttpd-1.4.26.new/src/plugin.h	2010-02-13 20:39:41.000000000 +0900
+@@ -23,6 +23,7 @@
+ #define PHYSICALPATH_FUNC  CONNECTION_FUNC
+ #define REQUESTDONE_FUNC   CONNECTION_FUNC
+ #define URIHANDLER_FUNC    CONNECTION_FUNC
++#define READ_CONT_FUNC     CONNECTION_FUNC
+ 
+ #define PLUGIN_DATA        size_t id
+ 
+@@ -55,6 +56,7 @@
+ 											    */
+ 	handler_t (* handle_subrequest)      (server *srv, connection *con, void *p_d);    /* */
+ 	handler_t (* connection_reset)       (server *srv, connection *con, void *p_d);    /* */
++	handler_t (* read_continuous)        (server *srv, connection *con, void *p_d);    /* */
+ 	void *data;
+ 
+ 	/* dlopen handle */
+@@ -74,6 +76,7 @@
+ handler_t plugins_call_handle_connection_close(server *srv, connection *con);
+ handler_t plugins_call_handle_joblist(server *srv, connection *con);
+ handler_t plugins_call_connection_reset(server *srv, connection *con);
++handler_t plugins_call_read_continuous(server *srv, connection *con);
+ 
+ handler_t plugins_call_handle_trigger(server *srv);
+ handler_t plugins_call_handle_sighup(server *srv);
