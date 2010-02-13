@@ -347,7 +347,7 @@ static handler_t websocket_write_request(server *srv, handler_ctx *hctx) {
                 continue;
             }
         }
-        if (pass < WS_NEED_HEADER) { /* XXX: check allow origin */
+        if (pass < WS_MANDATORY_HEADERS) { /* XXX: check allow origin */
             log_error_write(srv, __FILE__, __LINE__, "ss",
                             "websocket handshake failed.");
             con->http_status = 404;
