@@ -8,7 +8,7 @@
 
   次に、lighttpd.confに、
   websocket.server => ( "/echo" =>
-                       ("host" => 192.168.0.10, "port" => 8000) )
+                       ("host" => "192.168.0.10", "port" => 8000) )
 
   と、記述してあげた上でlighttpdを起動します。
 
@@ -23,9 +23,10 @@
   1. バックエンドのサーバのListen portには、現状Web Socketで規定されて
      いるframeがそのまま届きます。
      つまり、pywebsocketで言うところの、msgutilをちゃんと実装する必要
-     があります。(先頭1byteもしくはlength、最終byteを処理する必要があ
-     ります)
+     があります。(先頭1byteと最終1byte、もしくはlength部分を処理する必
+     要があります)
   2. allowed originを設定することが出来ません。セキュリティ上問題にな
      りますので、インターネット上で利用する場合にはご注意ください。
   3. UTF-8についても全くhandleしていません。
 
+// EOF
