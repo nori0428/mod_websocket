@@ -20,10 +20,30 @@
 
   $ cp mod_websocket.c lighttd-1.4.x/src/
   $ cd lighttpd-1.4.x
+
+  When you configure the first, do autogen.sh at once.
+  (because of patched src/Makefile.am)
+
+  $ ./autogen.sh
+
   $ ./configure --with-your-options
   $ make
 
-4.Format of mod_websocket for lighttpd.conf
+4. check for mod_websocket.so
+
+  $ cd lighttd-1.4.x/src/.libs
+  $ ls -l mod_websocket.*
+
+  If exists mod_websocket.* in .libs, you can use mod_websocket!
+  Write lighttpd.conf like below.
+
+5.Add setting for mod_websocket into lighttpd.conf
+
+  5-1. add websocket module into server.modules section.
+
+  server.modules              = ( "mod_websocket", ... )
+
+  5-2. add websocket.server section like this.
 
   websocket.server = (
   		     "/echo" => ( "host" => "127.0.0.1",
