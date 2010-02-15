@@ -32,7 +32,7 @@
   ...
 
   $ ./ws_chat 9001
-  $ lighttpd -f /path_to_your_setting/lighttpd.conf -m /path_to/your_modules
+  $ lighttpd -f /path_to/your_lighttpd.conf -m /path_to/your_modules
 
   こうした後で、Chromeなどからアクセスしていただくと、websocketを利用した
   chatが可能なはずです。
