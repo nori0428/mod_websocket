@@ -2,7 +2,7 @@
 
 - TODOs
   1.handle allowed origin
-  2.dealing websocket frames in mod_websocket
-  3.sub-protocol and utf-8 encoding
+  2.handle websocket frame that has length field.
+  3.handle sub-protocol
 
 // EOF

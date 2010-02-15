@@ -60,8 +60,14 @@ typedef enum {
 	WEBSOCKET_STATE_CONNECTED,
 } websocket_connection_state_t;
 
+typedef enum {
+    INITIAL,
+    CONTINUE,
+} websocket_frame_state_t;
+
 typedef struct {
 	websocket_connection_state_t state;
+    websocket_frame_state_t frame;
 	time_t state_timestamp;
 
 	buffer *host;
@@ -69,7 +75,6 @@ typedef struct {
     buffer *origin;
 
 	chunkqueue *toclient;
-	buffer *response;
 
 	int fd;						/* fd to the connect process */
 	int fd_server_ndx;			/* index into the fd-event buffer */
@@ -87,12 +92,38 @@ typedef struct {
 /* ok, we need a prototype */
 static handler_t websocket_handle_fdevent(void *s, void *ctx, int revents);
 
+static void handle_websocket_frame(handler_ctx *hctx, chunkqueue *cq) {
+	chunk *c;
+
+	for(c = cq->first; c; c = c->next) {
+        char first_byte, last_byte;
+
+        assert(c->type == MEM_CHUNK); /* websocket chunk must be a MEM_CHUNK */
+        if (c->mem->used == 0) {
+            return;
+        }
+        first_byte = c->mem->ptr[0];
+        last_byte = c->mem->ptr[c->mem->used - 2]; /* padded '\0' by buffer */
+        if (0 <= first_byte && first_byte < 127 &&
+            hctx->frame == INITIAL) {
+            c->offset++;
+            hctx->frame = CONTINUE;
+        }
+        if (-1 == last_byte) {
+            c->mem->ptr[c->mem->used - 1] = 0;
+            c->mem->used--;
+            hctx->frame = INITIAL;
+        }
+    }
+    return;
+}
+                                   
 static handler_ctx *handler_ctx_init(void) {
 	handler_ctx *hctx = calloc(1, sizeof(*hctx));
 
 	hctx->state = WEBSOCKET_STATE_INIT;
+	hctx->frame = INITIAL;
 	hctx->host = buffer_init();
-	hctx->response = buffer_init();
 	hctx->origin = buffer_init();
 	hctx->toclient = chunkqueue_init();
 	hctx->fd = -1;
@@ -103,7 +134,6 @@ static handler_ctx *handler_ctx_init(void) {
 
 static void handler_ctx_free(handler_ctx *hctx) {
 	buffer_free(hctx->host);
-	buffer_free(hctx->response);
 	buffer_free(hctx->origin);
 	chunkqueue_free(hctx->toclient);
 	free(hctx);
@@ -251,8 +281,7 @@ static void websocket_connection_close(server *srv, handler_ctx *hctx) {
 	con->plugin_ctx[p->id] = NULL;
 }
 
-static int websocket_establish_connection(server *srv, handler_ctx *hctx)
-{
+static int websocket_establish_connection(server *srv, handler_ctx *hctx) {
 	struct sockaddr *connect_addr;
 	struct sockaddr_in connect_addr_in;
 
@@ -469,6 +498,7 @@ static handler_t websocket_write_request(server *srv, handler_ctx *hctx) {
 		/* fall through */
 	case WEBSOCKET_STATE_CONNECTED:
 		if (!hctx->server_closed) {
+            handle_websocket_frame(hctx, con->read_queue);
 			ret = srv->network_backend_write(srv, con, hctx->fd, con->read_queue);
 			chunkqueue_remove_finished_chunks(con->read_queue);
 
@@ -506,8 +536,9 @@ static handler_t websocket_write_request(server *srv, handler_ctx *hctx) {
 			fdevent_event_del(srv->ev, &(hctx->fd_server_ndx), hctx->fd);
 			if (hctx->client_closed)
 				websocket_connection_close(srv, hctx);
-			else if (chunkqueue_is_empty(hctx->toclient))
+			else if (chunkqueue_is_empty(hctx->toclient)) {
 				fdevent_event_add(srv->ev, &(hctx->fd_server_ndx), hctx->fd, FDEVENT_IN);
+            }
 		}
 
 		if (!chunkqueue_is_empty(hctx->toclient)) {
@@ -629,8 +660,14 @@ static handler_t websocket_handle_fdevent(void *s, void *ctx, int revents) {
 		errno = 0;
 		r = read(fd, readbuf, b);
 		if (r > 0) {
+            const char head = 0;
+            const char tail = -1;
+
 			buf = chunkqueue_get_append_buffer(hctx->toclient);
-			buffer_append_memory(buf, readbuf, r + 1); // XX ???
+			buffer_append_memory(buf, &head, 1);
+			buffer_append_memory(buf, readbuf, r);
+            /* buffer.c replace buf[len - 1] = '\0' */
+			buffer_append_memory(buf, &tail, 2);
 		} else if (errno != EAGAIN)
 			goto disconnect;
 	}
