@@ -315,46 +315,55 @@ static handler_t websocket_write_request(server *srv, handler_ctx *hctx) {
 	plugin_data *p = hctx->plugin_data;
 	connection *con = hctx->remote_conn;
 	int ret;
-    size_t i;
-    int pass = 0;
+    size_t i, j;
+    struct {
+        const char *key; const char *val; int pass;
+    } m_hdrs[] = { /* mandatory headers */
+        { "Upgrade", "WebSocket", 0 },
+        { "Connection", "Upgrade", 0 },
+        { "Host", NULL   , 0 },
+        { "Origin", NULL, 0 },
+    };
 
-#define WS_MANDATORY_HEADERS (4)
 	switch(hctx->state) {
 	case WEBSOCKET_STATE_INIT:
-        /* check request header */
+        /* validate request header */
         for (i = 0; i < con->request.headers->used; i++) {
             data_string *ds = (data_string *)con->request.headers->data[i];
+
             if (!ds->value->used || !ds->key->used) {
                 break;
             }
-            if (buffer_is_equal_string(ds->key, CONST_STR_LEN("Upgrade")) &&
-                buffer_is_equal_string(ds->value, CONST_STR_LEN("WebSocket"))) {
-                pass++;
-                continue;
-            }
-            if (buffer_is_equal_string(ds->key, CONST_STR_LEN("Connection")) &&
-                buffer_is_equal_string(ds->value, CONST_STR_LEN("Upgrade"))) {
-                pass++;
-                continue;
-            }
-            if (buffer_is_equal_string(ds->key, CONST_STR_LEN("Host"))) {
-                pass++;
-                continue;
-            }
-            if (buffer_is_equal_string(ds->key, CONST_STR_LEN("Origin"))) {
-                buffer_copy_string_buffer(hctx->origin, ds->value);
-                pass++;
-                continue;
+            for (j = 0; j < (sizeof(m_hdrs) / sizeof(m_hdrs[0])); j++) {
+                if (buffer_is_equal_string(ds->key,
+                                           m_hdrs[j].key,
+                                           strlen(m_hdrs[j].key))) {
+                    if (!m_hdrs[j].val) {
+                        m_hdrs[j].pass = 1;
+                        if (buffer_is_equal_string(ds->key,
+                                                   CONST_STR_LEN("Origin"))) {
+                            buffer_copy_string_buffer(hctx->origin, ds->value);
+                        }
+                    } else {
+                        if (buffer_is_equal_string(ds->value,
+                                                   m_hdrs[j].val,
+                                                   strlen(m_hdrs[j].val))) {
+                            m_hdrs[j].pass = 1;
+                        }
+                    }
+                    break;
+                }
             }
         }
-        if (pass < WS_MANDATORY_HEADERS) { /* XXX: check allow origin */
-            log_error_write(srv, __FILE__, __LINE__, "ss",
-                            "websocket handshake failed.");
-            con->http_status = 404;
-            con->mode = DIRECT;
-            return HANDLER_FINISHED;
+        for (j = 0; j < (sizeof(m_hdrs) / sizeof(m_hdrs[0])); j++) {
+            if (!m_hdrs[j].pass) {
+                log_error_write(srv, __FILE__, __LINE__, "ss",
+                                "websocket handshake failed.");
+                con->http_status = 404;
+                con->mode = DIRECT;
+                return HANDLER_FINISHED;
+            }
         }
-#undef WS_MANDATORY_HEADERS
 
 #if defined(HAVE_IPV6) && defined(HAVE_INET_PTON)
 		if (strstr(hctx->host->ptr,":")) {
