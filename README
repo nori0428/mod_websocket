@@ -19,6 +19,26 @@
   としてあげれば、echo serverまでつながります。Reverse Proxyとして動作
   するイメージですね。
 
+  2010/02/15
+  Hiroki Ohtani(@liris)さんところから、chat htmlいただきました。
+  http://blog.liris.org/2009/12/websocketchat.html
+
+  $ cat lighttpd.conf
+  ...
+  websocket.server = (
+                      "/echo" => ( "host" => "127.0.0.1", "port" => 9000 ),
+                      "/chat" => ( "host" => "127.0.0.1", "port" => 9001 )
+                     )
+  ...
+
+  $ ./ws_chat 9001
+  $ lighttpd -f /path_to_your_setting/lighttpd.conf -m /path_to/your_modules
+
+  こうした後で、Chromeなどからアクセスしていただくと、websocketを利用した
+  chatが可能なはずです。
+
+  http://your_machine_ip:your_lighttpd_port/ws_chat.html
+
 - 現時点での注意点
   1. バックエンドのサーバのListen portには、現状Web Socketで規定されて
      いるframeがそのまま届きます。
