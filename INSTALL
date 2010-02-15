@@ -28,13 +28,18 @@
 
   $ ./configure --with-your-options
   $ make
+  $ sudo make install
 
 4. check for mod_websocket.so
 
   $ cd lighttd-1.4.x/src/.libs
   $ ls -l mod_websocket.*
 
-  If exists mod_websocket.* in .libs, you can use mod_websocket!
+  or 
+
+  $ ls -l /usr/local/lib/mod_websocket.*
+
+  If mod_websocket.* exists in dir, you can use mod_websocket!
   Write lighttpd.conf like below.
 
 5.Add setting for mod_websocket into lighttpd.conf
