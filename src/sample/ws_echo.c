@@ -49,8 +49,7 @@ tcp_listen(const char *service) {
 
 static void
 read_handler(int fd, short event, void *arg) {
-    int i;
-    ssize_t siz;
+    ssize_t i, siz;
     char buf[4096];
     struct event *ev = (struct event *)arg;
 
@@ -59,10 +58,14 @@ read_handler(int fd, short event, void *arg) {
 		if ((siz = read(fd, buf, sizeof(buf))) <= 0 ) {
 			event_del(ev);
             free(ev);
-			printf("finished\n");
+			fprintf(stdout, "finished fd = [%d]\n", fd);
 			close(fd);
 		} else{
-			printf("echo to fd[%d] = %s\n", fd, buf);
+            fprintf(stdout, "echo to fd[%d] = \n[", fd);
+            for (i = 0; i < siz; i++) {
+                fprintf(stdout, "0x%02x = '%c', ", buf[i] & 0x0ff, buf[i]);
+            }
+            fprintf(stdout, "]\n");
             write(fd, buf, siz);
 		}
 	}
@@ -81,7 +84,7 @@ accept_handler(int fd, short event, void *arg) {
         new_fd = accept(fd, (struct sockaddr *)&sa, &len);
 		event_set(new_ev, new_fd, EV_READ|EV_PERSIST, read_handler, new_ev);
 		event_add(new_ev, NULL);
-        printf("accepted = %d\n", new_fd);
+        fprintf(stdout, "accepted = %d\n", new_fd);
 	}
 }
 
