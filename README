@@ -14,7 +14,7 @@
 
   client側はjavascriptにて、
 
-  var ws = new WebSocket("ws://192.168.0.10:80/");
+  var ws = new WebSocket("ws://192.168.0.10:80/echo");
 
   としてあげれば、echo serverまでつながります。Reverse Proxyとして動作
   するイメージですね。
