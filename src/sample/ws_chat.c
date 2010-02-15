@@ -72,7 +72,11 @@ read_handler(int fd, short event, void *arg) {
                 }
                 prev = c;
             }
-            prev->next = c->next;
+            if (c == gHead_client) {
+                gHead_client = c->next;
+            } else {
+                prev->next = c->next;
+            }
 			fprintf(stdout, "finished fd = [%d]\n", fd);
 			close(fd);
             free(c);
