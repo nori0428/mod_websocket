@@ -29,4 +29,9 @@
      りますので、インターネット上で利用する場合にはご注意ください。
   3. Sub-Protocol、UTF-8についても全くhandleしていません。
 
+- great thanks to
+  Taiyo Fujii(@t_trace), Kensaku Komatsu(@komasshu),
+  Thoshiro Takahashi(@tohirot), Nobuyoshi Miyokawa(@nmiyo)
+  and Takezo(@velvetpass)
+
 // EOF
