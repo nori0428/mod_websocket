@@ -1,10 +1,25 @@
 // $Id$
 
-- lighttpdのインストール
+- lighttpdの起動まで
 
   lighttpd-1.4.x(あんまり古いと動かない可能性が大きいです)をダウンロー
   ドしてください。なお、私は1.4.26でテストしています
   http://www.lighttpd.net/download/
+
+  INSTALLに記述された手順にしたがって、lighttpdにpatchを当てたのち、
+  lighttpd本体、mod_websocketをmakeしてください。
+
+  テスト用に起動する際には、make installを行わず、
+
+  $ cd lighttpd-1.4.x/src
+  $ cp ../doc/lighttpd.conf .
+
+  lighttpd.confの必要な設定部分を書き換えた後で、
+
+  $ ./lighttpd -f ./lighttpd.conf -m .libs/ (-D)
+
+  とすることで、起動するはずです。(optionに-Dを指定すると、lighttpdは
+  daemon化しないです)
 
 - 基本的な使い方
   lighttpdを、192.168.0.10:80で、echo serverを192.168.0.10:8000で起動
@@ -47,6 +62,14 @@
   chatが可能なはずです。
 
   http://your_machine_ip:your_lighttpd_port/ws_chat.html
+
+  注意
+  ws_chat.html内のnew WebSocketに与えるuriを書き換えてください。例えば、
+  lighttpdが192.168.0.10:8000で起動している場合には、
+
+  var ws = new WebSocket("ws://192.168.0.10:8000/echo);
+  
+  など。chat serverのアドレス:ポート番号を与えてはいけません。
 
 - 現時点での注意点
   1. allowed originを設定することが出来ません。セキュリティ上問題にな
