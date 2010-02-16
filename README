@@ -51,13 +51,10 @@
 - 現時点での注意点
   1. allowed originを設定することが出来ません。セキュリティ上問題にな
      りますので、インターネット上で利用する場合にはご注意ください。
-  2. Web Socketで規定されている、Lengthを持つフレームはハンドリングで
-     きていません。
-     '0x00' + "UTF-8 Message" + '0xff'と言うメッセージのみ扱えます。
-  3. Sub-Protocolをhandlingしていません。
-  4. UTF-8についても全くhandleしていません。
-     考えた結果、この先もhandlingしない予定です。(ブラウザおよびバック
-     エンドサーバでUTF-8をご利用ください)
+  2. Sub-Protocolをhandlingしていません。
+  3. UTF-8についてもhandleしていません。
+     しばらく、handlingしない予定です。(ブラウザおよびバックエンドサー
+     バでUTF-8をご利用ください)
 
 - great thanks to
   Taiyo Fujii(@t_trace), Kensaku Komatsu(@komasshu),

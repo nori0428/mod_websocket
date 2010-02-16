@@ -61,19 +61,22 @@ typedef enum {
 } websocket_connection_state_t;
 
 typedef enum {
-    INITIAL,
-    CONTINUE,
+    WEBSOCKET_FRAME_STATE_INIT,
+    WEBSOCKET_FRAME_STATE_WAIT_DELIMIT,
+    WEBSOCKET_FRAME_STATE_CALC_LENGTH,
+    WEBSOCKET_FRAME_STATE_READ_MESSAGE,
 } websocket_frame_state_t;
 
 typedef struct {
 	websocket_connection_state_t state;
-    websocket_frame_state_t frame;
+    websocket_frame_state_t frame_state;
 	time_t state_timestamp;
 
 	buffer *host;
 	unsigned short port;
     buffer *origin;
 
+    int frame_siz;
 	chunkqueue *toclient;
 
 	int fd;						/* fd to the connect process */
@@ -96,23 +99,67 @@ static void handle_websocket_frame(handler_ctx *hctx, chunkqueue *cq) {
 	chunk *c;
 
 	for(c = cq->first; c; c = c->next) {
-        char first_byte, last_byte;
+        char *first_byte, *last_byte;
 
         assert(c->type == MEM_CHUNK); /* websocket chunk must be a MEM_CHUNK */
         if (c->mem->used == 0) {
             return;
         }
-        first_byte = c->mem->ptr[0];
-        last_byte = c->mem->ptr[c->mem->used - 2]; /* padded '\0' by buffer */
-        if (0 <= first_byte && first_byte < 127 &&
-            hctx->frame == INITIAL) {
+        first_byte = c->mem->ptr;
+        /* padded '\0' by buffer */
+        last_byte = c->mem->ptr + c->mem->used - 2;
+
+        if (!(*first_byte & 0x80) &&
+            hctx->frame_state == WEBSOCKET_FRAME_STATE_INIT) {
             c->offset++;
-            hctx->frame = CONTINUE;
+            hctx->frame_state = WEBSOCKET_FRAME_STATE_WAIT_DELIMIT;
         }
-        if (-1 == last_byte) {
+        if (0xff == (*last_byte & 0x0ff) &&
+            hctx->frame_state == WEBSOCKET_FRAME_STATE_WAIT_DELIMIT) {
             c->mem->ptr[c->mem->used - 1] = 0;
             c->mem->used--;
-            hctx->frame = INITIAL;
+            hctx->frame_state = WEBSOCKET_FRAME_STATE_INIT;
+            return;
+        }
+        if ((*first_byte & 0x80) &&
+            hctx->frame_state == WEBSOCKET_FRAME_STATE_INIT) {
+            char *len;
+
+            hctx->frame_siz = 0;
+            hctx->frame_state = WEBSOCKET_FRAME_STATE_CALC_LENGTH;
+            if (first_byte == last_byte) {
+                return;
+            }
+            c->offset++;
+            len = ++first_byte; /* go second byte */
+            do {
+                hctx->frame_siz = (hctx->frame_siz) * 128 + (*len & 0x7f);
+                if (len == last_byte) {
+                    break;
+                } 
+                len++;
+                c->offset++;
+            } while((*len & 0x80));
+            if (len != last_byte) {
+                hctx->frame_state = WEBSOCKET_FRAME_STATE_READ_MESSAGE;
+            }
+            return;
+        }
+        if (hctx->frame_state == WEBSOCKET_FRAME_STATE_CALC_LENGTH) {
+            char *len = first_byte;
+
+            c->offset++;
+            do {
+                hctx->frame_siz = (hctx->frame_siz) * 128 + (*len & 0x7f);
+                if (len == last_byte) {
+                    break;
+                } 
+                len++;
+                c->offset++;
+            } while((*len & 0x80));
+            if (len != last_byte) {
+                hctx->frame_state = WEBSOCKET_FRAME_STATE_READ_MESSAGE;
+            }
         }
     }
     return;
@@ -122,7 +169,7 @@ static handler_ctx *handler_ctx_init(void) {
 	handler_ctx *hctx = calloc(1, sizeof(*hctx));
 
 	hctx->state = WEBSOCKET_STATE_INIT;
-	hctx->frame = INITIAL;
+	hctx->frame_state = WEBSOCKET_FRAME_STATE_INIT;
 	hctx->host = buffer_init();
 	hctx->origin = buffer_init();
 	hctx->toclient = chunkqueue_init();
@@ -511,6 +558,12 @@ static handler_t websocket_write_request(server *srv, handler_ctx *hctx) {
                                 strerror(errno), errno);
 				hctx->server_closed = 1;
 			}
+            if (hctx->frame_state == WEBSOCKET_FRAME_STATE_READ_MESSAGE) {
+                hctx->frame_siz = hctx->frame_siz - con->read_queue->bytes_out;
+                if (hctx->frame_siz <= 0) {
+                    hctx->frame_state = WEBSOCKET_FRAME_STATE_INIT;
+                }
+            }
 		}
 
 		if (!hctx->client_closed) {

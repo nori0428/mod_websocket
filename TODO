@@ -2,7 +2,6 @@
 
 - TODOs
   1.handle allowed origin
-  2.handle websocket frame that has length field.
-  3.handle sub-protocol
+  2.handle sub-protocol
 
 // EOF
