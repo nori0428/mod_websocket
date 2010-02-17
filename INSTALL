@@ -27,6 +27,9 @@
   4.bzip2-dev
     $ sudo apt-get install libbz2-dev
 
+  If you want to use SSL, install openssl lib.
+  (But mod_websocket can't handle 'wss' scheme now, sorry)
+
   5.openssl
     $ sudo apt-get install libssl-dev
 
