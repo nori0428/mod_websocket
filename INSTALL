@@ -12,11 +12,16 @@
   if you don't have.
 
   1.autotools
+
+    automake-1.x package contains autoheader, autoconf,
+    automake, m4 etc...
+    But on ubuntu, only libtool has been excluded.
+
     exmaple for ubuntu.
     $ sudo apt-get install automake-1.x
     $ sudo apt-get install libtool
 
-    I recommend you to install version 1.9 or later.
+    And I recommend you to install version 1.9 or later.
 
   2.pcre lib( http://www.pcre.org/ )
     $ sudo apt-get install libpcre3 libpcre3-dev
