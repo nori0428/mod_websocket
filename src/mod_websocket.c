@@ -600,13 +600,24 @@ static handler_t websocket_write_request(server *srv, handler_ctx *hctx) {
                 { CONST_STR_LEN("Connection: Upgrade\r\n") },
             };
             buffer *b = chunkqueue_get_append_buffer(hctx->toclient);
-
+            server_socket *srv_socket = con->srv_socket;
+            
             for (i = 0; i < (int)(sizeof(strs)/sizeof(strs[0])); i++) {
                 buffer_append_string_len(b, strs[i].b, strs[i].l);
             }
             buffer_append_string_len(b, CONST_STR_LEN("WebSocket-Origin: "));
             buffer_append_string_buffer(b, hctx->origin);
-            buffer_append_string_len(b, CONST_STR_LEN("\r\nWebSocket-Location: ws://"));
+            buffer_append_string_len(b, CONST_STR_LEN("\r\nWebSocket-Location: "));
+            if (srv_socket->is_ssl) {
+#ifdef USE_OPENSSL
+                buffer_append_string_len(b, CONST_STR_LEN("wss://"));
+#else
+                hctx->server_closed = 1;
+                return HANDLER_ERROR;
+#endif
+            } else {
+                buffer_append_string_len(b, CONST_STR_LEN("ws://"));
+            }
             buffer_append_string_buffer(b, con->server_name);
             buffer_append_string_buffer(b, con->uri.path);
             buffer_append_string_len(b, CONST_STR_LEN("\r\n\r\n"));
