@@ -40,8 +40,7 @@
 
     $ sudo apt-get install libevent-dev
 
-  If you want to use SSL, install openssl lib.
-  (But mod_websocket can't handle 'wss' scheme now, sorry)
+  If you want to use SSL and wss, install openssl lib.
 
   6.openssl
     $ sudo apt-get install libssl-dev
