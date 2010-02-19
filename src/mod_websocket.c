@@ -310,9 +310,9 @@ SETDEFAULTS_FUNC(mod_websocket_set_defaults) {
         p->config_storage[i] = s;
         ca = ((data_config *)srv->config_context->data[i])->value;
 
-        if (config_insert_values_global(srv, ca, cv))
+        if (config_insert_values_global(srv, ca, cv)) {
             return HANDLER_ERROR;
-
+        }
         du = array_get_element(ca, "websocket.server");
         if (du) {
             size_t j;
