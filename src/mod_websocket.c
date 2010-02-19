@@ -70,7 +70,6 @@ typedef enum {
 typedef struct {
     websocket_connection_state_t state;
     websocket_frame_state_t frame_state;
-    time_t state_timestamp;
 
     buffer *host;
     unsigned short port;
@@ -79,17 +78,17 @@ typedef struct {
     int frame_siz;
     chunkqueue *toclient;
 
-    int fd;                        /* fd to the connect process */
-    int fd_server_ndx;            /* index into the fd-event buffer */
+    int fd;                   /* fd to the backend srv */
+    int fd_server_ndx;        /* index into the fd-event buffer */
 
     int client_closed, server_closed;
 
     int noresp;
-    int path;                    /* handle as /path based CONNECT */
-    size_t path_info_offset;    /* start of path_info in uri.path */
+    int path;                 /* handle /path as websocket resource */
+    size_t path_info_offset;  /* start of path_info in uri.path */
 
-    connection *remote_conn;    /* dump pointer */
-    plugin_data *plugin_data;    /* dump pointer */
+    connection *remote_conn;  /* dump pointer */
+    plugin_data *plugin_data; /* dump pointer */
 } handler_ctx;
 
 /* ok, we need a prototype */
@@ -452,8 +451,8 @@ static int websocket_establish_connection(server *srv, handler_ctx *hctx) {
 
 static int websocket_set_state(server *srv, handler_ctx *hctx,
                                websocket_connection_state_t state) {
+    UNUSED(srv);
     hctx->state = state;
-    hctx->state_timestamp = srv->cur_ts;
     return 0;
 }
 
@@ -503,7 +502,7 @@ static handler_t websocket_write_request(server *srv, handler_ctx *hctx) {
         }
         for (j = 0; j < (sizeof(m_hdrs) / sizeof(m_hdrs[0])); j++) {
             if (!m_hdrs[j].pass) {
-                log_error_write(srv, __FILE__, __LINE__, "ss",
+                log_error_write(srv, __FILE__, __LINE__, "s",
                                 "websocket handshake failed.");
                 con->http_status = 404;
                 con->mode = DIRECT;
@@ -576,7 +575,7 @@ static handler_t websocket_write_request(server *srv, handler_ctx *hctx) {
                 return HANDLER_ERROR;
             }
             if (socket_error != 0) {
-                log_error_write(srv, __FILE__, __LINE__, "ss",
+                log_error_write(srv, __FILE__, __LINE__, "sssd",
                                 "establishing connection failed:",
                                 strerror(socket_error),
                                 "port:", hctx->port);
@@ -863,30 +862,29 @@ static handler_t mod_websocket_check(server *srv, connection *con, void *p_d) {
     char *colon;
     int path = 0;
 
-    if (con->request.http_method != HTTP_METHOD_GET)
+    if (con->request.http_method != HTTP_METHOD_GET) {
         return HANDLER_GO_ON;
-
-    if (con->mode != DIRECT)
+    }
+    if (con->mode != DIRECT) {
         return HANDLER_GO_ON;
-
+    }
     /* Have we processed this request already? */
-    if (con->file_started == 1)
+    if (con->file_started == 1) {
         return HANDLER_GO_ON;
-
+    }
     mod_websocket_patch_connection(srv, con, p);
 
     fn = con->uri.path;
-
-    if (fn->used == 0)
+    if (fn->used == 0) {
         return HANDLER_ERROR;
-
+    }
     s_len = fn->used - 1;
 
     path_info_offset = 0;
 
-    if (p->conf.debug)
+    if (p->conf.debug) {
         log_error_write(srv, __FILE__, __LINE__,  "s", "websocket - start");
-
+    }
     /* check if prefix or host matches */
     for (k = 0; k < p->conf.extensions->used; k++) {
         data_array *ext = NULL;
@@ -894,14 +892,14 @@ static handler_t mod_websocket_check(server *srv, connection *con, void *p_d) {
 
         ext = (data_array *)p->conf.extensions->data[k];
 
-        if (ext->key->used == 0)
+        if (ext->key->used == 0) {
             continue;
-
+        }
         ct_len = ext->key->used - 1;
 
-        if (s_len < ct_len)
+        if (s_len < ct_len) {
             continue;
-
+	}
         /* check host/prefix in the form "/path" */
         if (*(ext->key->ptr) == '/') {
             if (strncmp(fn->ptr, ext->key->ptr, ct_len) == 0) {
@@ -909,26 +907,23 @@ static handler_t mod_websocket_check(server *srv, connection *con, void *p_d) {
                     char *pi_offset;
 
                     pi_offset = strchr(fn->ptr + ct_len + 1, '/');
-                    if (pi_offset)
+                    if (pi_offset) {
                         path_info_offset = pi_offset - fn->ptr;
+                    }
                 }
                 extension = ext;
                 path = 1;
                 break;
             }
-        } else if (fnmatch(ext->key->ptr, fn->ptr + 1, FNM_NOESCAPE|FNM_CASEFOLD) == 0) {
-            /* check extension in the form ".fcg" */
-            extension = ext;
-            break;
         }
     }
 
-    if (!extension)
+    if (!extension) {
         return HANDLER_GO_ON;
-
-    if (p->conf.debug)
+    }
+    if (p->conf.debug) {
         log_error_write(srv, __FILE__, __LINE__,  "s", "websocket - ext found");
-
+    }
     host = (data_websocket *)extension->value->data[0];
 
     /*
@@ -962,11 +957,11 @@ static handler_t mod_websocket_check(server *srv, connection *con, void *p_d) {
 
     con->mode = p->id;
 
-    if (p->conf.debug)
+    if (p->conf.debug) {
         log_error_write(srv, __FILE__, __LINE__,  "sbd",
                         "websocket - found a host",
                         hctx->host, hctx->port);
-
+    }
     return HANDLER_GO_ON;
 }
 
