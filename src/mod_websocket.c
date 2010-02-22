@@ -175,7 +175,7 @@ static void handle_websocket_frame(handler_ctx *hctx, chunkqueue *cq) {
             return;
         }
         first_byte = c->mem->ptr;
-        /* padded '\0' by buffer */
+        /* padded '\0' by buffer, so last_byte at c->mem->used - 2 */
         last_byte = c->mem->ptr + c->mem->used - 2;
 
         if (!(*first_byte & 0x80) &&
@@ -185,8 +185,8 @@ static void handle_websocket_frame(handler_ctx *hctx, chunkqueue *cq) {
         }
         if (0xff == (*last_byte & 0x0ff) &&
             hctx->frame_state == WEBSOCKET_FRAME_STATE_WAIT_DELIMIT) {
-            c->mem->ptr[c->mem->used - 1] = 0;
             c->mem->used--;
+            c->mem->ptr[c->mem->used - 1] = 0;
             hctx->frame_state = WEBSOCKET_FRAME_STATE_INIT;
             return;
         }
@@ -353,16 +353,15 @@ SETDEFAULTS_FUNC(mod_websocket_set_defaults) {
                 pcv[0].destination = dc->host;
                 pcv[1].destination = &(dc->port);
 
-                if (config_insert_values_internal(srv, da_ext->value, pcv))
+                if (config_insert_values_internal(srv, da_ext->value, pcv)) {
                     return HANDLER_ERROR;
-
+                }
                 dca = (data_array *)array_get_element(s->extensions, da_ext->key->ptr);
                 if (!dca) {
                     dca = data_array_init();
                     buffer_copy_string_buffer(dca->key, da_ext->key);
                     array_insert_unique(s->extensions, (data_unset *)dca);
                 }
-
                 if (s->debug) {
                     log_error_write(srv, __FILE__, __LINE__, "ssssd",
                                     da_ext->key->ptr, "=>", dc->host->ptr,
@@ -379,12 +378,11 @@ static void websocket_connection_close(server *srv, handler_ctx *hctx) {
     plugin_data *p;
     connection *con;
 
-    if (!hctx)
+    if (!hctx) {
         return;
-
+    }
     p = hctx->plugin_data;
     con = hctx->remote_conn;
-
     if (hctx->fd != -1) {
         fdevent_event_del(srv->ev, &(hctx->fd_server_ndx), hctx->fd);
         fdevent_unregister(srv->ev, hctx->fd);
@@ -392,7 +390,6 @@ static void websocket_connection_close(server *srv, handler_ctx *hctx) {
         close(hctx->fd);
         srv->cur_fds--;
     }
-
     handler_ctx_free(hctx);
     con->plugin_ctx[p->id] = NULL;
 }
@@ -431,9 +428,10 @@ static int websocket_establish_connection(server *srv, handler_ctx *hctx) {
 
     if (-1 == connect(connect_fd, connect_addr, servlen)) {
         if (errno == EINPROGRESS || errno == EALREADY) {
-            if (p->conf.debug)
+            if (p->conf.debug) {
                 log_error_write(srv, __FILE__, __LINE__, "sd",
                                 "connect delayed:", connect_fd);
+            }
             return 1;
         } else {
             log_error_write(srv, __FILE__, __LINE__, "sdsd",
@@ -547,7 +545,6 @@ static handler_t websocket_write_request(server *srv, handler_ctx *hctx) {
             switch (websocket_establish_connection(srv, hctx)) {
             case 1:
                 websocket_set_state(srv, hctx, WEBSOCKET_STATE_CONNECT);
-
                 /*
                  * connection is in progress,
                  * wait for an event and call getsockopt() below
@@ -583,9 +580,10 @@ static handler_t websocket_write_request(server *srv, handler_ctx *hctx) {
                 con->mode = DIRECT;
                 return HANDLER_FINISHED;
             }
-            if (p->conf.debug)
+            if (p->conf.debug) {
                 log_error_write(srv, __FILE__, __LINE__,  "s",
                                 "websocket - connect - delayed success");
+            }
         }
 
         websocket_set_state(srv, hctx, WEBSOCKET_STATE_CONNECTED);
@@ -668,9 +666,9 @@ static handler_t websocket_write_request(server *srv, handler_ctx *hctx) {
             fdevent_event_add(srv->ev, &(hctx->fd_server_ndx), hctx->fd, FDEVENT_OUT);
         } else {
             fdevent_event_del(srv->ev, &(hctx->fd_server_ndx), hctx->fd);
-            if (hctx->client_closed)
+            if (hctx->client_closed) {
                 websocket_connection_close(srv, hctx);
-            else if (chunkqueue_is_empty(hctx->toclient)) {
+            } else if (chunkqueue_is_empty(hctx->toclient)) {
                 fdevent_event_add(srv->ev, &(hctx->fd_server_ndx), hctx->fd, FDEVENT_IN);
             }
         }
@@ -685,8 +683,9 @@ static handler_t websocket_write_request(server *srv, handler_ctx *hctx) {
                     connection_set_state(srv, con, CON_STATE_RESPONSE_END);
                     hctx->client_closed = 1;
                 }
-            } else if (chunkqueue_is_empty(con->read_queue))
+            } else if (chunkqueue_is_empty(con->read_queue)) {
                 fdevent_event_add(srv->ev, &(con->fde_ndx), con->fd, FDEVENT_IN);
+            }
         }
         return HANDLER_WAIT_FOR_EVENT;
     default:
@@ -712,17 +711,18 @@ static int mod_websocket_patch_connection(server *srv, connection *con,
         s = p->config_storage[i];
 
         /* condition didn't match */
-        if (!config_check_cond(srv, con, dc))
+        if (!config_check_cond(srv, con, dc)) {
             continue;
-
+        }
         /* merge config */
         for (j = 0; j < dc->value->used; j++) {
             data_unset *du = dc->value->data[j];
 
-            if (buffer_is_equal_string(du->key, CONST_STR_LEN("websocket.server")))
+            if (buffer_is_equal_string(du->key, CONST_STR_LEN("websocket.server"))) {
                 PATCH(extensions);
-            else if (buffer_is_equal_string(du->key, CONST_STR_LEN("websocket.debug")))
+            } else if (buffer_is_equal_string(du->key, CONST_STR_LEN("websocket.debug"))) {
                 PATCH(debug);
+            }
         }
     }
 
@@ -736,21 +736,22 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
     handler_ctx *hctx = con->plugin_ctx[p->id];
     handler_t h;
 
-    if (!hctx)
+    if (!hctx) {
         return HANDLER_GO_ON;
-
+    }
     mod_websocket_patch_connection(srv, con, p);
 
     /* not my job */
-    if (con->mode != p->id)
+    if (con->mode != p->id) {
         return HANDLER_GO_ON;
+    }
 
     /* ok, create the request */
     h = websocket_write_request(srv, hctx);
     switch (h) {
     case HANDLER_ERROR:
-        log_error_write(srv, __FILE__, __LINE__,
-                        "sbdd", "websocket-server disabled:",
+        log_error_write(srv, __FILE__, __LINE__, "sbdd",
+                        "websocket-server disabled:",
                         hctx->host, hctx->port, hctx->fd);
         websocket_connection_close(srv, hctx);
 
@@ -788,8 +789,9 @@ static handler_t websocket_handle_fdevent(void *s, void *ctx, int revents) {
             goto disconnect;
         }
 
-        if (!b || b > (int)sizeof(readbuf))
+        if (!b || b > (int)sizeof(readbuf)) {
             b = sizeof(readbuf);
+        }
 
         errno = 0;
         r = read(fd, readbuf, b);
@@ -802,15 +804,16 @@ static handler_t websocket_handle_fdevent(void *s, void *ctx, int revents) {
             buffer_append_memory(buf, readbuf, r);
             /* buffer.c replace buf[len - 1] = '\0' */
             buffer_append_memory(buf, &tail, 2);
-        } else if (errno != EAGAIN)
+        } else if (errno != EAGAIN) {
             goto disconnect;
+        }
     }
 
     if (revents & FDEVENT_OUT) {
-        if (p->conf.debug)
+        if (p->conf.debug) {
             log_error_write(srv, __FILE__, __LINE__, "sd",
                             "websocket: fdevent-out", hctx->state);
-
+        }
         if (hctx->state == WEBSOCKET_STATE_CONNECT ||
             hctx->state == WEBSOCKET_STATE_CONNECTED) {
             /* unfinished websocket call or data to send */
@@ -823,10 +826,10 @@ static handler_t websocket_handle_fdevent(void *s, void *ctx, int revents) {
 
     /* perhaps this issue is already handled */
     if (revents & FDEVENT_HUP) {
-        if (p->conf.debug)
+        if (p->conf.debug) {
             log_error_write(srv, __FILE__, __LINE__, "sd",
                             "websocket: fdevent-hup", hctx->state);
-        
+        }
         if (hctx->state == WEBSOCKET_STATE_CONNECT) {
             /* connect() -> EINPROGRESS -> HUP */
             goto disconnect;
@@ -899,7 +902,7 @@ static handler_t mod_websocket_check(server *srv, connection *con, void *p_d) {
 
         if (s_len < ct_len) {
             continue;
-	}
+        }
         /* check host/prefix in the form "/path" */
         if (*(ext->key->ptr) == '/') {
             if (strncmp(fn->ptr, ext->key->ptr, ct_len) == 0) {
@@ -986,11 +989,11 @@ TRIGGER_FUNC(mod_websocket_trigger) {
         for (i = 0; i < srv->config_context->used; i++) {
             plugin_config *s = p->config_storage[i];
 
-            if (!s)
+            if (!s) {
                 continue;
+            }
 
             /* get the extensions for all configs */
-
             for (k = 0; k < s->extensions->used; k++) {
                 data_array *extension = (data_array *)s->extensions->data[k];
 
@@ -999,19 +1002,17 @@ TRIGGER_FUNC(mod_websocket_trigger) {
                     data_websocket *host = (data_websocket *)extension->value->data[n];
 
                     if (!host->is_disabled ||
-                        srv->cur_ts - host->disable_ts < 5)
+                        srv->cur_ts - host->disable_ts < 5) {
                             continue;
-
+                    }
                     log_error_write(srv, __FILE__, __LINE__,  "sbd",
                                     "websocket - re-enabled:",
                                     host->host, host->port);
-
                     host->is_disabled = 0;
                 }
             }
         }
     }
-
     return HANDLER_GO_ON;
 }
 
