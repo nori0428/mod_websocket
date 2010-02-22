@@ -40,10 +40,10 @@
 
     $ sudo apt-get install libevent-dev
 
-  If you want to use SSL and wss, install openssl lib.
+  If you want to use SSL and wss, install openssl and openssl lib.
 
   6.openssl
-    $ sudo apt-get install libssl-dev
+    $ sudo apt-get install openssl libssl-dev
 
 3.Patch the source
 
