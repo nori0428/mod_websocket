@@ -1,83 +1,35 @@
 // $Id$
 
-- lighttpdの起動まで
+- What is this?
+  mod_websocket.c provides a WebSocket extension for
+  lighttpd HTTP server ver 1.4.x.(http://www.lighttpd.net/)
 
-  lighttpd-1.4.x(あんまり古いと動かない可能性が大きいです)をダウンロー
-  ドしてください。なお、私は1.4.26でテストしています
-  http://www.lighttpd.net/download/
+- How can I use this?
+  First, please do like this.
 
-  INSTALLに記述された手順にしたがって、lighttpdにpatchを当てたのち、
-  lighttpd本体、mod_websocketをmakeしてください。
+  $ git clone git://github.com/nori0428/mod_websocket.git
 
-  テスト用に起動する際には、make installを行わず、
+  and follow the instructions in INSTALL.
 
-  $ cd lighttpd-1.4.x/src
-  $ cp ../doc/lighttpd.conf .
+  If you can read Japanese, a more detailed explanation is on the
+  following sites.
 
-  lighttpd.confの必要な設定部分を書き換えた後で、
-
-  $ ./lighttpd -f ./lighttpd.conf -m .libs/ (-D)
-
-  とすることで、起動するはずです。(optionに-Dを指定すると、lighttpdは
-  daemon化しないです)
-
-- 基本的な使い方
-  lighttpdを、192.168.0.10:80で、echo serverを192.168.0.10:8000で起動
-  し、browserからWeb Socket経由で繋げたいとします。
-
-  この場合、まず何も考えずにecho serverを起動。
-
-  次に、lighttpd.confに、
-  websocket.server => ( "/echo" =>
-                       ("host" => "192.168.0.10", "port" => 8000) )
-
-  と、記述してあげた上でlighttpdを起動します。
-
-  client側はjavascriptにて、
-
-  var ws = new WebSocket("ws://192.168.0.10:80/echo");
-
-  としてあげれば、echo serverまでつながります。
-
-  Reverse Proxyとして動作するイメージですね。
-
-  -------------------------------------------------------------------------
-  Updated 2010/02/15
-  -------------------------------------------------------------------------
-  Hiroki Ohtani(@liris)さんところから、chat htmlいただきました。
-  http://blog.liris.org/2009/12/websocketchat.html
-
-  $ cat lighttpd.conf
-  ...
-  websocket.server = (
-                      "/echo" => ( "host" => "127.0.0.1", "port" => 9000 ),
-                      "/chat" => ( "host" => "127.0.0.1", "port" => 9001 )
-                     )
-  ...
-
-  $ ./ws_chat 9001
-  $ lighttpd -f /path_to/your_lighttpd.conf -m /path_to/your_modules
-
-  こうした後で、Chromeなどからアクセスしていただくと、websocketを利用した
-  chatが可能なはずです。
-
-  http://your_machine_ip:your_lighttpd_port/ws_chat.html
-
-  注意
-  ws_chat.html内のnew WebSocketに与えるuriを書き換えてください。例えば、
-  lighttpdが192.168.0.10:8000で起動している場合には、
-
-  var ws = new WebSocket("ws://192.168.0.10:8000/echo);
+  http://blog.bornneet.com/Entry/271/
+  http://willibe.blogspot.com/
   
-  など。chat serverのアドレス:ポート番号を与えてはいけません。
+- LICENCE
+  see COPYING.
+  and see lighttpd LICENCE.
 
-- 現時点での注意点
-  1. allowed originを設定することが出来ません。セキュリティ上問題にな
-     りますので、インターネット上で利用する場合にはご注意ください。
-  2. Sub-Protocolをhandlingしていません。
-  3. UTF-8についてもhandleしていません。
-     しばらく、handlingしない予定です。(ブラウザおよびバックエンドサー
-     バでUTF-8をご利用ください)
+- issues
+  1. Can not set allowed Origin in a configuration file.
+     This causes security issue on Internet.
+  2. Can not use Websocket-Protocol.
+     So, you can not use a WebSocket API like below.
+     var ws = new WebSocket("ws://example.com", "sub_proto");
+  3. not handle UTF-8 encoding.
+     please use UTF-8 or encodeURIComponent() in javascript and
+     server-side Applications.
 
 - great thanks to
   Taiyo Fujii(@t_trace), Kensaku Komatsu(@komasshu),
