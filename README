@@ -23,7 +23,7 @@
 
 - issues
   1. Can not set allowed Origin in a configuration file.
-     This causes security issue on Internet.
+     This causes security issue on the Internet.
   2. Can not use Websocket-Protocol.
      So, you can not use a WebSocket API like below.
      var ws = new WebSocket("ws://example.com", "sub_proto");
