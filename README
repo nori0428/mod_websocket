@@ -2,7 +2,7 @@
 
 - What is this?
   mod_websocket.c provides a WebSocket extension for
-  lighttpd HTTP server ver 1.4.x.(http://www.lighttpd.net/)
+  lighttpd HTTP server ver 1.4.x.( http://www.lighttpd.net/ )
 
 - How can I use this?
   First, please do like this.
