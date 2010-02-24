@@ -22,11 +22,61 @@
   and see lighttpd LICENCE.
 
 - issues
-  1. Can not set allowed Origin in a configuration file.
-     This causes security issue on the Internet.
-  2. Can not use Websocket-Protocol.
-     So, you can not use a WebSocket API like below.
+  1. The Websocket-Protocol header doesn't have any meanings.
+     Now you can use sub protocol in your javascript like below, but
+     the sub protocol doesn't have any meanings in mod_websocket, and
+     backend service programs can't know the specified sub protocol.
+
      var ws = new WebSocket("ws://example.com/resource", "sub_proto");
+
+  2. "Allowed Origin" setting is very strict.
+     You can set allowed origins in lighttpd.conf. But It's very
+     strict.
+     
+     websocket.server = (
+                         "/echo" => (
+                                     "host" => "127.0.0.1",
+                                     "port" => 9000,
+                                    ),
+                         "/chat" => (
+                                     "host" => "127.0.0.1",
+                                     "port" => 9001,
+                                     "origins" => (
+                                                   "http://hostname:8000",
+                                                   "http://example.com:8000",
+                                                   "http://192.168.0.2:8000"
+                                                  )
+                                    )
+                        )
+
+     Above setting means...
+
+     1. You can access '/echo' WebSocket resource from every cross
+        domain sites by doing like this.
+
+        var ws = new new WebSocket("ws://example.com/echo");
+
+     2. You can access '/chat' WebSocket resource only from specified
+        sites. And this means that you can't access '/chat' from
+        "localhost" or "127.0.0.1".
+
+        for example.
+        a sample.html has the script like this.
+
+        var ws = new new WebSocket("ws://example.com:8000/chat");
+
+        When you type "http://example.com:8000/sample.html" on your
+        browser, you can access '/chat' resource and scripts will work
+        correctly.
+
+        But when you type "http://127.0.0.1:8000/sample.html" on your
+        browser, your browser generates a header 
+
+        "WebSocket-Origin: http://127.0.0.1:8000"
+
+        in websocket handshake. So you will fail to access '/chat'
+        resource.
+
   3. This module does not handle UTF-8 encoding.
      please use UTF-8 or encodeURIComponent() in javascript and
      server-side Applications.

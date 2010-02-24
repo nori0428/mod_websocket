@@ -88,10 +88,21 @@
   5-2. add websocket.server section like this.
 
   websocket.server = (
-  		     "/echo" => ( "host" => "127.0.0.1",
-		                  "port" => 7 ),
-		     "/func" => ( "host" => "192.168.0.10",
-		                  "port" => 8000 )
+  		     "/echo" =>    ( "host" => "127.0.0.1",
+		                     "port" => 7 ),
+		     "/func" =>    ( "host" => "192.168.0.10",
+		                     "port" => 8000 ),
+                     "/strict1" => ( "host" => "127.0.0.1",
+		                     "port" => 9000,
+                                     "origins" => ( "http://allowed_site" )
+                                   ),
+                     "/strict2" => ( "host" => "127.0.0.1",
+		                     "port" => 9000,
+                                     "origins" => (
+                                                   "http://allowed_site1",
+                                                   "http://allowed_site2"
+                                                  )
+                                   )
                      )
 
 // EOF
