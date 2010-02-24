@@ -85,7 +85,8 @@
 
   server.modules              = ( "mod_websocket", ... )
 
-  5-2. add websocket.server section like this.
+  5-2. add websocket.server section like below.
+       "origins" treats IP Address and FQDN as another value.
 
   websocket.server = (
   		     "/echo" =>    ( "host" => "127.0.0.1",
@@ -94,13 +95,13 @@
 		                     "port" => 8000 ),
                      "/strict1" => ( "host" => "127.0.0.1",
 		                     "port" => 9000,
-                                     "origins" => ( "http://allowed_site" )
+                                     "origins" => ( "example.com" )
                                    ),
                      "/strict2" => ( "host" => "127.0.0.1",
 		                     "port" => 9000,
                                      "origins" => (
-                                                   "http://allowed_site1",
-                                                   "http://allowed_site2"
+                                                   "example.com",
+                                                   "192.168.0.1"
                                                   )
                                    )
                      )

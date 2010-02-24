@@ -500,7 +500,7 @@ static handler_t websocket_write_request(server *srv, handler_ctx *hctx) {
                                 for (k = 0; k < p->conf.origins->used; k++) {
                                     data_string *origin = (data_string *)p->conf.origins->data[k];
 
-                                    if (buffer_is_equal(ds->value, origin->value)) {
+                                    if (NULL != strstr(ds->value->ptr, origin->value->ptr)) {
                                         buffer_copy_string_buffer(hctx->origin, ds->value);
                                     }
                                 }
