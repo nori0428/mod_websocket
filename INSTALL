@@ -50,7 +50,7 @@
   $ cd lighttpd-1.4.x/
   $ patch -p1 < mod_websocket.patch
 
-  note: this patch contains a mod-connect.patch 
+  note: this patch contains a part of mod-connect.patch 
   ( http://redmine.lighttpd.net/attachments/997/mod-connect.patch )
 
 4.copy mod_websocket.c into src dir and make lighty.
