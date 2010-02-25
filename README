@@ -4,6 +4,12 @@
   mod_websocket.c provides a WebSocket extension for
   lighttpd HTTP server ver 1.4.x.( http://www.lighttpd.net/ )
 
+- How does mod_websocket work?
+  Please see these figures.
+
+  http://picasaweb.google.com/lh/photo/fb97lbN-O1Q5VkfJXyqN2w?feat=directlink
+  http://picasaweb.google.com/lh/photo/KnX-73pr7ApCabc9NqBqNQ?feat=directlink
+
 - How can I use this?
   First, please do like this.
 
