@@ -840,7 +840,6 @@ int create_handshake_response(handler_ctx *hctx) {
 
 #ifdef	_MOD_WEBSOCKET_SPEC_76_
     buffer_append_string_buffer(resp, hctx->req.md5sum);
-    buffer_append_string(resp, MOD_WEBSOCKET_CRLF_STR);
 #endif	/* _MOD_WEBSOCKET_SPEC_76_ */
 
     return 0;
