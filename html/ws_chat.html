@@ -6,22 +6,28 @@
   </head>
   <body>
     <script>
-      var ws = new WebSocket("ws://127.0.0.1:8000/chat");
-      ws.onopen = function() {
-      };
-
-      ws.onmessage = function(message) {
-          var txtNode = document.createTextNode(message.data);
+      function appendTxtNode(msg) {
+          var txtNode = document.createTextNode(msg);
           var brNode = document.createElement('br');
-          var cnode = document.getElementById("content");
+          var cnode = document.getElementById('content');
           cnode.appendChild(txtNode);
           cnode.appendChild(brNode);
+      }
+
+      var ws = new WebSocket("ws://127.0.0.1:8000/chat");
+      ws.onopen = function(e) {
+          appendTxtNode('opened WebSocket');
+      };
+      ws.onmessage = function(msg) {
+          appendTxtNode(msg.data);
+      };
+      ws.onclose = function(e) {
+          appendTxtNode('closed WebSocket');
       };
     </script>
 
     <h1>Web Socket Chat</h1>
-    <div id="content">
-    </div>
-    <input id="message" type="text" onChange="javascript:ws.send(this.value);this.value='';"/>
+    <input type="text" onChange="javascript:ws.send(this.value);this.value='';"/>
+    <div id="content"></div>
   </body>
 </html>
