@@ -75,6 +75,7 @@ static handler_t websocket_check(server *, connection *, void *);
 static handler_t websocket_disconnect(server *, connection *, void *);
 #endif
 
+
 handler_ctx *handler_ctx_init(void) {
     handler_ctx *hctx = calloc(1, sizeof(*hctx));
 
@@ -954,7 +955,7 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
                             "connect - failed: fd =", hctx->fd);
             hctx->con->http_status = MOD_WEBSOCKET_SERVICE_UNAVAILABLE;
             hctx->con->mode = DIRECT;
-            return HANDLER_FINISHED;
+            return HANDLER_ERROR;
             break;
         }
 
@@ -966,13 +967,14 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
             log_error_write(srv, __FILE__, __LINE__, "ss",
                             "getsockopt failed:", strerror(errno));
             tcp_server_disconnect(srv, hctx);
-            return HANDLER_ERROR;
+            connection_set_state(srv, con, CON_STATE_CLOSE);
+            fdevent_event_del(srv->ev, &(hctx->fde_ndx), hctx->fd);
+            return HANDLER_FINISHED;
         }
         if (0 != sockret) {
-            log_error_write(srv, __FILE__, __LINE__, "sd",
-                            "connect - failed: fd =", hctx->fd);
-            hctx->con->http_status = MOD_WEBSOCKET_SERVICE_UNAVAILABLE;
-            hctx->con->mode = DIRECT;
+            tcp_server_disconnect(srv, hctx);
+            connection_set_state(srv, con, CON_STATE_CLOSE);
+            fdevent_event_del(srv->ev, &(hctx->fde_ndx), hctx->fd);
             return HANDLER_FINISHED;
         }
         if (hctx->state == MOD_WEBSOCKET_STATE_CONNECTING && p->conf.debug) {
@@ -1111,7 +1113,7 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
     }
     chunkqueue_reset(hctx->write_queue);
     chunkqueue_reset(hctx->con->read_queue);
-    connection_set_state(srv, con, CON_STATE_RESPONSE_END);
+    connection_set_state(srv, con, CON_STATE_CLOSE);
     fdevent_event_del(srv->ev, &(hctx->fde_ndx), hctx->fd);
     fdevent_event_del(srv->ev, &(con->fde_ndx), con->fd);
     tcp_server_disconnect(srv, hctx);
@@ -1321,14 +1323,10 @@ handler_t websocket_handle_fdevent(void *s, void *ctx, int revents) {
             log_error_write(srv, __FILE__, __LINE__, "sd",
                             "connect - failed(HUP): fd =", hctx->fd);
         }
-        hctx->con->http_status = MOD_WEBSOCKET_SERVICE_UNAVAILABLE;
-        hctx->con->mode = DIRECT;
         hctx->server_closed = MOD_WEBSOCKET_TRUE;
     } else if (revents & FDEVENT_ERR) {
         log_error_write(srv, __FILE__, __LINE__, "sd",
                         "connect - failed(ERR): fd =", hctx->fd);
-        hctx->con->http_status = MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
-        hctx->con->mode = DIRECT;
         hctx->server_closed = MOD_WEBSOCKET_TRUE;
     }
     return mod_websocket_handle_subrequest(srv, hctx->con, hctx->pd);
