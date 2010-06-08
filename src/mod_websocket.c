@@ -1,283 +1,172 @@
 /*
  * $Id$
+ *
+ * Copyright(c) 2010, Norio Kobota, All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * - Redistributions of source code must retain the above copyright notice,
+ *   this list of conditions and the following disclaimer.
+ * - Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ * - Neither the name of the 'incremental' nor the names of its contributors
+ *   may be used to endorse or promote products derived from this software
+ *   without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+ * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stdio.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <errno.h>
-#include <fcntl.h>
 #include <string.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <assert.h>
+#include <locale.h>
+#include <langinfo.h>
+#include <errno.h>
 
-#include "buffer.h"
-#include "server.h"
-#include "keyvalue.h"
-#include "log.h"
-#include "http_chunk.h"
-#include "fdevent.h"
 #include "connections.h"
-#include "response.h"
+#include "fdevent.h"
 #include "joblist.h"
-#include "network.h"
-#include "plugin.h"
-#include "inet_ntop_cache.h"
-#include "crc32.h"
+#include "md5.h"
+#include "log.h"
 
-#include <fnmatch.h>
+#include "mod_websocket.h"
 
-#ifdef HAVE_SYS_FILIO_H
-# include <sys/filio.h>
+/* prototypes */
+#ifndef	_MOD_WEBSOCKET_TEST_
+static handler_ctx *handler_ctx_init(void);
+static void handler_ctx_free(handler_ctx *);
+static int set_subproto_extension(data_array *, const data_array *);
+static int set_extension(data_array *, const data_array *);
+static int tcp_server_connect(server *, handler_ctx *);
+static void tcp_server_disconnect(server *, handler_ctx *);
+static mod_websocket_bool_t check_const_headers(const array *);
+static int get_subproto_field(buffer *, const array *);
+static data_array *get_subproto_extension(const array *, buffer *);
+static int get_origin_field(buffer *, const array *);
+static mod_websocket_bool_t is_allowed_origin(const array *, const buffer *);
+static int get_host_field(buffer *, const array *);
+
+# ifdef	_MOD_WEBSOCKET_SPEC_76_
+static int get_key1_field(buffer *, const array *);
+static int get_key2_field(buffer *, const array *);
+static int get_key3_field(buffer *, const handler_ctx *);
+static uint32_t count_spc(const buffer *);
+static int get_key_number(uint32_t *, const buffer *);
+static int create_MD5_sum(handler_ctx *);
+# endif	/* _MOD_WEBSOCKET_SPEC_76_ */
+
+static int create_handshake_response(handler_ctx *);
+static int websocket_handle_frame(handler_ctx *);
+static void websocket_send_closing_frame(server *, handler_ctx *);
+static int encode_to(iconv_t, char *, size_t *, char *, size_t);
+static handler_t websocket_handle_fdevent(void *, void *, int);
+static int websocket_dispatch(server *, connection *, plugin_data *);
+static handler_t websocket_check(server *, connection *, void *);
+static handler_t websocket_disconnect(server *, connection *, void *);
 #endif
 
-#include "sys-socket.h"
-
-#define	data_websocket		data_fastcgi
-#define	data_websocket_init	data_fastcgi_init
-
-/**
- * The websocket module is based on the proxy module,
- * which in turn is based on the fastcgi module.
- */
-
-typedef struct {
-    array *extensions;
-    array *origins; /* referral */
-    unsigned int debug;
-} plugin_config;
-
-typedef struct {
-    PLUGIN_DATA;
-
-    plugin_config **config_storage;
-    plugin_config conf;
-} plugin_data;
-
-typedef enum {
-    WEBSOCKET_STATE_INIT,
-    WEBSOCKET_STATE_CONNECT,
-    WEBSOCKET_STATE_CONNECTED,
-} websocket_connection_state_t;
-
-typedef enum {
-    WEBSOCKET_FRAME_STATE_INIT,
-    WEBSOCKET_FRAME_STATE_WAIT_DELIMIT,
-    WEBSOCKET_FRAME_STATE_CALC_LENGTH,
-    WEBSOCKET_FRAME_STATE_READ_MESSAGE,
-} websocket_frame_state_t;
-
-typedef struct {
-    websocket_connection_state_t state;
-    websocket_frame_state_t frame_state;
-
-    buffer *host;
-    unsigned short port;
-    buffer *origin;           /* browser side origin */
-    buffer *proto;            /* browser side proto */
-
-    int frame_siz;
-    chunkqueue *toclient;
-
-    int fd;                   /* fd to the backend srv */
-    int fd_server_ndx;        /* index into the fd-event buffer */
-
-    int client_closed, server_closed;
-
-    int noresp;
-    int path;                 /* handle /path as websocket resource */
-    size_t path_info_offset;  /* start of path_info in uri.path */
-
-    connection *remote_conn;  /* dump pointer */
-    plugin_data *plugin_data; /* dump pointer */
-} handler_ctx;
-
-/* ok, we need a prototype */
-static handler_t websocket_handle_fdevent(void *s, void *ctx, int revents);
-
-/*
- * XXX: quick hack.
- * This function is a copy of network_write_chunkqueue in network.c
- */
-static int ws_network_write_chunkqueue(server *srv, connection *con, chunkqueue *cq) {
-    int ret = -1;
-    off_t written = 0;
-#ifdef TCP_CORK
-    int corked = 0;
-#endif
-    server_socket *srv_socket = con->srv_socket;
-
-    if (con->conf.global_kbytes_per_second &&
-        *(con->conf.global_bytes_per_second_cnt_ptr) > con->conf.global_kbytes_per_second * 1024) {
-        /* we reached the global traffic limit */
-
-        con->traffic_limit_reached = 1;
-        joblist_append(srv, con);
-
-        return 1;
-    }
-
-    written = cq->bytes_out;
-
-#ifdef TCP_CORK
-    /* Linux: put a cork into the socket as we want to combine the write() calls
-     * but only if we really have multiple chunks
-     */
-    if (cq->first && cq->first->next) {
-        corked = 1;
-        setsockopt(con->fd, IPPROTO_TCP, TCP_CORK, &corked, sizeof(corked));
-    }
-#endif
-
-    if (srv_socket->is_ssl) {
-#ifdef USE_OPENSSL
-        ret = srv->network_ssl_backend_write(srv, con, con->ssl, cq);
-#endif
-    } else {
-        ret = srv->network_backend_write(srv, con, con->fd, cq);
-    }
-
-    if (ret >= 0) {
-        chunkqueue_remove_finished_chunks(cq);
-        ret = chunkqueue_is_empty(cq) ? 0 : 1;
-    }
-
-#ifdef TCP_CORK
-    if (corked) {
-        corked = 0;
-        setsockopt(con->fd, IPPROTO_TCP, TCP_CORK, &corked, sizeof(corked));
-    }
-#endif
-
-    written = cq->bytes_out - written;
-    con->bytes_written += written;
-    con->bytes_written_cur_second += written;
-
-    *(con->conf.global_bytes_per_second_cnt_ptr) += written;
-
-    if (con->conf.kbytes_per_second &&
-        (con->bytes_written_cur_second > con->conf.kbytes_per_second * 1024)) {
-        /* we reached the traffic limit */
-
-        con->traffic_limit_reached = 1;
-        joblist_append(srv, con);
-    }
-    return ret;
-}
-
-static void handle_websocket_frame(handler_ctx *hctx, chunkqueue *cq) {
-    chunk *c;
-
-    for(c = cq->first; c; c = c->next) {
-        char *first_byte, *last_byte;
-
-        assert(c->type == MEM_CHUNK); /* websocket chunk must be a MEM_CHUNK */
-        if (c->mem->used == 0) {
-            return;
-        }
-        first_byte = c->mem->ptr;
-        /* padded '\0' by buffer, so last_byte at c->mem->used - 2 */
-        last_byte = c->mem->ptr + c->mem->used - 2;
-
-        if (!(*first_byte & 0x80) &&
-            hctx->frame_state == WEBSOCKET_FRAME_STATE_INIT) {
-            c->offset++;
-            hctx->frame_state = WEBSOCKET_FRAME_STATE_WAIT_DELIMIT;
-        }
-        if (0xff == (*last_byte & 0x0ff) &&
-            hctx->frame_state == WEBSOCKET_FRAME_STATE_WAIT_DELIMIT) {
-            c->mem->used--;
-            c->mem->ptr[c->mem->used - 1] = 0;
-            hctx->frame_state = WEBSOCKET_FRAME_STATE_INIT;
-            return;
-        }
-        if ((*first_byte & 0x80) &&
-            hctx->frame_state == WEBSOCKET_FRAME_STATE_INIT) {
-            char *len;
-
-            hctx->frame_siz = 0;
-            hctx->frame_state = WEBSOCKET_FRAME_STATE_CALC_LENGTH;
-            if (first_byte == last_byte) {
-                return;
-            }
-            c->offset++;
-            len = ++first_byte; /* go second byte */
-            do {
-                hctx->frame_siz = (hctx->frame_siz) * 128 + (*len & 0x7f);
-                if (len == last_byte) {
-                    break;
-                } 
-                len++;
-                c->offset++;
-            } while((*len & 0x80));
-            if (len != last_byte) {
-                hctx->frame_state = WEBSOCKET_FRAME_STATE_READ_MESSAGE;
-            }
-            return;
-        }
-        if (hctx->frame_state == WEBSOCKET_FRAME_STATE_CALC_LENGTH) {
-            char *len = first_byte;
-
-            c->offset++;
-            do {
-                hctx->frame_siz = (hctx->frame_siz) * 128 + (*len & 0x7f);
-                if (len == last_byte) {
-                    break;
-                } 
-                len++;
-                c->offset++;
-            } while((*len & 0x80));
-            if (len != last_byte) {
-                hctx->frame_state = WEBSOCKET_FRAME_STATE_READ_MESSAGE;
-            }
-        }
-    }
-    return;
-}
-                                   
-static handler_ctx *handler_ctx_init(void) {
+handler_ctx *handler_ctx_init(void) {
     handler_ctx *hctx = calloc(1, sizeof(*hctx));
 
-    hctx->state = WEBSOCKET_STATE_INIT;
-    hctx->frame_state = WEBSOCKET_FRAME_STATE_INIT;
-    hctx->host = buffer_init();
-    hctx->origin = buffer_init();
-    hctx->proto = buffer_init();
-    hctx->toclient = chunkqueue_init();
+    if (!hctx) {
+        return NULL;
+    }
+    hctx->state = MOD_WEBSOCKET_STATE_INIT;
+
+    hctx->req.host = buffer_init();
+    hctx->req.origin = buffer_init();
+    hctx->req.subproto = buffer_init();
+
+#ifdef	_MOD_WEBSOCKET_SPEC_76_
+    hctx->req.md5sum = buffer_init();
+#endif	/* _MOD_WEBSOCKET_SPEC_76_ */
+
+    hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
+    hctx->frame.siz = 0;
+    hctx->send_response = MOD_WEBSOCKET_FALSE;
+    hctx->client_closed = MOD_WEBSOCKET_TRUE;
+    hctx->server_closed = MOD_WEBSOCKET_TRUE;
+    hctx->write_queue = chunkqueue_init();
+    hctx->cds = (iconv_t)-1;
+    hctx->cdc = (iconv_t)-1;
     hctx->fd = -1;
-    hctx->fd_server_ndx = -1;
-    hctx->path = 0;
+    hctx->fde_ndx = -1;
+    hctx->ext = NULL;
+    hctx->con = NULL;
+    hctx->pd = NULL;
+
     return hctx;
 }
 
-static void handler_ctx_free(handler_ctx *hctx) {
-    buffer_free(hctx->host);
-    buffer_free(hctx->origin);
-    buffer_free(hctx->proto);
-    chunkqueue_free(hctx->toclient);
+void handler_ctx_free(handler_ctx *hctx) {
+    if (!hctx) {
+        return;
+    }
+    hctx->state = MOD_WEBSOCKET_STATE_INIT;
+    if (hctx->req.host) {
+        buffer_free(hctx->req.host);
+        hctx->req.host = NULL;
+    }
+    if (hctx->req.origin) {
+        buffer_free(hctx->req.origin);
+        hctx->req.origin = NULL;
+    }
+    if (hctx->req.subproto) {
+        buffer_free(hctx->req.subproto);
+        hctx->req.subproto = NULL;
+    }
+
+#ifdef	_MOD_WEBSOCKET_SPEC_76_
+    buffer_free(hctx->req.md5sum);
+#endif	/* _MOD_WEBSOCKET_SPEC_76_ */
+
+    if (hctx->write_queue) {
+        chunkqueue_free(hctx->write_queue);
+        hctx->write_queue = NULL;
+    }
+    if (hctx->cds != (iconv_t)-1) {
+        iconv_close(hctx->cds);
+        hctx->cds = (iconv_t)-1;
+    }
+    if (hctx->cdc != (iconv_t)-1) {
+        iconv_close(hctx->cdc);
+        hctx->cdc = (iconv_t)-1;
+    }
+    if (0 < hctx->fd) {
+        close(hctx->fd);
+        hctx->fd = -1;
+    }
     free(hctx);
+    return;
 }
 
 INIT_FUNC(mod_websocket_init) {
-    plugin_data *p;
+    plugin_data *p = NULL;
 
     p = calloc(1, sizeof(*p));
     return p;
 }
 
 FREE_FUNC(mod_websocket_free) {
+    size_t i;
     plugin_data *p = p_d;
+    plugin_config *s = NULL;
 
-    UNUSED(srv);
     if (p->config_storage) {
-        size_t i;
-
         for (i = 0; i < srv->config_context->used; i++) {
-            plugin_config *s = p->config_storage[i];
-
+            s = p->config_storage[i];
             if (s) {
-                array_free(s->extensions);
+                array_free(s->exts);
                 free(s);
             }
         }
@@ -287,457 +176,1170 @@ FREE_FUNC(mod_websocket_free) {
     return HANDLER_GO_ON;
 }
 
+int set_subproto_extension(data_array *dst, const data_array *src) {
+    size_t i, j;
+    data_string *host = NULL;
+    data_integer *port = NULL;
+    data_array *da_origins = NULL;
+    data_array *origins = NULL;
+    data_string *origin = NULL;
+    data_string *locale = NULL;
+    buffer *key = NULL;
+
+    for (i = src->value->used; i > 0; i--) {
+        key = src->value->data[i - 1]->key;
+        if ( 0 == strcmp(key->ptr, MOD_WEBSOCKET_CONFIG_HOST) ) {
+            host = data_string_init();
+            buffer_copy_string_buffer(host->key, key);
+            buffer_copy_string_buffer(host->value,
+                                      ((data_string *)(src->value->data[i - 1]))->value);
+            array_insert_unique(dst->value, (data_unset *)host);
+        } else if ( 0 == strcmp(key->ptr, MOD_WEBSOCKET_CONFIG_PORT) ) {
+            port = data_integer_init();
+            buffer_copy_string_buffer(port->key, key);
+            port->value = ((data_integer *)(src->value->data[i - 1]))->value;
+            array_insert_unique(dst->value, (data_unset *)port);
+        } else if ( 0 == strcmp(key->ptr, MOD_WEBSOCKET_CONFIG_SUBPROTO) ) {
+            buffer_copy_string_buffer(dst->key, ((data_string *)(src->value->data[i - 1]))->value);
+        } else if ( 0 == strcmp(key->ptr, MOD_WEBSOCKET_CONFIG_ORIGINS) ) {
+            origins = data_array_init();
+            buffer_copy_string_len(origins->key,
+                                   CONST_STR_LEN(MOD_WEBSOCKET_CONFIG_ORIGINS));
+            if (src->value->data[i - 1]->type == TYPE_STRING) {
+                origin = data_string_init();
+                buffer_copy_string_buffer(origin->value,
+                                          ((data_string *)src->value->data[i - 1])->value);
+                array_insert_unique(origins->value, (data_unset *)origin);
+            } else if (src->value->data[i - 1]->type == TYPE_ARRAY) {
+                da_origins = (data_array *)src->value->data[i - 1];
+                for (j = da_origins->value->used; j > 0; j--) {
+                    origin = data_string_init();
+                    buffer_copy_string_buffer(origin->value,
+                                              ((data_string *)da_origins->value->data[j - 1])->value);
+                    array_insert_unique(origins->value, (data_unset *)origin);
+                }
+            }
+            array_insert_unique(dst->value, (data_unset *)origins);
+        } else if ( 0 == strcmp(key->ptr, MOD_WEBSOCKET_CONFIG_LOCALE) ) {
+            locale = data_string_init();
+            buffer_copy_string_buffer(locale->key, key);
+            buffer_copy_string_buffer(locale->value,
+                                      ((data_string *)(src->value->data[i - 1]))->value);
+            array_insert_unique(dst->value, (data_unset *)locale);
+        }
+    }
+    if (!host || !port) {
+        return -1;
+    }
+    return 0;
+}
+
+int set_extension(data_array *dst, const data_array *src) {
+    int ret = -1;
+    size_t i;
+    data_array *subproto;
+
+    if (!dst || !src) {
+        return ret;
+    }
+    buffer_copy_string_buffer(dst->key, src->key);
+    if (src->value->data[0]->type == TYPE_STRING) {
+        subproto = data_array_init();
+        ret = set_subproto_extension(subproto, src);
+        array_insert_unique(dst->value, (data_unset *)subproto);
+    } else if (src->value->data[0]->type == TYPE_ARRAY) {
+        for (i = src->value->used; i > 0; i--) {
+            data_array *da_src = (data_array *)src->value->data[i - 1];
+
+            subproto = data_array_init();
+            ret = set_subproto_extension(subproto, da_src);
+            if (subproto->key->ptr &&
+                array_get_element(dst->value, subproto->key->ptr)) {
+                ret = -1;
+            }
+            if (!subproto->key->ptr && dst->value->used) {
+                ret = -1;
+            }
+            array_insert_unique(dst->value, (data_unset *)subproto);
+            if (0 != ret) {
+                break;
+            }
+        }
+    }
+    return ret;
+}
+
 SETDEFAULTS_FUNC(mod_websocket_set_defaults) {
     plugin_data *p = p_d;
-    data_unset *du;
-    size_t i = 0;
+    size_t i, j;
+    array *cfg_ctx = srv->config_context;
 
-    config_values_t cv[] = {
-        { "websocket.server", NULL, T_CONFIG_LOCAL, T_CONFIG_SCOPE_CONNECTION },
-        { "websocket.debug",  NULL, T_CONFIG_INT, T_CONFIG_SCOPE_CONNECTION },
-        { NULL,               NULL, T_CONFIG_UNSET, T_CONFIG_SCOPE_UNSET }
-    };
-
-    p->config_storage = calloc(1, srv->config_context->used * sizeof(specific_config *));
-
-    for (i = 0; i < srv->config_context->used; i++) {
-        plugin_config *s;
-        array *ca;
+    p->config_storage = calloc(1, cfg_ctx->used * sizeof(specific_config *));
+    if (!p->config_storage) {
+        log_error_write(srv, __FILE__, __LINE__, "s", "no memory.");
+        return HANDLER_ERROR;
+    }
+    for (i = 0; i < cfg_ctx->used; i++) {
+        plugin_config *s = NULL;
+        array *ca = NULL;
+        data_unset *du = NULL;
+        data_array *da = NULL;
+        data_array *ext = NULL;
+        config_values_t cv[] = {
+            { MOD_WEBSOCKET_CONFIG_SERVER, NULL, T_CONFIG_LOCAL, T_CONFIG_SCOPE_CONNECTION },
+            { MOD_WEBSOCKET_CONFIG_DEBUG,  NULL, T_CONFIG_SHORT, T_CONFIG_SCOPE_CONNECTION },
+            { NULL,                        NULL, T_CONFIG_UNSET, T_CONFIG_SCOPE_UNSET }
+        };
 
         s = malloc(sizeof(plugin_config));
-        s->extensions = array_init();
+        if (!s) { /* p->config_storage is freed in FREE_FUNC */
+            log_error_write(srv, __FILE__, __LINE__, "s", "no memory");
+            return HANDLER_ERROR;
+        }
+        s->exts = array_init();
         s->debug = 0;
-
-        cv[0].destination = s->extensions;
+        cv[0].destination = s->exts;
         cv[1].destination = &(s->debug);
-
         p->config_storage[i] = s;
-        ca = ((data_config *)srv->config_context->data[i])->value;
 
+        ca = ((data_config *)(cfg_ctx->data[i]))->value;
         if (config_insert_values_global(srv, ca, cv)) {
             return HANDLER_ERROR;
         }
-        du = array_get_element(ca, "websocket.server");
-        if (du) {
-            size_t j;
-            data_array *da = (data_array *)du;
+        du = array_get_element(ca, MOD_WEBSOCKET_CONFIG_SERVER);
+        if (!du) {
+            continue;
+        }
+        if (du->type != TYPE_ARRAY) {
+            log_error_write(srv, __FILE__, __LINE__, "ss",
+                            MOD_WEBSOCKET_CONFIG_SERVER,
+                            "must be array");
+            return HANDLER_ERROR;
+        }
 
-            if (du->type != TYPE_ARRAY) {
-                log_error_write(srv, __FILE__, __LINE__, "sss",
-                                "unexpected type for key: ",
-                                "websocket.server", "array of strings");
+        da = (data_array *)du;
+        for (j = 0; j < da->value->used; j++) {
+            int ret;
+            data_array *da_src = (data_array *)da->value->data[j];
+
+            if (da_src->type != TYPE_ARRAY) {
+                log_error_write(srv, __FILE__, __LINE__, "ss",
+                                da_src->key->ptr,
+                                "must be array");
                 return HANDLER_ERROR;
             }
-            for (j = 0; j < da->value->used; j++) {
-                data_array *da_ext = (data_array *)da->value->data[j];
-                data_array *dca;
-                data_websocket *dc;
-                data_string *dp;
-                data_array *dorig;
-
-                if (da_ext->type != TYPE_ARRAY) {
-                    log_error_write(srv, __FILE__, __LINE__, "sssbs",
-                                    "unexpected type for key: ",
-                                    "websocket.server",
-                                    "[", da->value->data[j]->key,
-                                    "](string)");
-                    return HANDLER_ERROR;
-                }
-
-                config_values_t pcv[] = {
-                    { "host"  , NULL, T_CONFIG_STRING, T_CONFIG_SCOPE_CONNECTION },
-                    { "port"  , NULL, T_CONFIG_INT   , T_CONFIG_SCOPE_CONNECTION },
-                    { "proto" , NULL, T_CONFIG_STRING, T_CONFIG_SCOPE_CONNECTION },
-                    { "origins", NULL, T_CONFIG_ARRAY , T_CONFIG_SCOPE_CONNECTION },
-                    { NULL    , NULL, T_CONFIG_UNSET , T_CONFIG_SCOPE_UNSET }
-                };
-
-                dc = data_websocket_init();
-                buffer_copy_string_buffer(dc->key, da_ext->key);
-                dp = data_string_init();
-                buffer_copy_string_len(dp->key, CONST_STR_LEN("proto"));
-                dorig = data_array_init();
-                buffer_copy_string_len(dorig->key, CONST_STR_LEN("origins"));
-		
-                pcv[0].destination = dc->host;
-                pcv[1].destination = &(dc->port);
-                pcv[2].destination = dp->value;
-                pcv[3].destination = dorig->value;
-
-                if (config_insert_values_internal(srv, da_ext->value, pcv)) {
-                    return HANDLER_ERROR;
-                }
-                dca = (data_array *)array_get_element(s->extensions, da_ext->key->ptr);
-                if (!dca) {
-                    dca = data_array_init();
-                    buffer_copy_string_buffer(dca->key, da_ext->key);
-                    array_insert_unique(s->extensions, (data_unset *)dca);
-                }
-                if (s->debug) {
-                    log_error_write(srv, __FILE__, __LINE__, "ssssd",
-                                    da_ext->key->ptr, "=>", dc->host->ptr,
-                                    ":", dc->port);
-                }
-                array_insert_unique(dca->value, (data_unset *)dc);
-                array_insert_unique(dca->value, (data_unset *)dp);
-                array_insert_unique(dca->value, (data_unset *)dorig);
+            ext = data_array_init();
+            ret = set_extension(ext, da_src);
+            array_insert_unique(s->exts, (data_unset *)ext);
+            if (0 != ret) {
+                log_error_write(srv, __FILE__, __LINE__, "ss",
+                                "configuration error:",
+                                da_src->key->ptr);
+                return HANDLER_ERROR;
             }
         }
     }
     return HANDLER_GO_ON;
 }
 
-static void websocket_connection_close(server *srv, handler_ctx *hctx) {
-    plugin_data *p;
-    connection *con;
+int tcp_server_connect(server *srv, handler_ctx *hctx) {
+    struct sockaddr *addr;
+    struct sockaddr_in addr_in;
 
-    if (!hctx) {
-        return;
-    }
-    p = hctx->plugin_data;
-    con = hctx->remote_conn;
-    if (hctx->fd != -1) {
-        fdevent_event_del(srv->ev, &(hctx->fd_server_ndx), hctx->fd);
-        fdevent_unregister(srv->ev, hctx->fd);
-        close(hctx->fd);
-        srv->cur_fds--;
-    }
-    handler_ctx_free(hctx);
-    con->plugin_ctx[p->id] = NULL;
-}
-
-static int websocket_establish_connection(server *srv, handler_ctx *hctx) {
-    struct sockaddr *connect_addr;
-    struct sockaddr_in connect_addr_in;
-
-#if defined(HAVE_IPV6) && defined(HAVE_INET_PTON)
-    struct sockaddr_in6 connect_addr_in6;
+#if defined (HAVE_IPV6) && defined (HAVE_INET_PTON)
+    struct sockaddr_in6 addr_in6;
 #endif
 
     socklen_t servlen;
+    data_unset *du;
+    buffer *host = NULL;
+    int port = 0;
 
-    plugin_data *p = hctx->plugin_data;
-    int connect_fd = hctx->fd;
-
-#if defined(HAVE_IPV6) && defined(HAVE_INET_PTON)
-    if (strstr(hctx->host->ptr, ":")) {
-        memset(&connect_addr_in6, 0, sizeof(connect_addr_in6));
-        connect_addr_in6.sin6_family = AF_INET6;
-        inet_pton(AF_INET6, hctx->host->ptr, (char *) &connect_addr_in6.sin6_addr);
-        connect_addr_in6.sin6_port = htons(hctx->port);
-        servlen = sizeof(connect_addr_in6);
-        connect_addr = (struct sockaddr *) &connect_addr_in6;
-    } else
-#endif
-    {
-        memset(&connect_addr_in, 0, sizeof(connect_addr_in));
-        connect_addr_in.sin_family = AF_INET;
-        connect_addr_in.sin_addr.s_addr = inet_addr(hctx->host->ptr);
-        connect_addr_in.sin_port = htons(hctx->port);
-        servlen = sizeof(connect_addr_in);
-        connect_addr = (struct sockaddr *) &connect_addr_in;
+    du = array_get_element(hctx->ext->value, MOD_WEBSOCKET_CONFIG_HOST);
+    if (!du) {
+        return -1;
     }
+    host = ((data_string *)du)->value;
+    du = array_get_element(hctx->ext->value, MOD_WEBSOCKET_CONFIG_PORT);
+    if (!du) {
+        return -1;
+    }
+    port = ((data_integer *)du)->value;
 
-    if (-1 == connect(connect_fd, connect_addr, servlen)) {
-        if (errno == EINPROGRESS || errno == EALREADY) {
-            if (p->conf.debug) {
-                log_error_write(srv, __FILE__, __LINE__, "sd",
-                                "connect delayed:", connect_fd);
-            }
-            return 1;
-        } else {
-            log_error_write(srv, __FILE__, __LINE__, "sdsd",
-                            "connect failed:", connect_fd,
-                            strerror(errno), errno);
+#if defined (HAVE_IPV6) && defined (HAVE_INET_PTON)
+    if (strstr(host->ptr, ":")) {
+        if (-1 == (hctx->fd = socket(AF_INET6, SOCK_STREAM, 0))) {
+            log_error_write(srv, __FILE__, __LINE__, "ss",
+                            "socket failed:", strerror(errno));
             return -1;
         }
-    }
-    if (p->conf.debug) {
-        log_error_write(srv, __FILE__, __LINE__, "sd",
-                        "connect succeeded: ", connect_fd);
-    }
-    return 0;
-}
-
-static int websocket_set_state(server *srv, handler_ctx *hctx,
-                               websocket_connection_state_t state) {
-    UNUSED(srv);
-    hctx->state = state;
-    return 0;
-}
-
-static handler_t websocket_write_request(server *srv, handler_ctx *hctx) {
-    plugin_data *p = hctx->plugin_data;
-    connection *con = hctx->remote_conn;
-    int ret;
-    size_t i, j, k;
-    struct {
-        const char *key; const char *val; int pass;
-    } m_hdrs[] = { /* mandatory headers */
-        { "Upgrade"   , "WebSocket", 0 },
-        { "Connection", "Upgrade"  , 0 },
-        { "Host"      , NULL       , 0 },
-        { "Origin"    , NULL       , 0 },
-    };
-
-    switch(hctx->state) {
-    case WEBSOCKET_STATE_INIT:
-        /* validate request header */
-        for (i = 0; i < con->request.headers->used; i++) {
-            data_string *ds = (data_string *)con->request.headers->data[i];
-
-            if (!ds->value->used || !ds->key->used) {
-                break;
-            }
-            for (j = 0; j < (sizeof(m_hdrs) / sizeof(m_hdrs[0])); j++) {
-                if (buffer_is_equal_string(ds->key,
-                                           m_hdrs[j].key,
-                                           strlen(m_hdrs[j].key))) {
-                    if (!m_hdrs[j].val) {
-                        if (buffer_is_equal_string(ds->key,
-                                                   CONST_STR_LEN("Origin"))) {
-                            if (p->conf.origins) {
-                                for (k = 0; k < p->conf.origins->used; k++) {
-                                    data_string *origin = (data_string *)p->conf.origins->data[k];
-
-                                    if (NULL != strstr(ds->value->ptr, origin->value->ptr)) {
-                                        buffer_copy_string_buffer(hctx->origin, ds->value);
-                                    }
-                                }
-                            } else {
-                                buffer_copy_string_buffer(hctx->origin, ds->value);
-                            }
-                        }
-                        m_hdrs[j].pass = 1;
-                    } else {
-                        if (buffer_is_equal_string(ds->value,
-                                                   m_hdrs[j].val,
-                                                   strlen(m_hdrs[j].val))) {
-                            m_hdrs[j].pass = 1;
-                        }
-                    }
-                    break;
-                }
-            }
-            if (buffer_is_equal_string(ds->key,
-                                       CONST_STR_LEN("WebSocket-Protocol"))) {
-                buffer_copy_string_buffer(hctx->proto, ds->value);
-            }
-        }
-        for (j = 0; j < (sizeof(m_hdrs) / sizeof(m_hdrs[0])); j++) {
-            if (!m_hdrs[j].pass) {
-                log_error_write(srv, __FILE__, __LINE__, "s",
-                                "not found some mandatory headers");
-                con->http_status = 406;
-                con->mode = DIRECT;
-                return HANDLER_FINISHED;
-            }
-        }
-        if (buffer_is_empty(hctx->origin)) {
-            log_error_write(srv, __FILE__, __LINE__, "s", "not allowed origin");
-            con->http_status = 403;
-            con->mode = DIRECT;
-            return HANDLER_FINISHED;
-        }            
-
-#if defined(HAVE_IPV6) && defined(HAVE_INET_PTON)
-        if (strstr(hctx->host->ptr,":")) {
-            if (-1 == (hctx->fd = socket(AF_INET6, SOCK_STREAM, 0))) {
-                log_error_write(srv, __FILE__, __LINE__, "ss",
-                                "socket failed: ", strerror(errno));
-                return HANDLER_ERROR;
-            }
-        } else
+        memset(&addr_in6, 0, sizeof(addr_in6));
+        addr_in6.sin6_family = AF_INET6;
+        inet_pton(AF_INET6, host->ptr, (char *)&addr_in6.sin6_addr);
+        addr_in6.sin6_port = htons(port);
+        servlen = sizeof(addr_in6);
+        addr = (struct sockaddr *) &addr_in6;
+    } else
 #endif
         {
             if (-1 == (hctx->fd = socket(AF_INET, SOCK_STREAM, 0))) {
                 log_error_write(srv, __FILE__, __LINE__, "ss",
-                                "socket failed: ", strerror(errno));
-                return HANDLER_ERROR;
+                                "socket failed:", strerror(errno));
+                return -1;
             }
-        }
-        hctx->fd_server_ndx = -1;
-        srv->cur_fds++;
-        fdevent_register(srv->ev, hctx->fd, websocket_handle_fdevent, hctx);
-        if (-1 == fdevent_fcntl_set(srv->ev, hctx->fd)) {
-            log_error_write(srv, __FILE__, __LINE__, "ss",
-                            "fcntl failed: ", strerror(errno));
-            return HANDLER_ERROR;
+            memset(&addr_in, 0, sizeof(addr_in));
+            addr_in.sin_family = AF_INET;
+            addr_in.sin_addr.s_addr = inet_addr(host->ptr);
+            addr_in.sin_port = htons(port);
+            servlen = sizeof(addr_in);
+            addr = (struct sockaddr *) &addr_in;
         }
 
-        /* fall through */
-
-    case WEBSOCKET_STATE_CONNECT:
-        /* try to finish the connect() */
-        if (hctx->state == WEBSOCKET_STATE_INIT) {
-            /* first round */
-            switch (websocket_establish_connection(srv, hctx)) {
-            case 1:
-                websocket_set_state(srv, hctx, WEBSOCKET_STATE_CONNECT);
-                /*
-                 * connection is in progress,
-                 * wait for an event and call getsockopt() below
-                 */
-                fdevent_event_add(srv->ev, &(hctx->fd_server_ndx), hctx->fd, FDEVENT_OUT);
-                return HANDLER_WAIT_FOR_EVENT;
-            case -1:
-                hctx->fd_server_ndx = -1;
-                return HANDLER_ERROR;
-            default:
-                /* everything is ok, go on */
-                break;
+    hctx->fde_ndx = -1;
+    srv->cur_fds++;
+    fdevent_register(srv->ev, hctx->fd, websocket_handle_fdevent, hctx);
+    if (-1 == fdevent_fcntl_set(srv->ev, hctx->fd)) {
+        log_error_write(srv, __FILE__, __LINE__, "ss",
+                        "fcntl failed:", strerror(errno));
+        return -1;
+    }
+    if (-1 == connect(hctx->fd, addr, servlen)) {
+        if (errno == EINPROGRESS || errno == EALREADY) {
+            hctx->state = MOD_WEBSOCKET_STATE_CONNECTING;
+            if (hctx->pd->conf.debug) {
+                log_error_write(srv, __FILE__, __LINE__, "sdsssd",
+                                "connect - delayed: fd =",
+                                hctx->fd, "=>", host->ptr, ":", port);
             }
+            return 1;
         } else {
-            int socket_error;
-            socklen_t socket_error_len = sizeof(socket_error);
-
-            /* we don't need it anymore */
-            fdevent_event_del(srv->ev, &(hctx->fd_server_ndx), hctx->fd);
-
-            /* try to finish the connect() */
-            if (0 != getsockopt(hctx->fd, SOL_SOCKET, SO_ERROR, &socket_error, &socket_error_len)) {
-                log_error_write(srv, __FILE__, __LINE__, "ss",
-                                "getsockopt failed:", strerror(errno));
-                return HANDLER_ERROR;
+            if (hctx->pd->conf.debug) {
+                log_error_write(srv, __FILE__, __LINE__, "sdsssd",
+                                "connect - failed: fd =",
+                                hctx->fd, "=>", host->ptr, ":", port);
             }
-            if (socket_error != 0) {
-                log_error_write(srv, __FILE__, __LINE__, "ssbsd",
-                                "establishing connection failed:",
-                                strerror(socket_error),
-                                hctx->host, ":", hctx->port);
-                con->http_status = 503;
+            return -1;
+        }
+    }
+    if (hctx->pd->conf.debug) {
+        log_error_write(srv, __FILE__, __LINE__, "sdsssd",
+                        "connect - success: fd =",
+                        hctx->fd, "=>", host->ptr, ":", port);
+    }
+    return 0;
+}
+
+void tcp_server_disconnect(server *srv, handler_ctx *hctx) {
+    connection *con = NULL;
+    plugin_data *p = NULL;
+
+    if (!srv || !hctx) {
+        return;
+    }
+    con = hctx->con;
+    p = hctx->pd;
+    if (0 < hctx->fd) {
+        if (p->conf.debug) {
+            log_error_write(srv, __FILE__, __LINE__, "sd",
+                            "close: fd =", hctx->fd);
+        }
+        fdevent_event_del(srv->ev, &(hctx->fde_ndx), hctx->fd);
+        fdevent_unregister(srv->ev, hctx->fd);
+        close(hctx->fd);
+        hctx->fd = -1;
+        srv->cur_fds--;
+    }
+    handler_ctx_free(hctx);
+    con->plugin_ctx[p->id] = NULL;
+    return;
+}
+
+mod_websocket_bool_t check_const_headers(const array *headers) {
+    struct {
+        const char *key;
+        const char *val;
+        mod_websocket_bool_t pass;
+    } const_hdrs[] = {
+        {
+            MOD_WEBSOCKET_CONNECTION_STR,
+            MOD_WEBSOCKET_UPGRADE_STR,
+            MOD_WEBSOCKET_FALSE
+        },
+        {
+            MOD_WEBSOCKET_UPGRADE_STR,
+            MOD_WEBSOCKET_WEBSOCKET_STR,
+            MOD_WEBSOCKET_FALSE
+        },
+    };
+    size_t i, j;
+    mod_websocket_bool_t ret = MOD_WEBSOCKET_TRUE;
+    data_string *header = NULL;
+
+    if (!headers) {
+        return MOD_WEBSOCKET_FALSE;
+    }
+    for (i = headers->used; i > 0; i--) {
+        header = (data_string *)headers->data[i - 1];
+        if (!header->key->used || !header->value->used) {
+            return MOD_WEBSOCKET_FALSE;
+        }
+        for (j = (sizeof(const_hdrs) / sizeof(const_hdrs[0])); j > 0; j--) {
+            if ( buffer_is_equal_string(header->key,
+                                        const_hdrs[j - 1].key,
+                                        strlen(const_hdrs[j - 1].key)) &&
+                 buffer_is_equal_string(header->value,
+                                        const_hdrs[j - 1].val,
+                                        strlen(const_hdrs[j - 1].val)) ) {
+                const_hdrs[j - 1].pass = MOD_WEBSOCKET_TRUE;
+            }
+        }
+    }
+    for (i = (sizeof(const_hdrs) / sizeof(const_hdrs[0])); i > 0; i--) {
+        ret &= const_hdrs[i - 1].pass;
+    }
+    return ret;
+}
+
+int get_subproto_field(buffer *subproto, const array *headers) {
+    size_t i;
+    data_string *header = NULL;
+
+    if (!subproto || !headers) {
+        return -1;
+    }
+    for (i = headers->used; i > 0; i--) {
+        header = (data_string *)headers->data[i - 1];
+        if (!header->key->used || !header->value->used) {
+            return -1;
+        }
+
+#ifdef	_MOD_WEBSOCKET_SPEC_UP_TO_75_
+        if ( buffer_is_equal_string(header->key,
+                                    CONST_STR_LEN(MOD_WEBSOCKET_WEBSOCKET_PROTOCOL_STR)) ) {
+            return buffer_copy_string_buffer(subproto, header->value);
+        }
+#endif	/* _MOD_WEBSOCKET_SPEC_UP_TO_75_ */
+
+#ifdef	_MOD_WEBSOCKET_SPEC_76_
+        if ( buffer_is_equal_string(header->key,
+                                    CONST_STR_LEN(MOD_WEBSOCKET_SEC_WEBSOCKET_PROTOCOL_STR)) ) {
+            return buffer_copy_string_buffer(subproto, header->value);
+        }
+#endif	/* _MOD_WEBSOCKET_SPEC_76_ */
+
+    }
+    return 0;
+}
+
+data_array *get_subproto_extension(const array *subprotos, buffer *subproto) {
+    size_t i;
+    data_array *da_subproto = NULL;
+    data_array *ext = NULL;
+
+    if (!subprotos || !subproto) {
+        return NULL;
+    }
+    if (buffer_is_empty(subproto) && subprotos->used == 1) {
+        ext = (data_array *)subprotos->data[0];
+        return ext;
+    }
+    for (i = subprotos->used; i > 0; i--) {
+        da_subproto = (data_array *)subprotos->data[i - 1];
+        if (buffer_is_equal(da_subproto->key, subproto)) {
+            ext = (data_array *)da_subproto;
+            break;
+        }
+    }
+    return ext;
+}
+
+int get_origin_field(buffer *origin, const array *headers) {
+    size_t i;
+    data_string *header = NULL;
+
+    if (!origin || !headers) {
+        return -1;
+    }
+    for (i = headers->used; i > 0; i--) {
+        header = (data_string *)headers->data[i - 1];
+        if (!header->key->used || !header->value->used) {
+            return -1;
+        }
+        if (buffer_is_equal_string(header->key,
+                                   CONST_STR_LEN(MOD_WEBSOCKET_ORIGIN_STR))) {
+            return buffer_copy_string_buffer(origin, header->value);
+        }
+    }
+    return -1;
+}
+
+mod_websocket_bool_t is_allowed_origin(const array *allowed_origins,
+                                       const buffer *origin) {
+    size_t i;
+    data_string *allowed_origin = NULL;
+
+    if (!allowed_origins || !allowed_origins->used) {
+        return MOD_WEBSOCKET_TRUE;
+    }
+    if (!origin) {
+        return MOD_WEBSOCKET_FALSE;
+    }
+    for (i = allowed_origins->used; i > 0; i--) {
+        allowed_origin = (data_string *)allowed_origins->data[i - 1];
+        if (NULL != strstr(origin->ptr, allowed_origin->value->ptr)) {
+            return MOD_WEBSOCKET_TRUE;
+        }
+    }
+    return MOD_WEBSOCKET_FALSE;
+}
+
+int get_host_field(buffer *host, const array *headers) {
+    size_t i;
+    data_string *header = NULL;
+
+    if (!host || !headers) {
+        return -1;
+    }
+    for (i = headers->used; i > 0; i--) {
+        header = (data_string *)headers->data[i - 1];
+        if (!header->key->used || !header->value->used) {
+            return -1;
+        }
+        if (buffer_is_equal_string(header->key,
+                                   CONST_STR_LEN(MOD_WEBSOCKET_HOST_STR))) {
+            return buffer_copy_string_buffer(host, header->value);
+        }
+    }
+    return -1;
+}
+
+#ifdef	_MOD_WEBSOCKET_SPEC_76_
+int get_key1_field(buffer *key, const array *headers) {
+    size_t i;
+    data_string *header = NULL;
+
+    if (!key || !headers) {
+        return -1;
+    }
+    for (i = headers->used; i > 0; i--) {
+        header = (data_string *)headers->data[i - 1];
+        if (!header->key->used || !header->value->used) {
+            return -1;
+        }
+        if (buffer_is_equal_string(header->key,
+                                   CONST_STR_LEN(MOD_WEBSOCKET_SEC_WEBSOCKET_KEY1_STR))) {
+            return buffer_copy_string_buffer(key, header->value);
+        }
+    }
+    return -1;
+}
+
+int get_key2_field(buffer *key, const array *headers) {
+    size_t i;
+    data_string *header = NULL;
+
+    if (!key || !headers) {
+        return -1;
+    }
+    for (i = headers->used; i > 0; i--) {
+        header = (data_string *)headers->data[i - 1];
+        if (!header->key->used || !header->value->used) {
+            return -1;
+        }
+        if (buffer_is_equal_string(header->key,
+                                   CONST_STR_LEN(MOD_WEBSOCKET_SEC_WEBSOCKET_KEY2_STR))) {
+            return buffer_copy_string_buffer(key, header->value);
+        }
+    }
+    return -1;
+}
+
+int get_key3_field(buffer *key, const handler_ctx *hctx) {
+    const char *body = NULL;
+    int ret;
+
+    if (!key || !hctx) {
+        return -1;
+    }
+    if (hctx->con->read_queue->first != hctx->con->read_queue->last) {
+        return -1; /* XXX: key3 is separated */
+    }
+    body = &hctx->con->read_queue->first->mem->ptr[hctx->con->read_queue->first->offset];
+    ret = buffer_copy_string_len(key, body, MOD_WEBSOCKET_SEC_WEBSOCKET_KEY3_LEN);
+    return ret;
+}
+
+uint32_t count_spc(const buffer *b) {
+    size_t i;
+    uint32_t c = 0;
+
+    if (!b || !b->used) {
+        return 0;
+    }
+    for (i = b->used; i > 0; i--) {
+        c += (b->ptr[i - 1] == 0x20);
+    }
+    return c;
+}
+
+int get_key_number(uint32_t *ret, const buffer *b) {
+#define	UINT32_MAX_STRLEN	(10)
+    char tmp[UINT32_MAX_STRLEN + 1];
+    size_t i, j = 0;
+    unsigned long n;
+    uint32_t s;
+
+    if (!b || !b->used) {
+        return -1;
+    }
+    memset(tmp, 0, sizeof(tmp));
+    for (i = 0; i < b->used; i++) {
+        if (isdigit((int)b->ptr[i])) {
+            tmp[j] = b->ptr[i];
+            j++;
+        }
+        if (UINT32_MAX_STRLEN < j) {
+            return -1;
+        }
+    }
+    n = strtoul(tmp, NULL, 10);
+    if (UINT32_MAX < n) {
+        return -1;
+    }
+    s = count_spc(b);
+    if (s == 0) {
+        return -1;
+    }
+    *ret = (uint32_t)(n / s);
+    return 0;
+#undef	UINT32_MAX_STRLEN
+}
+
+int create_MD5_sum(handler_ctx *hctx) {
+#define MD5SUM_STRLEN	(16)
+    unsigned char final[MD5SUM_STRLEN];
+    unsigned char buf[MD5SUM_STRLEN];
+    buffer *key1 = buffer_init();
+    buffer *key2 = buffer_init();
+    buffer *key3 = buffer_init();
+    uint32_t k1 = 0, k2 = 0;
+    MD5_CTX ctx;
+
+    if (!hctx) {
+        return -1;
+    }
+    if (get_key1_field(key1, hctx->con->request.headers) < 0) {
+        goto err_out;
+    }
+    if (get_key2_field(key2, hctx->con->request.headers) < 0) {
+        goto err_out;
+    }
+    if (get_key3_field(key3, hctx) < 0) {
+        goto err_out;
+    }
+    if (get_key_number(&k1, key1) < 0) {
+        return -1;
+    }
+    if (get_key_number(&k2, key2) < 0) {
+        return -1;
+    }
+    buf[0] = k1 >> 24;
+    buf[1] = k1 >> 16;
+    buf[2] = k1 >> 8;
+    buf[3] = k1;
+    buf[4] = k2 >> 24;
+    buf[5] = k2 >> 16;
+    buf[6] = k2 >> 8;
+    buf[7] = k2;
+    memcpy(&buf[MOD_WEBSOCKET_SEC_WEBSOCKET_KEY3_LEN], key3->ptr,
+           MOD_WEBSOCKET_SEC_WEBSOCKET_KEY3_LEN);
+    MD5_Init(&ctx);
+    MD5_Update(&ctx, buf, sizeof(buf));
+    MD5_Final(final, &ctx);
+    buffer_free(key1);
+    buffer_free(key2);
+    buffer_free(key3);
+    return buffer_copy_string_len(hctx->req.md5sum, (char *)final, MD5SUM_STRLEN);
+
+ err_out:
+    buffer_free(key1);
+    buffer_free(key2);
+    buffer_free(key3);
+    return -1;
+#undef	MD5SUM_STRLEN
+}
+#endif /* _MOD_WEBSOCKET_SPEC_76_ */
+
+int create_handshake_response(handler_ctx *hctx) {
+    size_t i;
+    struct {
+        const char *b;
+    } const_hdrs[] = {
+        { "HTTP/1.1 101 Web Socket Protocol Handshake\r\n" },
+        { "Upgrade: WebSocket\r\n" },
+        { "Connection: Upgrade\r\n" },
+    };
+    buffer *resp = NULL;
+
+    if (!hctx) {
+        return -1;
+    }
+    resp = chunkqueue_get_append_buffer(hctx->write_queue);
+
+    for (i = 0; i < (sizeof(const_hdrs) / sizeof(const_hdrs[0])); i++) {
+        buffer_append_string(resp, const_hdrs[i].b);
+    }
+#ifdef	_MOD_WEBSOCKET_SPEC_UP_TO_75_
+    buffer_append_string(resp, MOD_WEBSOCKET_WEBSOCKET_ORIGIN_STR);
+    buffer_append_string(resp, ": ");
+    buffer_append_string_buffer(resp, hctx->req.origin);
+    buffer_append_string(resp, MOD_WEBSOCKET_CRLF_STR);
+
+    if (!buffer_is_empty(hctx->req.subproto)) {
+        buffer_append_string(resp, MOD_WEBSOCKET_WEBSOCKET_PROTOCOL_STR);
+        buffer_append_string(resp, ": ");
+        buffer_append_string_buffer(resp, hctx->req.subproto);
+        buffer_append_string(resp, MOD_WEBSOCKET_CRLF_STR);
+    }
+    buffer_append_string(resp, MOD_WEBSOCKET_WEBSOCKET_LOCATION_STR);
+    buffer_append_string(resp, ": ");
+#endif	/* _MOD_WEBSOCKET_SPEC_UP_TO_75_ */
+
+#ifdef	_MOD_WEBSOCKET_SPEC_76_
+    buffer_append_string(resp, MOD_WEBSOCKET_SEC_WEBSOCKET_ORIGIN_STR);
+    buffer_append_string(resp, ": ");
+    buffer_append_string_buffer(resp, hctx->req.origin);
+    buffer_append_string(resp, MOD_WEBSOCKET_CRLF_STR);
+
+    if (!buffer_is_empty(hctx->req.subproto)) {
+        buffer_append_string(resp, MOD_WEBSOCKET_SEC_WEBSOCKET_PROTOCOL_STR);
+        buffer_append_string(resp, ": ");
+        buffer_append_string_buffer(resp, hctx->req.subproto);
+        buffer_append_string(resp, MOD_WEBSOCKET_CRLF_STR);
+    }
+    buffer_append_string(resp, MOD_WEBSOCKET_SEC_WEBSOCKET_LOCATION_STR);
+    buffer_append_string(resp, ": ");
+#endif	/* _MOD_WEBSOCKET_SPEC_76_ */
+
+    if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
+
+#ifdef	USE_OPENSSL
+        buffer_append_string(resp, MOD_WEBSOCKET_SCHEME_WSS);
+#else	/* SSL is not available */
+        return -1;
+#endif	/* USE_OPENSSL */
+
+    } else {
+        buffer_append_string(resp, MOD_WEBSOCKET_SCHEME_WS);
+    }
+    buffer_append_string_buffer(resp, hctx->req.host);
+    buffer_append_string_buffer(resp, hctx->con->uri.path);
+    buffer_append_string(resp, MOD_WEBSOCKET_CRLF_STR);
+    buffer_append_string(resp, MOD_WEBSOCKET_CRLF_STR);
+
+#ifdef	_MOD_WEBSOCKET_SPEC_76_
+    buffer_append_string_buffer(resp, hctx->req.md5sum);
+    buffer_append_string(resp, MOD_WEBSOCKET_CRLF_STR);
+#endif	/* _MOD_WEBSOCKET_SPEC_76_ */
+
+    return 0;
+}
+
+SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
+    plugin_data *p = p_d;
+    handler_ctx *hctx = con->plugin_ctx[p->id];
+    data_array *origins = NULL;
+    data_string *locale = NULL;
+    char *nlinfo = NULL;
+    int ret;
+    int sockret;
+    socklen_t socklen = sizeof(sockret);
+
+    if (!hctx) {
+        return HANDLER_GO_ON;
+    }
+    /* not my job */
+    if (con->mode != p->id) {
+        return HANDLER_GO_ON;
+    }
+
+    switch (hctx->state) {
+    case MOD_WEBSOCKET_STATE_INIT:
+        /* ok, check request */
+        if (!check_const_headers(con->request.headers)) {
+            if (p->conf.debug) {
+                log_error_write(srv, __FILE__, __LINE__, "s",
+                                "not found some mandatory headers");
+            }
+            con->http_status = MOD_WEBSOCKET_BAD_REQUEST;
+            con->mode = DIRECT;
+            return HANDLER_FINISHED;
+        }
+        if (0 != get_subproto_field(hctx->req.subproto,
+                                    con->request.headers)) {
+            if (p->conf.debug) {
+                log_error_write(srv, __FILE__, __LINE__, "s",
+                                "recv invalid request");
+            }
+            con->http_status = MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
+            con->mode = DIRECT;
+            return HANDLER_FINISHED;
+        }
+        if ( (hctx->ext = get_subproto_extension(hctx->ext->value,
+                                                 hctx->req.subproto)) == NULL ) {
+            if (p->conf.debug) {
+                log_error_write(srv, __FILE__, __LINE__, "ss",
+                                "not found specified sub protocol:",
+                                hctx->req.subproto->ptr);
+            }
+            con->http_status = MOD_WEBSOCKET_NOT_FOUND;
+            con->mode = DIRECT;
+            return HANDLER_FINISHED;
+        }
+        if (0 != get_origin_field(hctx->req.origin, con->request.headers)) {
+            if (p->conf.debug) {
+                log_error_write(srv, __FILE__, __LINE__, "s",
+                                "not found origin header");
+            }
+            con->http_status = MOD_WEBSOCKET_BAD_REQUEST;
+            con->mode = DIRECT;
+            return HANDLER_FINISHED;
+        }
+        origins = (data_array *)array_get_element(hctx->ext->value, MOD_WEBSOCKET_CONFIG_ORIGINS);
+        if (origins) {
+            if (!is_allowed_origin(origins->value, hctx->req.origin)) {
+                if (p->conf.debug) {
+                    log_error_write(srv, __FILE__, __LINE__, "ss",
+                                    "not allowed origin:", hctx->req.origin->ptr);
+                }
+                con->http_status = MOD_WEBSOCKET_FORBIDDEN;
                 con->mode = DIRECT;
                 return HANDLER_FINISHED;
             }
+        }
+        if (0 != get_host_field(hctx->req.host, con->request.headers)) {
             if (p->conf.debug) {
-                log_error_write(srv, __FILE__, __LINE__,  "s",
-                                "websocket - connect - delayed success");
+                log_error_write(srv, __FILE__, __LINE__, "s",
+                                "not found host headers");
             }
+            con->http_status = MOD_WEBSOCKET_BAD_REQUEST;
+            con->mode = DIRECT;
+            return HANDLER_FINISHED;
         }
 
-        websocket_set_state(srv, hctx, WEBSOCKET_STATE_CONNECTED);
-
-        if (!hctx->noresp) {
-            struct {
-                const char *b; size_t l;
-            } strs[] = {
-                { CONST_STR_LEN("HTTP/1.1 101 Web Socket Protocol Handshake\r\n") },
-                { CONST_STR_LEN("Upgrade: WebSocket\r\n") },
-                { CONST_STR_LEN("Connection: Upgrade\r\n") },
-            };
-            buffer *b = chunkqueue_get_append_buffer(hctx->toclient);
-            server_socket *srv_socket = con->srv_socket;
-            
-            for (i = 0; i < (int)(sizeof(strs)/sizeof(strs[0])); i++) {
-                buffer_append_string_len(b, strs[i].b, strs[i].l);
+#ifdef	_MOD_WEBSOCKET_SPEC_76_
+        if (create_MD5_sum(hctx) < 0) {
+            if (p->conf.debug) {
+                log_error_write(srv, __FILE__, __LINE__, "s",
+                                "failed to create MD5 sum for response");
             }
-            buffer_append_string_len(b, CONST_STR_LEN("WebSocket-Origin: "));
-            buffer_append_string_buffer(b, hctx->origin);
-            buffer_append_string_len(b, CONST_STR_LEN("\r\nWebSocket-Location: "));
-            if (srv_socket->is_ssl) {
-#ifdef USE_OPENSSL
-                buffer_append_string_len(b, CONST_STR_LEN("wss://"));
-#else
-                hctx->server_closed = 1;
-                return HANDLER_ERROR;
-#endif
-            } else {
-                buffer_append_string_len(b, CONST_STR_LEN("ws://"));
-            }
-            buffer_append_string_buffer(b, con->server_name);
-            buffer_append_string_buffer(b, con->uri.path);
-            buffer_append_string_len(b, CONST_STR_LEN("\r\n"));
-            if (!buffer_is_empty(hctx->proto)) {
-                buffer_append_string_len(b, CONST_STR_LEN("WebSocket-Protocol: "));
-                buffer_append_string_buffer(b, hctx->proto);
-                buffer_append_string_len(b, CONST_STR_LEN("\r\n"));
-            }
-            buffer_append_string_len(b, CONST_STR_LEN("\r\n"));
+            con->http_status = MOD_WEBSOCKET_BAD_REQUEST;
+            con->mode = DIRECT;
+            return HANDLER_FINISHED;
         }
-        connection_set_state(srv, con, CON_STATE_READ_CONTINUOUS);
+#endif	/* _MOD_WEBSOCKET_SPEC_76_ */
+
+        /* ok, next connect to server */
+        switch (tcp_server_connect(srv, hctx)) {
+        case 0: /* connected */
+            hctx->state = MOD_WEBSOCKET_STATE_CONNECTED;
+            break;
+        case 1: /* connecting */
+            hctx->state = MOD_WEBSOCKET_STATE_CONNECTING;
+            fdevent_event_add(srv->ev, &(hctx->fde_ndx), hctx->fd, FDEVENT_OUT);
+            return HANDLER_WAIT_FOR_EVENT;
+            break;
+        default: /* could not connect */
+            log_error_write(srv, __FILE__, __LINE__, "sd",
+                            "connect - failed: fd =", hctx->fd);
+            hctx->con->http_status = MOD_WEBSOCKET_SERVICE_UNAVAILABLE;
+            hctx->con->mode = DIRECT;
+            return HANDLER_FINISHED;
+            break;
+        }
 
         /* fall through */
-    case WEBSOCKET_STATE_CONNECTED:
-        if (!hctx->server_closed) {
-            handle_websocket_frame(hctx, con->read_queue);
-            ret = srv->network_backend_write(srv, con, hctx->fd, con->read_queue);
-            chunkqueue_remove_finished_chunks(con->read_queue);
 
-            if (-1 == ret) { /* error on our side */
-                log_error_write(srv, __FILE__, __LINE__, "ssd",
-                                "write failed:", strerror(errno), errno);
-            } else if (-2 == ret) { /* remote close */
-                log_error_write(srv, __FILE__, __LINE__, "ssd",
-                                "write failed, remote connection close:",
-                                strerror(errno), errno);
-                hctx->server_closed = 1;
-            }
-            if (hctx->frame_state == WEBSOCKET_FRAME_STATE_READ_MESSAGE) {
-                hctx->frame_siz = hctx->frame_siz - con->read_queue->bytes_out;
-                if (hctx->frame_siz <= 0) {
-                    hctx->frame_state = WEBSOCKET_FRAME_STATE_INIT;
-                }
-            }
+    case MOD_WEBSOCKET_STATE_CONNECTING:
+        if (0 != getsockopt(hctx->fd, SOL_SOCKET, SO_ERROR,
+                            &sockret, &socklen)) {
+            log_error_write(srv, __FILE__, __LINE__, "ss",
+                            "getsockopt failed:", strerror(errno));
+            tcp_server_disconnect(srv, hctx);
+            return HANDLER_ERROR;
         }
-
-        if (!hctx->client_closed) {
-            con->keep_alive = 1;
-            ret = ws_network_write_chunkqueue(srv, con, hctx->toclient);
-            con->keep_alive = 0;
-            chunkqueue_remove_finished_chunks(hctx->toclient);
-            if (-1 == ret) { /* error on our side */
-                log_error_write(srv, __FILE__, __LINE__, "ssd",
-                                "write failed:", strerror(errno), errno);
-            } else if (-2 == ret) { /* remote close */
-                log_error_write(srv, __FILE__, __LINE__, "ssd",
-                                "write failed, remote connection close:",
-                                strerror(errno), errno);
-                hctx->client_closed = 1;
-            }
+        if (0 != sockret) {
+            log_error_write(srv, __FILE__, __LINE__, "sd",
+                            "connect - failed: fd =", hctx->fd);
+            hctx->con->http_status = MOD_WEBSOCKET_SERVICE_UNAVAILABLE;
+            hctx->con->mode = DIRECT;
+            return HANDLER_FINISHED;
         }
+        if (hctx->state == MOD_WEBSOCKET_STATE_CONNECTING && p->conf.debug) {
+            log_error_write(srv, __FILE__, __LINE__,  "sd",
+                            "connect - delayed success: fd =", hctx->fd);
+        }
+        hctx->state = MOD_WEBSOCKET_STATE_SEND_RESPONSE;
+        hctx->server_closed = MOD_WEBSOCKET_FALSE;
+        hctx->client_closed = MOD_WEBSOCKET_FALSE;
 
-        if (!chunkqueue_is_empty(con->read_queue)) {
-            fdevent_event_del(srv->ev, &(hctx->fd_server_ndx), hctx->fd);
-            fdevent_event_add(srv->ev, &(hctx->fd_server_ndx), hctx->fd, FDEVENT_OUT);
+        /* ok, prepare descripter for iconv */
+        locale = (data_string *)array_get_element(hctx->ext->value,
+                                                  MOD_WEBSOCKET_CONFIG_LOCALE);
+        if (locale) {
+            if (p->conf.debug) {
+                log_error_write(srv, __FILE__, __LINE__, "ss",
+                                "specified locale:", locale->value->ptr);
+            }
+            hctx->cds = iconv_open(locale->value->ptr,
+                                   MOD_WEBSOCKET_UTF8_STR);
+            hctx->cdc = iconv_open(MOD_WEBSOCKET_UTF8_STR,
+                                   locale->value->ptr);
         } else {
-            fdevent_event_del(srv->ev, &(hctx->fd_server_ndx), hctx->fd);
-            if (hctx->client_closed) {
-                websocket_connection_close(srv, hctx);
-            } else if (chunkqueue_is_empty(hctx->toclient)) {
-                fdevent_event_add(srv->ev, &(hctx->fd_server_ndx), hctx->fd, FDEVENT_IN);
+            setlocale(LC_ALL, "");
+            nlinfo = nl_langinfo(CODESET);
+            if (p->conf.debug) {
+                log_error_write(srv, __FILE__, __LINE__, "ss",
+                                "use default locale:", nlinfo);
             }
+            hctx->cds = iconv_open(nlinfo, MOD_WEBSOCKET_UTF8_STR);
+            hctx->cdc = iconv_open(MOD_WEBSOCKET_UTF8_STR, nlinfo);
+        }
+        if ((iconv_t) -1 == hctx->cds || (iconv_t) -1 == hctx->cdc) {
+            log_error_write(srv, __FILE__, __LINE__, "s",
+                            "iconv_open failed.");
+            hctx->con->http_status = MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
+            hctx->con->mode = DIRECT;
+            tcp_server_disconnect(srv, hctx);
+            return HANDLER_FINISHED;
         }
 
-        if (!chunkqueue_is_empty(hctx->toclient)) {
-            fdevent_event_del(srv->ev, &(con->fde_ndx), con->fd);
+        /* fall through */
+
+    case MOD_WEBSOCKET_STATE_SEND_RESPONSE:
+        if (!hctx->send_response) {
+            ret = create_handshake_response(hctx);
+            if (ret < 0) {
+                log_error_write(srv, __FILE__, __LINE__, "s",
+                                "create handshake response error");
+                tcp_server_disconnect(srv, hctx);
+                return HANDLER_ERROR;
+            }
+            connection_set_state(srv, hctx->con, CON_STATE_READ_CONTINUOUS);
+            hctx->send_response = MOD_WEBSOCKET_TRUE;
+            return HANDLER_WAIT_FOR_EVENT;
+        } else {
+            if (chunkqueue_is_empty(hctx->write_queue)) {
+                hctx->state = MOD_WEBSOCKET_STATE_CONNECTED;
+                chunkqueue_reset(hctx->con->read_queue);
+                return HANDLER_WAIT_FOR_EVENT;
+            } else {
+                ret = srv->network_backend_write(srv, con, hctx->con->fd, hctx->write_queue);
+                if (0 <= ret) {
+                    chunkqueue_remove_finished_chunks(hctx->write_queue);
+                } else {
+                    log_error_write(srv, __FILE__, __LINE__, "ss",
+                                    "send handshake response error:",
+                                    strerror(errno));
+                    tcp_server_disconnect(srv, hctx);
+                    return HANDLER_ERROR;
+                }
+                return HANDLER_WAIT_FOR_EVENT;
+            }
+        }
+        /* never reach */
+        log_error_write(srv, __FILE__, __LINE__, "s", "invalid state");
+        tcp_server_disconnect(srv, hctx);
+        return HANDLER_ERROR;
+        break;
+
+    case MOD_WEBSOCKET_STATE_CONNECTED:
+        if (hctx->server_closed) {
+            if (p->conf.debug) {
+                log_error_write(srv, __FILE__, __LINE__, "s",
+                                "disconnected from server");
+            }
+            if (!hctx->client_closed) {
+                websocket_send_closing_frame(srv, hctx);
+            }
+            break;
+        } else {
+            if (websocket_handle_frame(hctx) < 0) {
+                log_error_write(srv, __FILE__, __LINE__, "s",
+                                "recv closing frame or invalid frame");
+                break;
+            }
+            ret = srv->network_backend_write(srv, con, hctx->fd, con->read_queue);
+            if (0 <= ret) {
+                chunkqueue_remove_finished_chunks(con->read_queue);
+            } else {
+                log_error_write(srv, __FILE__, __LINE__, "ss",
+                                "write error(server):", strerror(errno));
+                break;
+            }
+        }
+        if (hctx->client_closed) {
+            if (p->conf.debug) {
+                log_error_write(srv, __FILE__, __LINE__, "s",
+                                "disconnected from client");
+            }
+            break;
+        } else {
+            ret = srv->network_backend_write(srv, con, hctx->con->fd, hctx->write_queue);
+            if (0 <= ret) {
+                chunkqueue_remove_finished_chunks(hctx->write_queue);
+            } else {
+                log_error_write(srv, __FILE__, __LINE__, "ss",
+                                "write error(client):", strerror(errno));
+                break;
+            }
+        }
+        fdevent_event_del(srv->ev, &(hctx->fde_ndx), hctx->fd);
+        fdevent_event_del(srv->ev, &(con->fde_ndx), con->fd);
+        if (!chunkqueue_is_empty(con->read_queue)) {
+            fdevent_event_add(srv->ev, &(hctx->fde_ndx), hctx->fd, FDEVENT_OUT);
+        } else {
+            fdevent_event_add(srv->ev, &(hctx->fde_ndx), hctx->fd, FDEVENT_IN);
+        }
+        if (!chunkqueue_is_empty(hctx->write_queue)) {
             fdevent_event_add(srv->ev, &(con->fde_ndx), con->fd, FDEVENT_OUT);
         } else {
-            fdevent_event_del(srv->ev, &(con->fde_ndx), con->fd);
-            if (hctx->server_closed) {
-                if (!hctx->client_closed) {
-                    connection_set_state(srv, con, CON_STATE_RESPONSE_END);
-                    hctx->client_closed = 1;
-                }
-            } else if (chunkqueue_is_empty(con->read_queue)) {
-                fdevent_event_add(srv->ev, &(con->fde_ndx), con->fd, FDEVENT_IN);
-            }
+            fdevent_event_add(srv->ev, &(con->fde_ndx), con->fd, FDEVENT_IN);
         }
         return HANDLER_WAIT_FOR_EVENT;
-    default:
-        log_error_write(srv, __FILE__, __LINE__, "s", "(debug) unknown state");
-        return HANDLER_ERROR;
+        break;
     }
-    return HANDLER_ERROR; /* never reach */
+    chunkqueue_reset(hctx->write_queue);
+    chunkqueue_reset(hctx->con->read_queue);
+    connection_set_state(srv, con, CON_STATE_RESPONSE_END);
+    fdevent_event_del(srv->ev, &(hctx->fde_ndx), hctx->fd);
+    fdevent_event_del(srv->ev, &(con->fde_ndx), con->fd);
+    tcp_server_disconnect(srv, hctx);
+    return HANDLER_FINISHED;
 }
 
-static int mod_websocket_patch_connection(server *srv, connection *con,
-                                          plugin_data *p) {
+int websocket_handle_frame(handler_ctx *hctx) {
+    chunk *c = NULL;
+    buffer *readbuf = NULL;
+    char *preadbuf = NULL, *first_byte = NULL, *last_byte = NULL;
+    char *writebuf = NULL;
+    size_t len = 0;
+
+    if (!hctx->con || !hctx->con->read_queue) {
+        return -1;
+    }
+    /* serialize data */
+    for (c = hctx->con->read_queue->first; c; c = c->next) {
+        if (NULL == readbuf) {
+            readbuf = buffer_init_buffer(c->mem);
+        } else {
+            buffer_append_memory(readbuf, c->mem->ptr, c->mem->used);
+        }
+    }
+    chunkqueue_reset(hctx->con->read_queue);
+    if (!readbuf || !readbuf->used) {
+        return 0;
+    }
+    preadbuf = readbuf->ptr;
+    /* padded '\0' by buffer, so last_byte at c->mem->used - 2 */
+    last_byte = readbuf->ptr + readbuf->used - 2;
+
+    if (hctx->frame.state == MOD_WEBSOCKET_FRAME_STATE_INIT) {
+        if (0x00 == *preadbuf) {
+            hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_UTF8;
+            if (preadbuf == last_byte) {
+                buffer_free(readbuf);
+                return 0;
+            }
+            preadbuf++;
+        } else if (0xff == (unsigned char)(*preadbuf)) {
+            hctx->frame.siz = 0;
+            hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_LENGTH;
+            if (preadbuf == last_byte) {
+                buffer_free(readbuf);
+                return 0;
+            }
+        } else {
+            buffer_free(readbuf);
+            return -1;
+        }
+    }
+    if (hctx->frame.state == MOD_WEBSOCKET_FRAME_STATE_READ_LENGTH) {
+        if (0x00 == *(preadbuf + 1)) { /* closing frame */
+            buffer_free(readbuf);
+            return -1;
+        }
+        do {
+            preadbuf++;
+            hctx->frame.siz = (hctx->frame.siz) * 128 + (*preadbuf & 0x7f);
+            /* limits frame length under UINT32_MAX */
+            if (hctx->frame.siz > UINT32_MAX) {
+                buffer_free(readbuf);
+                return -1;
+            }
+            if (preadbuf == last_byte) {
+                break;
+            }
+        } while (*preadbuf & 0x80);
+        if (preadbuf == last_byte) {
+            buffer_free(readbuf);
+            return 0;
+        } else {
+            hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_BINARY;
+        }
+    }
+    if (hctx->frame.state == MOD_WEBSOCKET_FRAME_STATE_READ_UTF8) {
+        first_byte = preadbuf;
+        for (;preadbuf != last_byte; preadbuf++) {
+            if (0xff == (unsigned char)(*preadbuf)) {
+                break;
+            }
+        }
+        if (0xff == (unsigned char)(*preadbuf)) {
+            hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
+        }
+        len = (size_t)(preadbuf - first_byte);
+        if (!len) {
+            buffer_free(readbuf);
+            return 0;
+        }
+        writebuf = (char *)malloc(len + 1);
+        if (!writebuf) {
+            buffer_free(readbuf);
+            return -1;
+        }
+        if (encode_to(hctx->cdc, writebuf, &len, first_byte, len) < 0) {
+            buffer_free(readbuf);
+            free(writebuf);
+            writebuf = NULL;
+            return -1;
+        }
+        len = strlen(writebuf);
+        chunkqueue_append_mem(hctx->con->read_queue, writebuf, len + 1);
+        buffer_free(readbuf);
+        free(writebuf);
+        writebuf = NULL;
+        return 0;
+    }
+    if (hctx->frame.state == MOD_WEBSOCKET_FRAME_STATE_READ_BINARY) {
+        len = (size_t)(last_byte - preadbuf);
+        hctx->frame.siz -= len;
+        if (hctx->frame.siz <= 0) {
+            hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
+        }
+        chunkqueue_append_mem(hctx->con->read_queue, preadbuf, len + 1);
+        buffer_free(readbuf);
+        return 0;
+    }
+    /* never reach */
+    return -1;
+}
+
+void websocket_send_closing_frame(server *srv, handler_ctx *hctx) {
+    buffer *buf;
+    const unsigned char closing_frame[2] = { 0xff, 0x00 };
+
+    buf = chunkqueue_get_append_buffer(hctx->write_queue);
+    /* XXX:BUG? in buffer.c */
+    buffer_append_memory(buf, (const char *)closing_frame, sizeof(closing_frame) + 1);
+    srv->network_backend_write(srv, hctx->con, hctx->con->fd, hctx->write_queue);
+    chunkqueue_remove_finished_chunks(hctx->write_queue);
+    return;
+}
+
+int encode_to(iconv_t cd, char *dst, size_t *dstlen,
+              char *src, size_t srclen) {
+    size_t r;
+
+    if ((iconv_t) -1 == cd) {
+        return 0;
+    }
+    if (!dst || !dstlen || !(*dstlen) || !src) {
+        return -1;
+    }
+    memset(dst, 0, *dstlen);
+    r = iconv(cd, &src, &srclen, &dst, dstlen);
+    if (r == (size_t)-1) {
+        return -1;
+    }
+    *dst = '\0';
+    return 0;
+}
+
+handler_t websocket_handle_fdevent(void *s, void *ctx, int revents) {
+    server *srv = (server *)s;
+    handler_ctx *hctx = (handler_ctx *)ctx;
+    int b;
+    ssize_t r;
+    buffer *buf = NULL;
+    const unsigned char head = 0x00;
+    const unsigned char tail = 0xff;
+
+#define	WEBSOCKET_BUFSIZ	(1024)
+    char readbuf[WEBSOCKET_BUFSIZ];
+    char writebuf[WEBSOCKET_BUFSIZ];
+    size_t wbuflen;
+
+    if (revents & FDEVENT_IN) {
+        if (hctx->state == MOD_WEBSOCKET_STATE_CONNECTED) {
+            /* check how much we have to read */
+            if (ioctl(hctx->fd, FIONREAD, &b)) {
+                log_error_write(srv, __FILE__, __LINE__, "sd",
+                                "ioctl failed:", hctx->fd);
+                hctx->server_closed = MOD_WEBSOCKET_TRUE;
+                return mod_websocket_handle_subrequest(srv, hctx->con, hctx->pd);
+            }
+            if (!b || b > (int)sizeof(readbuf)) {
+                b = sizeof(readbuf);
+            }
+            r = read(hctx->fd, readbuf, b);
+            if (0 < r) {
+                wbuflen = WEBSOCKET_BUFSIZ;
+#undef	WEBSOCKET_BUFSIZ
+                if (0 <= encode_to(hctx->cdc, writebuf, &wbuflen,
+                                   readbuf, (size_t)r)) {
+                    buf = chunkqueue_get_append_buffer(hctx->write_queue);
+                    buffer_append_memory(buf, (const char *)&head, 1);
+                    buffer_append_memory(buf, writebuf, strlen(writebuf));
+                    /* XXX:BUG? in buffer.c */
+                    buffer_append_memory(buf, (const char *)&tail, 2);
+                } else {
+                    log_error_write(srv, __FILE__, __LINE__, "sd",
+                                    "iconv failed: fd =", hctx->fd);
+                    hctx->server_closed = MOD_WEBSOCKET_TRUE;
+                }                    
+            } else if (errno != EAGAIN) {
+                hctx->server_closed = MOD_WEBSOCKET_TRUE;
+            }
+        }
+        return mod_websocket_handle_subrequest(srv, hctx->con, hctx->pd);
+    }
+
+    if (revents & FDEVENT_HUP) {
+        if (hctx->pd->conf.debug) {
+            log_error_write(srv, __FILE__, __LINE__, "sd",
+                            "connect - failed(HUP): fd =", hctx->fd);
+        }
+        hctx->con->http_status = MOD_WEBSOCKET_SERVICE_UNAVAILABLE;
+        hctx->con->mode = DIRECT;
+        hctx->server_closed = MOD_WEBSOCKET_TRUE;
+    } else if (revents & FDEVENT_ERR) {
+        log_error_write(srv, __FILE__, __LINE__, "sd",
+                        "connect - failed(ERR): fd =", hctx->fd);
+        hctx->con->http_status = MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
+        hctx->con->mode = DIRECT;
+        hctx->server_closed = MOD_WEBSOCKET_TRUE;
+    }
+    return mod_websocket_handle_subrequest(srv, hctx->con, hctx->pd);
+}
+
+int websocket_dispatch(server *srv, connection *con, plugin_data *p) {
     size_t i, j;
     plugin_config *s = p->config_storage[0];
 
 #define PATCH(x) do { p->conf.x = s->x; } while (0)
 
-    PATCH(extensions);
+    PATCH(exts);
     PATCH(debug);
 
     /* skip the first, the global context */
@@ -753,289 +1355,76 @@ static int mod_websocket_patch_connection(server *srv, connection *con,
         for (j = 0; j < dc->value->used; j++) {
             data_unset *du = dc->value->data[j];
 
-            if (buffer_is_equal_string(du->key, CONST_STR_LEN("websocket.server"))) {
-                PATCH(extensions);
-            } else if (buffer_is_equal_string(du->key, CONST_STR_LEN("websocket.debug"))) {
+            if (buffer_is_equal_string(du->key, CONST_STR_LEN(MOD_WEBSOCKET_CONFIG_SERVER))) {
+                PATCH(exts);
+            } else if (buffer_is_equal_string(du->key, CONST_STR_LEN(MOD_WEBSOCKET_CONFIG_DEBUG))) {
                 PATCH(debug);
             }
         }
     }
 
 #undef PATCH
-
+    if (!p->conf.exts) {
+        return -1;
+    }
     return 0;
 }
 
-SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
+handler_t websocket_check(server *srv, connection *con, void *p_d) {
     plugin_data *p = p_d;
-    handler_ctx *hctx = con->plugin_ctx[p->id];
-    handler_t h;
-
-    if (!hctx) {
-        return HANDLER_GO_ON;
-    }
-    mod_websocket_patch_connection(srv, con, p);
-
-    /* not my job */
-    if (con->mode != p->id) {
-        return HANDLER_GO_ON;
-    }
-
-    /* ok, create the request */
-    h = websocket_write_request(srv, hctx);
-    switch (h) {
-    case HANDLER_ERROR:
-        log_error_write(srv, __FILE__, __LINE__, "sbdd",
-                        "websocket-server disabled:",
-                        hctx->host, hctx->port, hctx->fd);
-        websocket_connection_close(srv, hctx);
-
-        /* reset the enviroment and restart the sub-request */
-        buffer_reset(con->physical.path);
-        con->mode = DIRECT;
-
-        joblist_append(srv, con);
-
-        return HANDLER_ERROR;
-    default:
-        return h;
-    }
-    return HANDLER_ERROR; /* never reach */
-}
-
-static handler_t websocket_handle_fdevent(void *s, void *ctx, int revents) {
-    server *srv = (server *)s;
-    handler_ctx *hctx = ctx;
-    connection *con = hctx->remote_conn;
-    plugin_data *p = hctx->plugin_data;
-    int b;
-    ssize_t r;
-    buffer *buf;
-    int fd = hctx->fd;
-    char readbuf[4096];
-
-    if ((revents & FDEVENT_IN) &&
-        hctx->state == WEBSOCKET_STATE_CONNECTED &&
-        chunkqueue_is_empty(hctx->toclient)) {
-        /* check how much we have to read */
-        if (ioctl(fd, FIONREAD, &b)) {
-            log_error_write(srv, __FILE__, __LINE__, "sd",
-                            "ioctl failed: ", fd);
-            goto disconnect;
-        }
-        if (!b || b > (int)sizeof(readbuf)) {
-            b = sizeof(readbuf);
-        }
-        errno = 0;
-        r = read(fd, readbuf, b);
-        if (r > 0) {
-            const char head = 0;
-            const char tail = -1;
-
-            buf = chunkqueue_get_append_buffer(hctx->toclient);
-            buffer_append_memory(buf, &head, 1);
-            buffer_append_memory(buf, readbuf, r);
-            /* buffer.c replace buf[len - 1] = '\0' */
-            buffer_append_memory(buf, &tail, 2);
-        } else if (errno != EAGAIN) {
-            goto disconnect;
-        }
-    }
-
-    if (revents & FDEVENT_OUT) {
-        if (p->conf.debug) {
-            log_error_write(srv, __FILE__, __LINE__, "sd",
-                            "websocket: fdevent-out", hctx->state);
-        }
-        if (hctx->state == WEBSOCKET_STATE_CONNECT ||
-            hctx->state == WEBSOCKET_STATE_CONNECTED) {
-            /* unfinished websocket call or data to send */
-            return mod_websocket_handle_subrequest(srv, con, p);
-        } else {
-            log_error_write(srv, __FILE__, __LINE__, "sd",
-                            "websocket: out", hctx->state);
-        }
-    }
-
-    /* perhaps this issue is already handled */
-    if (revents & FDEVENT_HUP) {
-        if (p->conf.debug) {
-            log_error_write(srv, __FILE__, __LINE__, "sd",
-                            "websocket: fdevent-hup", hctx->state);
-        }
-        if (hctx->state == WEBSOCKET_STATE_CONNECT) {
-            /* connect() -> EINPROGRESS -> HUP */
-            goto disconnect;
-        }
-        con->file_finished = 1;
-        goto disconnect;
-    } else if (revents & FDEVENT_ERR) {
-        /* kill all connections to the websocket process */
-        log_error_write(srv, __FILE__, __LINE__, "sd",
-                        "websocket-FDEVENT_ERR, but no HUP", revents);
-        goto disconnect;
-    }
-    joblist_append(srv, con);
-    return HANDLER_FINISHED;
-
- disconnect:
-    hctx->server_closed = 1;
-    joblist_append(srv, con);
-    websocket_write_request(srv, hctx);
-    return HANDLER_FINISHED;
-}
-
-static handler_t mod_websocket_check(server *srv, connection *con, void *p_d) {
-    plugin_data *p = p_d;
-    size_t s_len;
-    size_t k;
-    buffer *fn;
-    data_array *extension = NULL;
-    size_t path_info_offset;
-    data_websocket *host;
-    data_array *origins;
-    handler_ctx *hctx;
-    int path = 0;
+    size_t i;
+    data_array *ext = NULL;
+    handler_ctx *hctx = NULL;
 
     if (con->request.http_method != HTTP_METHOD_GET) {
         return HANDLER_GO_ON;
     }
-    if (con->mode != DIRECT) {
+    if (websocket_dispatch(srv, con, p) < 0) {
         return HANDLER_GO_ON;
     }
-    /* Have we processed this request already? */
-    if (con->file_started == 1) {
-        return HANDLER_GO_ON;
+    for (i = p->conf.exts->used; i > 0; i--) {
+        ext = (data_array *)p->conf.exts->data[i - 1];
+        if (0 == strcmp(con->uri.path->ptr, ext->key->ptr)) {
+            break;
+        }
+        ext = NULL;
     }
-    mod_websocket_patch_connection(srv, con, p);
-    fn = con->uri.path;
-    if (fn->used == 0) {
-        return HANDLER_ERROR;
-    }
-    s_len = fn->used - 1;
-    path_info_offset = 0;
-    /* check if prefix or host matches */
-    for (k = 0; k < p->conf.extensions->used; k++) {
-        data_array *ext = NULL;
-        size_t ct_len;
-
-        ext = (data_array *)p->conf.extensions->data[k];
-        if (ext->key->used == 0) {
-            continue;
-        }
-        ct_len = ext->key->used - 1;
-        if (s_len < ct_len) {
-            continue;
-        }
-        /* check host/prefix in the form "/path" */
-        if (*(ext->key->ptr) == '/') {
-            if (strncmp(fn->ptr, ext->key->ptr, ct_len) == 0) {
-                if (s_len > ct_len + 1) {
-                    char *pi_offset;
-
-                    pi_offset = strchr(fn->ptr + ct_len + 1, '/');
-                    if (pi_offset) {
-                        path_info_offset = pi_offset - fn->ptr;
-                    }
-                }
-                extension = ext;
-                path = 1;
-                break;
-            }
-        }
-    }
-    if (!extension) {
-        if (p->conf.debug) {
-            log_error_write(srv, __FILE__, __LINE__, "ss",
-                            "websocket - not my task", fn->ptr);
-        }
+    if (!ext) {
         return HANDLER_GO_ON;
     }
     if (p->conf.debug) {
         log_error_write(srv, __FILE__, __LINE__, "ss",
-                        "websocket - ext found", fn->ptr);
+                        "found extension:", ext->key->ptr);
     }
-    host = (data_websocket *)array_get_element(extension->value, fn->ptr);
-    origins = (data_array *)array_get_element(extension->value, "origins");
-    if (origins->value->used > 0) {
-        p->conf.origins = origins->value;
-    } else {
-        p->conf.origins = NULL;
-    }
-
     /* init handler-context */
     hctx = handler_ctx_init();
-    hctx->path_info_offset = path_info_offset;
-    hctx->remote_conn = con;
-    hctx->plugin_data = p;
-    if (host) {
-        buffer_copy_string_buffer(hctx->host, host->host);
-        hctx->port = host->port;
-    } else {
+    if (!hctx) {
+        log_error_write(srv, __FILE__, __LINE__, "s", "no memory.");
         return HANDLER_ERROR;
     }
-    hctx->noresp = host->usage; // XXX
-    hctx->path = path;
+    hctx->ext = ext;
+    hctx->con = con;
+    hctx->pd = p;
     con->plugin_ctx[p->id] = hctx;
     con->mode = p->id;
-    if (p->conf.debug) {
-        log_error_write(srv, __FILE__, __LINE__,  "sbsd",
-                        "websocket - connect to",
-                        hctx->host, ":", hctx->port);
-    }
     return HANDLER_GO_ON;
 }
 
-static handler_t mod_websocket_connection_close(server *srv, connection *con, void *p_d) {
+handler_t websocket_disconnect(server *srv, connection *con, void *p_d) {
     plugin_data *p = p_d;
 
-    websocket_connection_close(srv, con->plugin_ctx[p->id]);
-    return HANDLER_GO_ON;
-}
-
-/**
- *
- * the trigger re-enables the disabled connections after the timeout is over
- *
- */
-TRIGGER_FUNC(mod_websocket_trigger) {
-    plugin_data *p = p_d;
-
-    if (p->config_storage) {
-        size_t i, n, k;
-        for (i = 0; i < srv->config_context->used; i++) {
-            plugin_config *s = p->config_storage[i];
-
-            if (!s) {
-                continue;
-            }
-
-            /* get the extensions for all configs */
-            for (k = 0; k < s->extensions->used; k++) {
-                data_array *extension = (data_array *)s->extensions->data[k];
-
-                /* get all hosts */
-                for (n = 0; n < extension->value->used; n++) {
-                    data_websocket *host;
-
-                    if (extension->value->data[n]->type != TYPE_FASTCGI) { // XXX
-                        continue;
-                    }
-                    host = (data_websocket *)extension->value->data[n];
-                    if (!host->is_disabled ||
-                        srv->cur_ts - host->disable_ts < 5) {
-                            continue;
-                    }
-                    log_error_write(srv, __FILE__, __LINE__,  "sbd",
-                                    "websocket - re-enabled:",
-                                    host->host, host->port);
-                    host->is_disabled = 0;
-                }
-            }
+    if (con->plugin_ctx[p->id]) {
+        if (p->conf.debug) {
+            log_error_write(srv, __FILE__, __LINE__, "s",
+                            "disconnect - event received");
         }
+        tcp_server_disconnect(srv, con->plugin_ctx[p->id]);
     }
     return HANDLER_GO_ON;
 }
+
+/* suppress warning */
+int mod_websocket_plugin_init(plugin *);
 
 int mod_websocket_plugin_init(plugin *p) {
     p->version = LIGHTTPD_VERSION_ID;
@@ -1043,11 +1432,10 @@ int mod_websocket_plugin_init(plugin *p) {
     p->init = mod_websocket_init;
     p->cleanup = mod_websocket_free;
     p->set_defaults = mod_websocket_set_defaults;
-    p->connection_reset = mod_websocket_connection_close;
-    p->handle_connection_close = mod_websocket_connection_close;
-    p->handle_uri_clean = mod_websocket_check;
+    p->connection_reset = websocket_disconnect;
+    p->handle_connection_close = websocket_disconnect;
+    p->handle_uri_clean = websocket_check;
     p->handle_subrequest = mod_websocket_handle_subrequest;
-    p->handle_trigger = mod_websocket_trigger;
     p->read_continuous = mod_websocket_handle_subrequest;
     p->data = NULL;
     return 0;
