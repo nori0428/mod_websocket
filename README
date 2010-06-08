@@ -2,7 +2,7 @@
 
 - What is this?
   mod_websocket.c provides a WebSocket extension for
-  lighttpd HTTP server ver 1.4.x.( http://www.lighttpd.net/ )
+  lighttpd HTTP server ver 1.4.26.( http://www.lighttpd.net/ )
 
 - How does mod_websocket work?
   Please see these figures.
@@ -28,16 +28,7 @@
   and see lighttpd LICENCE.
 
 - issues
-  1. The Websocket-Protocol header doesn't have any meanings.
-     Now you can use sub protocol in your javascript like below, but
-     the sub protocol doesn't have any meanings in mod_websocket, and
-     backend service programs can't know the specified sub protocol.
-
-     var ws = new WebSocket("ws://example.com/resource", "sub_proto");
-
-  2. This module does not handle UTF-8 encoding.
-     please use UTF-8 or encodeURIComponent() in javascript and
-     server-side Applications.
+  none
 
 - great thanks to
   Taiyo Fujii(@t_trace), Kensaku Komatsu(@komasshu),
