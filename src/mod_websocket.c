@@ -954,7 +954,7 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
                             "connect - failed: fd =", hctx->fd);
             hctx->con->http_status = MOD_WEBSOCKET_SERVICE_UNAVAILABLE;
             hctx->con->mode = DIRECT;
-            return HANDLER_ERROR;
+            return HANDLER_FINISHED;
             break;
         }
 
@@ -967,13 +967,11 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
                             "getsockopt failed:", strerror(errno));
             tcp_server_disconnect(srv, hctx);
             connection_set_state(srv, con, CON_STATE_CLOSE);
-            fdevent_event_del(srv->ev, &(hctx->fde_ndx), hctx->fd);
             return HANDLER_FINISHED;
         }
         if (0 != sockret) {
             tcp_server_disconnect(srv, hctx);
             connection_set_state(srv, con, CON_STATE_CLOSE);
-            fdevent_event_del(srv->ev, &(hctx->fde_ndx), hctx->fd);
             return HANDLER_FINISHED;
         }
         if (hctx->state == MOD_WEBSOCKET_STATE_CONNECTING && p->conf.debug) {
@@ -1009,9 +1007,9 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
         if ((iconv_t) -1 == hctx->cds || (iconv_t) -1 == hctx->cdc) {
             log_error_write(srv, __FILE__, __LINE__, "s",
                             "iconv_open failed.");
+            tcp_server_disconnect(srv, hctx);
             hctx->con->http_status = MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
             hctx->con->mode = DIRECT;
-            tcp_server_disconnect(srv, hctx);
             return HANDLER_FINISHED;
         }
 
@@ -1024,7 +1022,9 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
                 log_error_write(srv, __FILE__, __LINE__, "s",
                                 "create handshake response error");
                 tcp_server_disconnect(srv, hctx);
-                return HANDLER_ERROR;
+                hctx->con->http_status = MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
+                hctx->con->mode = DIRECT;
+                return HANDLER_FINISHED;
             }
             connection_set_state(srv, hctx->con, CON_STATE_READ_CONTINUOUS);
             hctx->send_response = MOD_WEBSOCKET_TRUE;
@@ -1043,7 +1043,8 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
                                     "send handshake response error:",
                                     strerror(errno));
                     tcp_server_disconnect(srv, hctx);
-                    return HANDLER_ERROR;
+                    connection_set_state(srv, con, CON_STATE_CLOSE);
+                    return HANDLER_FINISHED;
                 }
                 return HANDLER_WAIT_FOR_EVENT;
             }
@@ -1051,7 +1052,8 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
         /* never reach */
         log_error_write(srv, __FILE__, __LINE__, "s", "invalid state");
         tcp_server_disconnect(srv, hctx);
-        return HANDLER_ERROR;
+        connection_set_state(srv, con, CON_STATE_CLOSE);
+        return HANDLER_FINISHED;
         break;
 
     case MOD_WEBSOCKET_STATE_CONNECTED:
