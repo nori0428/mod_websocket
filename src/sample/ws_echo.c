@@ -53,22 +53,22 @@ read_handler(int fd, short event, void *arg) {
     char buf[4096];
     struct event *ev = (struct event *)arg;
 
-	if (event & EV_READ) {
+    if (event & EV_READ) {
         memset(buf, 0 ,sizeof(buf));
-		if ((siz = read(fd, buf, sizeof(buf))) <= 0 ) {
-			event_del(ev);
+        if ((siz = read(fd, buf, sizeof(buf))) <= 0 ) {
+            event_del(ev);
             free(ev);
-			fprintf(stdout, "finished fd = [%d]\n", fd);
-			close(fd);
-		} else{
+            fprintf(stdout, "finished fd = [%d]\n", fd);
+            close(fd);
+        } else{
             fprintf(stdout, "echo to fd[%d] = \n[", fd);
             for (i = 0; i < siz; i++) {
                 fprintf(stdout, "0x%02x = '%c', ", buf[i] & 0x0ff, buf[i]);
             }
             fprintf(stdout, "]\n");
             write(fd, buf, siz);
-		}
-	}
+        }
+    }
 }
 
 static void
@@ -79,13 +79,13 @@ accept_handler(int fd, short event, void *arg) {
     struct event *new_ev;
     struct event *ev = (struct event *)arg;
 
-	if (event & EV_READ) {
+    if (event & EV_READ) {
         new_ev = malloc(sizeof(struct event));
         new_fd = accept(fd, (struct sockaddr *)&sa, &len);
-		event_set(new_ev, new_fd, EV_READ|EV_PERSIST, read_handler, new_ev);
-		event_add(new_ev, NULL);
+        event_set(new_ev, new_fd, EV_READ|EV_PERSIST, read_handler, new_ev);
+        event_add(new_ev, NULL);
         fprintf(stdout, "accepted = %d\n", new_fd);
-	}
+    }
 }
 
 int
@@ -101,9 +101,9 @@ main(int argc, char *argv[]) {
     fprintf(stdout, "listen on %s\n", argv[1]);
 
     event_init();
-	event_set(&ev, fd, EV_READ|EV_PERSIST, accept_handler, &ev);
-	event_add(&ev, NULL);
-	event_dispatch();
+    event_set(&ev, fd, EV_READ|EV_PERSIST, accept_handler, &ev);
+    event_add(&ev, NULL);
+    event_dispatch();
 }
 
 /* EOF */

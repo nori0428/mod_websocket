@@ -62,10 +62,10 @@ read_handler(int fd, short event, void *arg) {
     struct chat_client *c = (struct chat_client *)arg;
     struct chat_client *prev = gHead_client;
 
-	if (event & EV_READ) {
+    if (event & EV_READ) {
         memset(buf, 0 ,sizeof(buf));
-		if ((siz = read(fd, buf, sizeof(buf))) <= 0 ) {
-			event_del(&c->ev);
+        if ((siz = read(fd, buf, sizeof(buf))) <= 0 ) {
+            event_del(&c->ev);
             for (c = gHead_client; c ; c = c->next) {
                 if (fd == c->fd) {
                     break;
@@ -77,10 +77,10 @@ read_handler(int fd, short event, void *arg) {
             } else {
                 prev->next = c->next;
             }
-			fprintf(stdout, "finished fd = [%d]\n", fd);
-			close(fd);
+            fprintf(stdout, "finished fd = [%d]\n", fd);
+            close(fd);
             free(c);
-		} else{
+        } else{
             fprintf(stdout, "send to clients = \n[");
             for (i = 0; i < siz; i++) {
                 fprintf(stdout, "0x%02x = '%c', ", buf[i] & 0x0ff, buf[i]);
@@ -89,8 +89,8 @@ read_handler(int fd, short event, void *arg) {
             for (c = gHead_client; c ; c = c->next) {
                 write(c->fd, buf, siz);
             }
-		}
-	}
+        }
+    }
 }
 
 static void
@@ -99,8 +99,8 @@ accept_handler(int fd, short event, void *arg) {
     socklen_t len = sizeof(sa);
     struct chat_client *new_client;
     struct chat_client *p = gHead_client;
-
-	if (event & EV_READ) {
+    
+    if (event & EV_READ) {
         new_client = malloc(sizeof(struct chat_client));
         new_client->fd = accept(fd, (struct sockaddr *)&sa, &len);
         new_client->next = NULL;
@@ -112,18 +112,18 @@ accept_handler(int fd, short event, void *arg) {
             }
             p->next = new_client;
         }
-		event_set(&new_client->ev, new_client->fd,
+        event_set(&new_client->ev, new_client->fd,
                   EV_READ|EV_PERSIST, read_handler, new_client);
-		event_add(&new_client->ev, NULL);
+        event_add(&new_client->ev, NULL);
         fprintf(stdout, "accepted = %d\n", new_client->fd);
-	}
+    }
 }
 
 int
 main(int argc, char *argv[]) {
     int fd;
     struct event ev;
-
+    
     fd = tcp_listen(argv[1]);
     if (fd < 0) {
         fprintf(stderr, "Usage: %s portnum\n", argv[0]);
@@ -132,9 +132,9 @@ main(int argc, char *argv[]) {
     fprintf(stdout, "listen on %s\n", argv[1]);
 
     event_init();
-	event_set(&ev, fd, EV_READ|EV_PERSIST, accept_handler, &ev);
-	event_add(&ev, NULL);
-	event_dispatch();
+    event_set(&ev, fd, EV_READ|EV_PERSIST, accept_handler, &ev);
+    event_add(&ev, NULL);
+    event_dispatch();
 }
 
 /* EOF */
