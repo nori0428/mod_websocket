@@ -1292,6 +1292,7 @@ handler_t websocket_handle_fdevent(void *s, void *ctx, int revents) {
             if (!b || b > (int)sizeof(readbuf)) {
                 b = sizeof(readbuf);
             }
+            errno = 0;
             r = read(hctx->fd, readbuf, b);
             if (0 < r) {
                 wbuflen = WEBSOCKET_BUFSIZ;
