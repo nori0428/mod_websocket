@@ -965,13 +965,19 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
                             &sockret, &socklen)) {
             log_error_write(srv, __FILE__, __LINE__, "ss",
                             "getsockopt failed:", strerror(errno));
+            fdevent_event_del(srv->ev, &(hctx->fde_ndx), hctx->fd);
+            joblist_append(srv, hctx->con);
             tcp_server_disconnect(srv, hctx);
-            connection_set_state(srv, con, CON_STATE_CLOSE);
+            hctx->con->http_status = MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
+            hctx->con->mode = DIRECT;
             return HANDLER_FINISHED;
         }
         if (0 != sockret) {
+            fdevent_event_del(srv->ev, &(hctx->fde_ndx), hctx->fd);
+            joblist_append(srv, hctx->con);
             tcp_server_disconnect(srv, hctx);
-            connection_set_state(srv, con, CON_STATE_CLOSE);
+            hctx->con->http_status = MOD_WEBSOCKET_SERVICE_UNAVAILABLE;
+            hctx->con->mode = DIRECT;
             return HANDLER_FINISHED;
         }
         if (hctx->state == MOD_WEBSOCKET_STATE_CONNECTING && p->conf.debug) {
@@ -1007,6 +1013,8 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
         if ((iconv_t) -1 == hctx->cds || (iconv_t) -1 == hctx->cdc) {
             log_error_write(srv, __FILE__, __LINE__, "s",
                             "iconv_open failed.");
+            fdevent_event_del(srv->ev, &(hctx->fde_ndx), hctx->fd);
+            joblist_append(srv, hctx->con);
             tcp_server_disconnect(srv, hctx);
             hctx->con->http_status = MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
             hctx->con->mode = DIRECT;
@@ -1021,6 +1029,8 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
             if (ret < 0) {
                 log_error_write(srv, __FILE__, __LINE__, "s",
                                 "create handshake response error");
+                fdevent_event_del(srv->ev, &(hctx->fde_ndx), hctx->fd);
+                joblist_append(srv, hctx->con);
                 tcp_server_disconnect(srv, hctx);
                 hctx->con->http_status = MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
                 hctx->con->mode = DIRECT;
@@ -1051,6 +1061,8 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
         }
         /* never reach */
         log_error_write(srv, __FILE__, __LINE__, "s", "invalid state");
+        fdevent_event_del(srv->ev, &(hctx->fde_ndx), hctx->fd);
+        joblist_append(srv, hctx->con);
         tcp_server_disconnect(srv, hctx);
         connection_set_state(srv, con, CON_STATE_CLOSE);
         return HANDLER_FINISHED;
