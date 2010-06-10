@@ -1057,8 +1057,6 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
             if (chunkqueue_is_empty(hctx->write_queue)) {
                 hctx->state = MOD_WEBSOCKET_STATE_CONNECTED;
                 chunkqueue_reset(hctx->con->read_queue);
-                fdevent_event_del(srv->ev, &(hctx->fde_ndx), hctx->fd);
-                fdevent_event_add(srv->ev, &(hctx->fde_ndx), hctx->fd, FDEVENT_IN);
                 return HANDLER_WAIT_FOR_EVENT;
             } else {
                 ret = srv->network_backend_write(srv, con, hctx->con->fd, hctx->write_queue);
