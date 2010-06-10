@@ -1036,6 +1036,20 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
                 hctx->con->mode = DIRECT;
                 return HANDLER_FINISHED;
             }
+            ret = srv->network_backend_write(srv, con, hctx->con->fd, hctx->write_queue);
+            if (0 <= ret) {
+                chunkqueue_remove_finished_chunks(hctx->write_queue);
+            } else {
+                log_error_write(srv, __FILE__, __LINE__, "ss",
+                                "send handshake response error:",
+                                strerror(errno));
+                fdevent_event_del(srv->ev, &(hctx->fde_ndx), hctx->fd);
+                joblist_append(srv, hctx->con);
+                tcp_server_disconnect(srv, hctx);
+                hctx->con->http_status = MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
+                hctx->con->mode = DIRECT;
+                return HANDLER_FINISHED;
+            }
             connection_set_state(srv, hctx->con, CON_STATE_READ_CONTINUOUS);
             hctx->send_response = MOD_WEBSOCKET_TRUE;
             return HANDLER_WAIT_FOR_EVENT;
@@ -1043,6 +1057,8 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
             if (chunkqueue_is_empty(hctx->write_queue)) {
                 hctx->state = MOD_WEBSOCKET_STATE_CONNECTED;
                 chunkqueue_reset(hctx->con->read_queue);
+                fdevent_event_del(srv->ev, &(hctx->fde_ndx), hctx->fd);
+                fdevent_event_add(srv->ev, &(hctx->fde_ndx), hctx->fd, FDEVENT_IN);
                 return HANDLER_WAIT_FOR_EVENT;
             } else {
                 ret = srv->network_backend_write(srv, con, hctx->con->fd, hctx->write_queue);
