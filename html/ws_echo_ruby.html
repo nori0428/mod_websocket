@@ -6,19 +6,24 @@
   </head>
   <body>
     <script>
-      var ws = new WebSocket("ws://127.0.0.1:8000/echo");
-      ws.onopen = function() {
-      };
-
-      ws.onmessage = function(message) {
-          var txtNode = document.createTextNode(message.data);
+      function appendTxtNode(msg) {
+          var txtNode = document.createTextNode(msg);
           var brNode = document.createElement('br');
-          var cnode = document.getElementById("content");
+          var cnode = document.getElementById('content');
           cnode.appendChild(txtNode);
           cnode.appendChild(brNode);
+      }
+      var ws = new WebSocket("ws://127.0.0.1:8000/chat");
+      ws.onopen = function(e) {
+          appendTxtNode('opened WebSocket');
+      };
+      ws.onmessage = function(msg) {
+          appendTxtNode(msg.data);
+      };
+      ws.onclose = function(e) {
+          appendTxtNode('closed WebSocket');
       };
     </script>
-
     <h1>Web Socket Echo (ruby srv ver)</h1>
     <h3>The default delimiter of Ruby::TCPServer->gets is '\n'. so, do ws.send(input.value + '\n').</h3>
     <div id="content">
