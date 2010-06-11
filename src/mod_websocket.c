@@ -1309,6 +1309,15 @@ handler_t websocket_handle_fdevent(void *s, void *ctx, int revents) {
     char writebuf[WEBSOCKET_BUFSIZ];
     size_t wbuflen;
 
+    if (revents & FDEVENT_NVAL) {
+        if (hctx->pd->conf.debug) {
+            log_error_write(srv, __FILE__, __LINE__, "sdsd",
+                            "fd is not open(NVAL): fd(srv) =", hctx->fd,
+                            "fd(browser) =", hctx->con->fd);
+        }
+        hctx->server_closed = MOD_WEBSOCKET_TRUE;
+        return mod_websocket_handle_subrequest(srv, hctx->con, hctx->pd);
+    }
     if (revents & FDEVENT_IN) {
         if (hctx->state == MOD_WEBSOCKET_STATE_CONNECTED) {
             /* check how much we have to read */
@@ -1344,7 +1353,6 @@ handler_t websocket_handle_fdevent(void *s, void *ctx, int revents) {
         }
         return mod_websocket_handle_subrequest(srv, hctx->con, hctx->pd);
     }
-
     if (revents & FDEVENT_HUP) {
         if (hctx->pd->conf.debug) {
             log_error_write(srv, __FILE__, __LINE__, "sd",
