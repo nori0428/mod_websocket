@@ -1142,7 +1142,6 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
     chunkqueue_reset(hctx->con->read_queue);
     connection_set_state(srv, con, CON_STATE_CLOSE);
     fdevent_event_del(srv->ev, &(hctx->fde_ndx), hctx->fd);
-    fdevent_event_del(srv->ev, &(con->fde_ndx), con->fd);
     tcp_server_disconnect(srv, hctx);
     return HANDLER_FINISHED;
 }
