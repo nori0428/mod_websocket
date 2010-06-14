@@ -63,7 +63,7 @@
   $ cd lighttpd-1.4.x
 
   When you configure the first, do autogen.sh at once.
-  (because of patched src/Makefile.am)
+  (because of patched some Makefile.am)
 
   $ ./autogen.sh
 
@@ -105,24 +105,20 @@
 		                     "port" => 8000 ),
                      "/strict1" => ( "host" => "127.0.0.1",
 		                     "port" => 9000,
-                                     "origins" => ( "example.com" )
-                                   ),
+                                     "origins" => ( "example.com" ) ),
                      "/strict2" => ( "host" => "127.0.0.1",
-		                     "port" => 9000,
-                                     "origins" => (
-                                                   "example.com",
-                                                   "192.168.0.1"
-                                                  )
-                                   ),
+		                     "port" => 9001,
+                                     "origins" => ( "example.com",
+                                                    "192.168.0.1" ) ),
                      "/subproto" => (
 		                     ( "host" => "127.0.0.1",
-		                       "port" => 9000,
+		                       "port" => 9002,
 				       "subproto" => "subproto1"
                                      ),
 		                     ( "host" => "127.0.0.1",
-		                       "port" => 9001,
+		                       "port" => 9003,
 				       "subproto" => "subproto2"
-                                     ),
+                                     )
                                     ),
                      "/locale" => (
 		                    "host" => "192.168.0.5",
@@ -130,6 +126,7 @@
 				    "locale" => "EUCJP"
                                   )
                      )
+
   5-3. locale
        If a backend server uses non UTF-8 locale, plz set the locale
        into configration.
