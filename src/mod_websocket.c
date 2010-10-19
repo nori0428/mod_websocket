@@ -657,16 +657,33 @@ int get_key2_field(buffer *key, const array *headers) {
 
 int get_key3_field(buffer *key, const handler_ctx *hctx) {
     const char *body = NULL;
+    char key3buf[MOD_WEBSOCKET_SEC_WEBSOCKET_KEY3_LEN];
     int ret;
+    struct pollfd pfd;
+    int timeout = 100; /* poll timeout = 100ms */
 
     if (!key || !hctx) {
         return -1;
     }
-    if (hctx->con->read_queue->first != hctx->con->read_queue->last) {
-        return -1; /* XXX: key3 is separated */
+    /* key3 is in separated packet */
+    if (!hctx->con->read_queue->first ||
+        hctx->con->read_queue->first != hctx->con->read_queue->last) {
+        pfd.fd = hctx->con->fd;
+        pfd.events = POLLIN;
+        ret = poll(&pfd, 1, timeout);
+        if (ret > 0 && pfd.revents & POLLIN) {
+            if ( read(hctx->con->fd, key3buf,
+                      MOD_WEBSOCKET_SEC_WEBSOCKET_KEY3_LEN) != 
+                 MOD_WEBSOCKET_SEC_WEBSOCKET_KEY3_LEN ) {
+                return -1;
+            }
+            ret = buffer_copy_string_len(key, key3buf,
+                                         MOD_WEBSOCKET_SEC_WEBSOCKET_KEY3_LEN);
+        }
+    } else {
+        body = &hctx->con->read_queue->first->mem->ptr[hctx->con->read_queue->first->offset];
+        ret = buffer_copy_string_len(key, body, MOD_WEBSOCKET_SEC_WEBSOCKET_KEY3_LEN);
     }
-    body = &hctx->con->read_queue->first->mem->ptr[hctx->con->read_queue->first->offset];
-    ret = buffer_copy_string_len(key, body, MOD_WEBSOCKET_SEC_WEBSOCKET_KEY3_LEN);
     return ret;
 }
 
