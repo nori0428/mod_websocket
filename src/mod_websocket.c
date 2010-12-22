@@ -1053,7 +1053,15 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
                 hctx->con->mode = DIRECT;
                 return HANDLER_FINISHED;
             }
-            ret = srv->network_backend_write(srv, con, hctx->con->fd, hctx->write_queue);
+            if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
+                ret = srv->network_ssl_backend_write(srv, con,
+                                                     hctx->con->ssl,
+                                                     hctx->write_queue);
+            } else {
+                ret = srv->network_backend_write(srv, con,
+                                                 hctx->con->fd,
+                                                 hctx->write_queue);
+            }
             if (0 <= ret) {
                 chunkqueue_remove_finished_chunks(hctx->write_queue);
             } else {
@@ -1076,7 +1084,15 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
                 chunkqueue_reset(hctx->con->read_queue);
                 return HANDLER_WAIT_FOR_EVENT;
             } else {
-                ret = srv->network_backend_write(srv, con, hctx->con->fd, hctx->write_queue);
+                if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
+                    ret = srv->network_ssl_backend_write(srv, con,
+                                                         hctx->con->ssl,
+                                                         hctx->write_queue);
+                } else {
+                    ret = srv->network_backend_write(srv, con,
+                                                     hctx->con->fd,
+                                                     hctx->write_queue);
+                }
                 if (0 <= ret) {
                     chunkqueue_remove_finished_chunks(hctx->write_queue);
                 } else {
@@ -1131,7 +1147,15 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
             }
             break;
         } else {
-            ret = srv->network_backend_write(srv, con, hctx->con->fd, hctx->write_queue);
+            if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
+                ret = srv->network_ssl_backend_write(srv, con,
+                                                     hctx->con->ssl,
+                                                     hctx->write_queue);
+            } else {
+                ret = srv->network_backend_write(srv, con,
+                                                 hctx->con->fd,
+                                                 hctx->write_queue);
+            }
             if (0 <= ret) {
                 chunkqueue_remove_finished_chunks(hctx->write_queue);
             } else {
@@ -1287,7 +1311,13 @@ void websocket_send_closing_frame(server *srv, handler_ctx *hctx) {
     buf = chunkqueue_get_append_buffer(hctx->write_queue);
     /* XXX:BUG? in buffer.c */
     buffer_append_memory(buf, (const char *)closing_frame, sizeof(closing_frame) + 1);
-    srv->network_backend_write(srv, hctx->con, hctx->con->fd, hctx->write_queue);
+    if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
+        srv->network_ssl_backend_write(srv, hctx->con,
+                                       hctx->con->ssl, hctx->write_queue);
+    } else {
+        srv->network_backend_write(srv, hctx->con,
+                                   hctx->con->fd, hctx->write_queue);
+    }
     chunkqueue_remove_finished_chunks(hctx->write_queue);
     return;
 }
