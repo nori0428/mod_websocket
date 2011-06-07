@@ -1054,9 +1054,13 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
                 return HANDLER_FINISHED;
             }
             if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
+#ifdef	USE_OPENSSL
                 ret = srv->network_ssl_backend_write(srv, con,
                                                      hctx->con->ssl,
                                                      hctx->write_queue);
+#else	/* SSL is not available */
+                ret = -1;
+#endif	/* USE_OPENSSL */
             } else {
                 ret = srv->network_backend_write(srv, con,
                                                  hctx->con->fd,
@@ -1085,9 +1089,13 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
                 return HANDLER_WAIT_FOR_EVENT;
             } else {
                 if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
+#ifdef	USE_OPENSSL
                     ret = srv->network_ssl_backend_write(srv, con,
                                                          hctx->con->ssl,
                                                          hctx->write_queue);
+#else	/* SSL is not available */
+                    ret = -1;
+#endif	/* USE_OPENSSL */
                 } else {
                     ret = srv->network_backend_write(srv, con,
                                                      hctx->con->fd,
@@ -1148,9 +1156,13 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
             break;
         } else {
             if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
+#ifdef	USE_OPENSSL
                 ret = srv->network_ssl_backend_write(srv, con,
                                                      hctx->con->ssl,
                                                      hctx->write_queue);
+#else	/* SSL is not available */
+                ret = -1;
+#endif	/* USE_OPENSSL */
             } else {
                 ret = srv->network_backend_write(srv, con,
                                                  hctx->con->fd,
@@ -1312,8 +1324,10 @@ void websocket_send_closing_frame(server *srv, handler_ctx *hctx) {
     /* XXX:BUG? in buffer.c */
     buffer_append_memory(buf, (const char *)closing_frame, sizeof(closing_frame) + 1);
     if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
+#ifdef	USE_OPENSSL
         srv->network_ssl_backend_write(srv, hctx->con,
                                        hctx->con->ssl, hctx->write_queue);
+#endif	/* USE_OPENSSL */
     } else {
         srv->network_backend_write(srv, hctx->con,
                                    hctx->con->fd, hctx->write_queue);
