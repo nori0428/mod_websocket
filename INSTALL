@@ -2,11 +2,11 @@
 
 - Install lighty with mod_websocket
 
-1.Get the lighttpd-1.4.26 source from
+1.Get the lighttpd-1.4.28 source from
 
   http://www.lighttpd.net/download/
 
-  $ tar xzvf lighttpd-1.4.26.tar.gz
+  $ tar xzvf lighttpd-1.4.28.tar.gz
 
 2.Install tools and libraries necessary for making lighttpd
   if you don't have.
@@ -51,7 +51,7 @@
 
 3.Patch the source
 
-  $ cd lighttpd-1.4.26/
+  $ cd lighttpd-1.4.28/
   $ patch -p1 < mod_websocket.patch
 
   note: this patch contains a part of mod-connect.patch
@@ -59,9 +59,9 @@
 
 4.copy mod_websocket and sha1 sources into src dir and make lighty.
 
-  $ cp mod_websocket.{h,c} lighttd-1.4.26/src/
-  $ cp sha1.{h,c} lighttd-1.4.26/src/
-  $ cd lighttpd-1.4.26
+  $ cp mod_websocket.{h,c} lighttd-1.4.28/src/
+  $ cp sha1.{h,c} lighttd-1.4.28/src/
+  $ cd lighttpd-1.4.28
 
   When you configure the first, do autogen.sh at once.
   (because of patched some Makefile.am)
@@ -80,7 +80,7 @@
 
 5. check for mod_websocket.so
 
-  $ cd lighttd-1.4.26/src/.libs
+  $ cd lighttd-1.4.28/src/.libs
   $ ls -l mod_websocket.*
 
   or

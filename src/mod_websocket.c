@@ -84,7 +84,7 @@ static int websocket_handle_frame(handler_ctx *);
 static int websocket_create_frame(handler_ctx *, char, char *, size_t);
 static void websocket_send_closing_frame(server *, handler_ctx *);
 static int encode_to(iconv_t, char *, size_t *, char *, size_t);
-static handler_t websocket_handle_fdevent(void *, void *, int);
+static handler_t websocket_handle_fdevent(server *, void *, int);
 static int websocket_dispatch(server *, connection *, plugin_data *);
 static handler_t websocket_check(server *, connection *, void *);
 static handler_t websocket_disconnect(server *, connection *, void *);
@@ -1043,7 +1043,7 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
             break;
         case 1: /* connecting */
             hctx->state = MOD_WEBSOCKET_STATE_CONNECTING;
-            fdevent_event_add(srv->ev, &(hctx->fde_ndx), hctx->fd, FDEVENT_OUT);
+            fdevent_event_set(srv->ev, &(hctx->fde_ndx), hctx->fd, FDEVENT_OUT);
             return HANDLER_WAIT_FOR_EVENT;
             break;
         default: /* could not connect */
@@ -1268,14 +1268,14 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
         fdevent_event_del(srv->ev, &(hctx->fde_ndx), hctx->fd);
         fdevent_event_del(srv->ev, &(con->fde_ndx), con->fd);
         if (!chunkqueue_is_empty(con->read_queue)) {
-            fdevent_event_add(srv->ev, &(hctx->fde_ndx), hctx->fd, FDEVENT_OUT);
+            fdevent_event_set(srv->ev, &(hctx->fde_ndx), hctx->fd, FDEVENT_OUT);
         } else {
-            fdevent_event_add(srv->ev, &(hctx->fde_ndx), hctx->fd, FDEVENT_IN);
+            fdevent_event_set(srv->ev, &(hctx->fde_ndx), hctx->fd, FDEVENT_IN);
         }
         if (!chunkqueue_is_empty(hctx->outbuf)) {
-            fdevent_event_add(srv->ev, &(con->fde_ndx), con->fd, FDEVENT_OUT);
+            fdevent_event_set(srv->ev, &(con->fde_ndx), con->fd, FDEVENT_OUT);
         } else {
-            fdevent_event_add(srv->ev, &(con->fde_ndx), con->fd, FDEVENT_IN);
+            fdevent_event_set(srv->ev, &(con->fde_ndx), con->fd, FDEVENT_IN);
         }
         return HANDLER_WAIT_FOR_EVENT;
         break;
@@ -1669,9 +1669,8 @@ int encode_to(iconv_t cd, char *dst, size_t *dstlen,
     return 0;
 }
 
-handler_t websocket_handle_fdevent(void *s, void *ctx, int revents) {
+handler_t websocket_handle_fdevent(server *srv, void *ctx, int revents) {
     int b = 0;
-    server *srv = (server *)s;
     handler_ctx *hctx = (handler_ctx *)ctx;
     ssize_t r;
     data_string *type;
