@@ -1703,7 +1703,8 @@ handler_t websocket_handle_fdevent(server *srv, void *ctx, int revents) {
             if (0 < r) {
                 type = (data_string *)array_get_element(hctx->ext->value,
                                                         MOD_WEBSOCKET_CONFIG_TYPE);
-                if ( 0 == strcasecmp(type->value->ptr,
+                if ( type &&
+                     0 == strcasecmp(type->value->ptr,
                                      MOD_WEBSOCKET_BIN_STR) ) {
                     t = MOD_WEBSOCKET_FRAME_TYPE_BIN;
                 } else {
