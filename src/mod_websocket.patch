@@ -1,6 +1,6 @@
 diff -ur lighttpd-1.4.26.orig/configure.ac lighttpd-1.4.26/configure.ac
 --- lighttpd-1.4.26.orig/configure.ac	2010-02-02 08:28:20.000000000 +0900
-+++ lighttpd-1.4.26/configure.ac	2010-06-08 18:28:02.000000000 +0900
++++ lighttpd-1.4.26/configure.ac	2011-06-17 17:28:06.000000000 +0900
 @@ -67,6 +67,7 @@
  AC_TYPE_OFF_T
  AC_TYPE_PID_T
@@ -18,7 +18,7 @@ diff -ur lighttpd-1.4.26.orig/configure.ac lighttpd-1.4.26/configure.ac
  
  dnl Checks for database.
  MYSQL_INCLUDE=""
-@@ -174,6 +175,64 @@
+@@ -174,6 +175,87 @@
   AC_SUBST(ATTR_LIB)
  fi
  
@@ -28,10 +28,12 @@ diff -ur lighttpd-1.4.26.orig/configure.ac lighttpd-1.4.26/configure.ac
 +	libiconv,
 +	[  --with-libiconv=DIR	enable to convert locale: default=yes],
 +	[ libiconv_dir=$withval ],
-+	[ libiconv_dir=yes ]) 
++	[ libiconv_dir=yes ])
 +
 +if test "x${libiconv_dir}" != "xno"; then
 +   AC_MSG_RESULT($libiconv_dir)
++   LIBICONV_CFLAGS="-I/usr/local/include"
++   LIBICONV_LDFLAGS="-L/usr/local/lib"
 +   if test "x${libiconv_dir}" != "xyes"; then
 +      LIBICONV_CFLAGS="-I${libiconv_dir}/include"
 +      LIBICONV_LDFLAGS="-L${libiconv_dir}/lib"
@@ -64,34 +66,59 @@ diff -ur lighttpd-1.4.26.orig/configure.ac lighttpd-1.4.26/configure.ac
 +LIBS="$LIBS $LIBICONV_LIBS"
 +
 +dnl Check for websocket version
-+AC_MSG_CHECKING(whether --with-websocket-version option specified)
++AC_MSG_CHECKING(whether --with-websocket option specified)
 +AC_ARG_WITH(
-+	websocket-version,
-+	[  --with-websocket-version=VER	determine websocket version : default=75],
-+	[ websocket_version_num=$withval ],
-+	[ websocket_version_num=75 ]) 
-+AC_MSG_RESULT(${websocket_version_num})
-+if test "x${websocket_version_num}" == "x75"; then
-+   WEBSOCKET_VERSION_CFLAGS="-D_MOD_WEBSOCKET_SPEC_UP_TO_75_"
++	websocket,
++	[  --with-websocket@<:@=IETF-{00,08}@:>@
++				  specify draft version : default=IETF-00],
++	[ websocket=$withval ],
++	[ websocket=no ])
++AC_MSG_RESULT(${websocket})
++if test "x${websocket}" == "xyes" ||
++   test "x${websocket}" == "xietf-00" ||
++   test "x${websocket}" == "xIETF-00"; then
++   websocket="IETF-00"
++   WEBSOCKET_VERSION_CFLAGS="-D_MOD_WEBSOCKET_SPEC_IETF_00_"
++elif test "x${websocket}" == "xietf-08" ||
++     test "x${websocket}" == "xIETF-08"; then
++   WEBSOCKET_VERSION_CFLAGS="-D_MOD_WEBSOCKET_SPEC_IETF_08_"
++elif test "x${websocket}" != "xno"; then
++   AC_MSG_ERROR([websocket option is invalid. plz specify IETF-{00,08}])
 +fi
-+if test "x${websocket_version_num}" == "x76"; then
-+   WEBSOCKET_VERSION_CFLAGS="-D_MOD_WEBSOCKET_SPEC_76_"
-+fi
++AC_SUBST(websocket)
 +AC_SUBST(WEBSOCKET_VERSION_CFLAGS)
 +CFLAGS="$CFLAGS $WEBSOCKET_VERSION_CFLAGS"
++
++dnl with gprof
++AC_MSG_CHECKING(whether --with-gprof option specified)
++AC_ARG_WITH(
++        gprof,
++	[  --with-gprof=yes/no	with GNU profiler : default=no],
++	[ gprof=$withval ],
++	[ gprof=no ]) 
++AC_MSG_RESULT(${gprof})
++if test "x${gprof}" == "xyes"; then
++   GPROF_CFLAGS="-pg"
++fi
++AC_SUBST(GPROF_CFLAGS)
++CFLAGS="$CFLAGS $GPROF_CFLAGS"
 +
  dnl openssl on solaris needs -lsocket -lnsl
  AC_SEARCH_LIBS(socket,socket)
  AC_SEARCH_LIBS(gethostbyname,nsl socket)
-@@ -581,6 +640,13 @@
+@@ -581,6 +663,17 @@
  do_build="mod_cgi mod_fastcgi mod_extforward mod_proxy mod_evhost mod_simple_vhost mod_access mod_alias mod_setenv mod_usertrack mod_auth mod_status mod_accesslog"
  do_build="$do_build mod_rrdtool mod_secdownload mod_expire mod_compress mod_dirlisting mod_indexfile mod_userdir mod_webdav mod_staticfile mod_scgi mod_flv_streaming"
  
-+plugins="mod_websocket(SPEC-${websocket_version_num})"
-+if test ! "x$HAS_LIBICONV" = x; then
-+   	do_build="$do_build $plugins"
++if test "x${websocket}" != "xno"; then
++	plugins="mod_websocket(${websocket})"
++	if test ! "x$HAS_LIBICONV" = x; then
++		do_build="$do_build $plugins"
++	else
++		no_build="$no_build $plugins"
++	fi
 +else
-+	no_build="$no_build $plugins"
++	no_build="$no_build mod_websocket"
 +fi
 +
  plugins="mod_rewrite mod_redirect mod_ssi mod_trigger_b4_dl"
@@ -99,13 +126,22 @@ diff -ur lighttpd-1.4.26.orig/configure.ac lighttpd-1.4.26/configure.ac
  if test ! "x$PCRE_LIB" = x; then
 diff -ur lighttpd-1.4.26.orig/src/Makefile.am lighttpd-1.4.26/src/Makefile.am
 --- lighttpd-1.4.26.orig/src/Makefile.am	2010-02-02 08:28:20.000000000 +0900
-+++ lighttpd-1.4.26/src/Makefile.am	2010-06-08 18:28:10.000000000 +0900
++++ lighttpd-1.4.26/src/Makefile.am	2011-06-17 17:21:55.000000000 +0900
+@@ -76,7 +76,7 @@
+       splaytree.c status_counter.c
+ 
+ src = server.c response.c connections.c network.c \
+-      configfile.c configparser.c request.c proc_open.c
++      configfile.c configparser.c request.c proc_open.c 
+ 
+ lib_LTLIBRARIES =
+ 
 @@ -95,6 +95,11 @@
  common_libadd =
  endif
  
 +lib_LTLIBRARIES += mod_websocket.la
-+mod_websocket_la_SOURCES = mod_websocket.c
++mod_websocket_la_SOURCES = mod_websocket.c sha1.c
 +mod_websocket_la_LDFLAGS = -module -export-dynamic -avoid-version -no-undefined
 +mod_websocket_la_LIBADD = $(common_libadd)
 +
@@ -114,7 +150,7 @@ diff -ur lighttpd-1.4.26.orig/src/Makefile.am lighttpd-1.4.26/src/Makefile.am
  mod_flv_streaming_la_LDFLAGS = -module -export-dynamic -avoid-version -no-undefined
 diff -ur lighttpd-1.4.26.orig/src/base.h lighttpd-1.4.26/src/base.h
 --- lighttpd-1.4.26.orig/src/base.h	2010-02-02 08:28:20.000000000 +0900
-+++ lighttpd-1.4.26/src/base.h	2010-06-08 18:27:51.000000000 +0900
++++ lighttpd-1.4.26/src/base.h	2011-06-17 17:22:44.000000000 +0900
 @@ -331,7 +331,8 @@
  	CON_STATE_WRITE,
  	CON_STATE_RESPONSE_END,
@@ -127,7 +163,7 @@ diff -ur lighttpd-1.4.26.orig/src/base.h lighttpd-1.4.26/src/base.h
  typedef enum { COND_RESULT_UNSET, COND_RESULT_FALSE, COND_RESULT_TRUE } cond_result_t;
 diff -ur lighttpd-1.4.26.orig/src/connections-glue.c lighttpd-1.4.26/src/connections-glue.c
 --- lighttpd-1.4.26.orig/src/connections-glue.c	2010-02-02 08:28:20.000000000 +0900
-+++ lighttpd-1.4.26/src/connections-glue.c	2010-06-08 18:27:51.000000000 +0900
++++ lighttpd-1.4.26/src/connections-glue.c	2011-06-17 17:22:12.000000000 +0900
 @@ -14,6 +14,7 @@
  	case CON_STATE_REQUEST_END: return "req-end";
  	case CON_STATE_RESPONSE_START: return "resp-start";
@@ -146,7 +182,7 @@ diff -ur lighttpd-1.4.26.orig/src/connections-glue.c lighttpd-1.4.26/src/connect
  }
 diff -ur lighttpd-1.4.26.orig/src/connections.c lighttpd-1.4.26/src/connections.c
 --- lighttpd-1.4.26.orig/src/connections.c	2010-02-04 19:07:45.000000000 +0900
-+++ lighttpd-1.4.26/src/connections.c	2010-06-08 18:27:51.000000000 +0900
++++ lighttpd-1.4.26/src/connections.c	2011-06-17 17:35:52.000000000 +0900
 @@ -1155,6 +1155,8 @@
  		}
  
@@ -197,7 +233,7 @@ diff -ur lighttpd-1.4.26.orig/src/connections.c lighttpd-1.4.26/src/connections.
  		break;
 diff -ur lighttpd-1.4.26.orig/src/plugin.c lighttpd-1.4.26/src/plugin.c
 --- lighttpd-1.4.26.orig/src/plugin.c	2010-02-02 08:28:20.000000000 +0900
-+++ lighttpd-1.4.26/src/plugin.c	2010-06-08 18:27:51.000000000 +0900
++++ lighttpd-1.4.26/src/plugin.c	2011-06-17 17:38:19.000000000 +0900
 @@ -44,6 +44,7 @@
  		PLUGIN_FUNC_INIT,
  		PLUGIN_FUNC_CLEANUP,
@@ -224,7 +260,7 @@ diff -ur lighttpd-1.4.26.orig/src/plugin.c lighttpd-1.4.26/src/plugin.c
  #undef PLUGIN_TO_SLOT
 diff -ur lighttpd-1.4.26.orig/src/plugin.h lighttpd-1.4.26/src/plugin.h
 --- lighttpd-1.4.26.orig/src/plugin.h	2010-02-02 08:28:20.000000000 +0900
-+++ lighttpd-1.4.26/src/plugin.h	2010-06-08 18:27:51.000000000 +0900
++++ lighttpd-1.4.26/src/plugin.h	2011-06-17 17:23:19.000000000 +0900
 @@ -23,6 +23,7 @@
  #define PHYSICALPATH_FUNC  CONNECTION_FUNC
  #define REQUESTDONE_FUNC   CONNECTION_FUNC

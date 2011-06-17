@@ -2,11 +2,11 @@
 
 - Install lighty with mod_websocket
 
-1.Get the lighttpd source from
+1.Get the lighttpd-1.4.26 source from
 
   http://www.lighttpd.net/download/
 
-  $ tar xzvf lighttpd-1.4.x.tar.gz
+  $ tar xzvf lighttpd-1.4.26.tar.gz
 
 2.Install tools and libraries necessary for making lighttpd
   if you don't have.
@@ -51,16 +51,17 @@
 
 3.Patch the source
 
-  $ cd lighttpd-1.4.x/
+  $ cd lighttpd-1.4.26/
   $ patch -p1 < mod_websocket.patch
 
-  note: this patch contains a part of mod-connect.patch 
+  note: this patch contains a part of mod-connect.patch
   ( http://redmine.lighttpd.net/attachments/997/mod-connect.patch )
 
-4.copy mod_websocket.c into src dir and make lighty.
+4.copy mod_websocket and sha1 sources into src dir and make lighty.
 
-  $ cp mod_websocket.{h,c} lighttd-1.4.x/src/
-  $ cd lighttpd-1.4.x
+  $ cp mod_websocket.{h,c} lighttd-1.4.26/src/
+  $ cp sha1.{h,c} lighttd-1.4.26/src/
+  $ cd lighttpd-1.4.26
 
   When you configure the first, do autogen.sh at once.
   (because of patched some Makefile.am)
@@ -71,18 +72,18 @@
 
   NOTE:
   websocket configure option is below.
-  --with-websocket-version={75, 76}
-  If you want to use latest spec, plz specify --with-websocket-version=76
+  --with-websocket[=IETF-{00, 08}]
+  If you want to use latest spec, plz specify --with-websocket=IETF-08
 
   $ make
   $ sudo make install
 
 5. check for mod_websocket.so
 
-  $ cd lighttd-1.4.x/src/.libs
+  $ cd lighttd-1.4.26/src/.libs
   $ ls -l mod_websocket.*
 
-  or 
+  or
 
   $ ls -l /usr/local/lib/mod_websocket.*
 
@@ -91,47 +92,81 @@
 
 6.Add setting for mod_websocket into lighttpd.conf
 
-  5-1. add websocket module into server.modules section.
+  6-1. add websocket module into server.modules section.
 
   server.modules              = ( "mod_websocket", ... )
 
-  5-2. add websocket.server section like below.
+  6-2. add websocket.server section like below.
        "origins" treats IP Address and FQDN as another value.
 
   websocket.server = (
-  		     "/echo" =>    ( "host" => "127.0.0.1",
-		                     "port" => 7 ),
-		     "/func" =>    ( "host" => "192.168.0.10",
-		                     "port" => 8000 ),
+                     "/echo" =>    ( "host" => "127.0.0.1",
+                                     "port" => 7 ),
+                     "/binary" =>  ( "host" => "127.0.0.1",
+                                     "port" => 7000,
+                                     "type" => "bin" ),
+                     "/func" =>    ( "host" => "192.168.0.10",
+                                     "port" => 8000 ),
                      "/strict1" => ( "host" => "127.0.0.1",
-		                     "port" => 9000,
+                                     "port" => 9000,
                                      "origins" => ( "example.com" ) ),
                      "/strict2" => ( "host" => "127.0.0.1",
-		                     "port" => 9001,
+                                     "port" => 9001,
                                      "origins" => ( "example.com",
                                                     "192.168.0.1" ) ),
                      "/subproto" => (
-		                     ( "host" => "127.0.0.1",
-		                       "port" => 9002,
-				       "subproto" => "subproto1"
+                                     ( "host" => "127.0.0.1",
+                                       "port" => 9002,
+                                       "subproto" => "subproto1"
                                      ),
-		                     ( "host" => "127.0.0.1",
-		                       "port" => 9003,
-				       "subproto" => "subproto2"
+                                     ( "host" => "127.0.0.1",
+                                       "port" => 9003,
+                                       "subproto" => "subproto2"
                                      )
                                     ),
                      "/locale" => (
-		                    "host" => "192.168.0.5",
-		                    "port" => 9000,
-				    "locale" => "EUCJP"
+                                    "host" => "192.168.0.5",
+                                    "port" => 9000,
+                                    "locale" => "EUCJP"
                                   )
                      )
 
-  5-3. locale
+  6-3. locale
        If a backend server uses non UTF-8 locale, plz set the locale
        into configration.
        If not set locale, mod_websocket treats all messages as same
        locale of OS from which lighttpd is executed.
        (and If messages are not same locale, disconnect session.)
 
+7. websocket.server section format
+   "host"  = STRING          : FQDN or IPAddr [mandatory]
+   "port"  = INTEGER         : port number [mandatory]
+   "type"  = "bin" or "text" : payload type [optional]
+                               case insensitive, default = "text"
+                               This parameter becomes effective only at
+                               --with-websocket=IETF-08.
+   "origins" = STRING ARRAY  : part of domain or IPAddr [optional]
+                               enable to access only from specified origins.
+                               NOTE: it's easy to misrepresent origin by an
+                               original application.
+   "subproto" = STRING       : sub protocol [optional]
+   "locale" = STRING         : locale string [optional]
+                               If you use character encodings other than UTF-8
+                               on backend server, set this param properly.
+   ex.
+   +---------+            +--------+            +------------------+
+   | browser | <--------> | lighty | <--------> | TCP server       |
+   |         |  Internet  |        |  Localnet  | 192.168.0.2:9000 |
+   |  UTF-8  |            |        |            | encoding = EUCJP |
+   +---------+            +--------+            +------------------+
+               <-------->            <-------->
+                  UTF-8                 EUCJP
+
+   websocket.server = (
+                       "/locale" => (
+                                     "host" => "192.168.0.2",
+                                     "port" => 9000,
+                                     "locale" => "EUCJP"
+                                    )
+                      )
 // EOF

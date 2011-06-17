@@ -2,5 +2,7 @@
 
 - TODOs
   1. commit test
+  2. send PING frame if specified at configuration
+  3. timeout handle
 
 // EOF
