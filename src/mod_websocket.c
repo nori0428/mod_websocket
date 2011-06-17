@@ -1350,7 +1350,7 @@ int websocket_handle_frame(handler_ctx *hctx) {
             buffer_reset(hctx->frame.payload.data);
             return -1;
         }
-        if (encode_to(hctx->cdc, writebuf, &len,
+        if (encode_to(hctx->cds, writebuf, &len,
                       hctx->frame.payload.data->ptr, len) < 0) {
             free(writebuf);
             writebuf = NULL;
@@ -1551,7 +1551,7 @@ int websocket_handle_frame(handler_ctx *hctx) {
                 buffer_reset(hctx->frame.payload.data);
                 return -1;
             }
-            if (encode_to(hctx->cdc, writebuf, &len,
+            if (encode_to(hctx->cds, writebuf, &len,
                           hctx->frame.payload.data->ptr,
                           hctx->frame.ctl.siz) < 0) {
                 free(writebuf);
