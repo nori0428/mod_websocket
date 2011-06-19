@@ -1,15 +1,7 @@
 diff -ur lighttpd-1.4.28.orig/configure.ac lighttpd-1.4.28/configure.ac
 --- lighttpd-1.4.28.orig/configure.ac	2010-08-13 20:10:15.000000000 +0900
-+++ lighttpd-1.4.28/configure.ac	2011-06-17 19:48:23.000000000 +0900
-@@ -67,6 +67,7 @@
- AC_TYPE_OFF_T
- AC_TYPE_PID_T
- AC_TYPE_SIZE_T
-+AC_TYPE_UINT32_T
- 
- AC_CHECK_MEMBER(struct tm.tm_gmtoff,[AC_DEFINE([HAVE_STRUCT_TM_GMTOFF],[1],[gmtoff in struct tm])],,[#include <time.h>])
- AC_CHECK_TYPES(struct sockaddr_storage,,,[#include <sys/socket.h>])
-@@ -81,7 +82,7 @@
++++ lighttpd-1.4.28/configure.ac	2011-06-20 08:48:53.000000000 +0900
+@@ -81,7 +81,7 @@
  AC_TYPE_SIGNAL
  AC_FUNC_STAT
  AC_FUNC_STRFTIME
@@ -18,7 +10,7 @@ diff -ur lighttpd-1.4.28.orig/configure.ac lighttpd-1.4.28/configure.ac
  
  if test -z "$PKG_CONFIG"; then
    AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
-@@ -215,6 +216,87 @@
+@@ -215,6 +215,73 @@
   AC_SUBST(ATTR_LIB)
  fi
  
@@ -89,24 +81,10 @@ diff -ur lighttpd-1.4.28.orig/configure.ac lighttpd-1.4.28/configure.ac
 +AC_SUBST(WEBSOCKET_VERSION_CFLAGS)
 +CFLAGS="$CFLAGS $WEBSOCKET_VERSION_CFLAGS"
 +
-+dnl with gprof
-+AC_MSG_CHECKING(whether --with-gprof option specified)
-+AC_ARG_WITH(
-+        gprof,
-+        [  --with-gprof=yes/no  with GNU profiler : default=no],
-+        [ gprof=$withval ],
-+        [ gprof=no ]) 
-+AC_MSG_RESULT(${gprof})
-+if test "x${gprof}" == "xyes"; then
-+   GPROF_CFLAGS="-pg"
-+fi
-+AC_SUBST(GPROF_CFLAGS)
-+CFLAGS="$CFLAGS $GPROF_CFLAGS"
-+
  dnl openssl on solaris needs -lsocket -lnsl
  AC_SEARCH_LIBS(socket,socket)
  AC_SEARCH_LIBS(gethostbyname,nsl socket)
-@@ -625,6 +707,17 @@
+@@ -625,6 +692,17 @@
  do_build="mod_cgi mod_fastcgi mod_extforward mod_proxy mod_evhost mod_simple_vhost mod_access mod_alias mod_setenv mod_usertrack mod_auth mod_status mod_accesslog"
  do_build="$do_build mod_rrdtool mod_secdownload mod_expire mod_compress mod_dirlisting mod_indexfile mod_userdir mod_webdav mod_staticfile mod_scgi mod_flv_streaming"
  
@@ -124,9 +102,10 @@ diff -ur lighttpd-1.4.28.orig/configure.ac lighttpd-1.4.28/configure.ac
  plugins="mod_rewrite mod_redirect mod_ssi mod_trigger_b4_dl"
  features="regex-conditionals"
  if test ! "x$PCRE_LIB" = x; then
+lighttpd-1.4.28だけに発見: configure.ac~
 diff -ur lighttpd-1.4.28.orig/src/Makefile.am lighttpd-1.4.28/src/Makefile.am
 --- lighttpd-1.4.28.orig/src/Makefile.am	2010-08-12 05:44:17.000000000 +0900
-+++ lighttpd-1.4.28/src/Makefile.am	2011-06-17 19:50:18.000000000 +0900
++++ lighttpd-1.4.28/src/Makefile.am	2011-06-20 08:47:26.000000000 +0900
 @@ -95,6 +95,11 @@
  common_libadd =
  endif
@@ -141,7 +120,7 @@ diff -ur lighttpd-1.4.28.orig/src/Makefile.am lighttpd-1.4.28/src/Makefile.am
  mod_flv_streaming_la_LDFLAGS = -module -export-dynamic -avoid-version -no-undefined
 diff -ur lighttpd-1.4.28.orig/src/base.h lighttpd-1.4.28/src/base.h
 --- lighttpd-1.4.28.orig/src/base.h	2010-08-07 21:44:17.000000000 +0900
-+++ lighttpd-1.4.28/src/base.h	2011-06-17 19:23:01.000000000 +0900
++++ lighttpd-1.4.28/src/base.h	2011-06-20 08:47:26.000000000 +0900
 @@ -331,7 +331,8 @@
  	CON_STATE_WRITE,
  	CON_STATE_RESPONSE_END,
@@ -154,7 +133,7 @@ diff -ur lighttpd-1.4.28.orig/src/base.h lighttpd-1.4.28/src/base.h
  typedef enum { COND_RESULT_UNSET, COND_RESULT_FALSE, COND_RESULT_TRUE } cond_result_t;
 diff -ur lighttpd-1.4.28.orig/src/connections-glue.c lighttpd-1.4.28/src/connections-glue.c
 --- lighttpd-1.4.28.orig/src/connections-glue.c	2010-08-17 18:04:38.000000000 +0900
-+++ lighttpd-1.4.28/src/connections-glue.c	2011-06-17 19:24:47.000000000 +0900
++++ lighttpd-1.4.28/src/connections-glue.c	2011-06-20 08:47:26.000000000 +0900
 @@ -14,6 +14,7 @@
  	case CON_STATE_REQUEST_END: return "req-end";
  	case CON_STATE_RESPONSE_START: return "resp-start";
@@ -173,7 +152,7 @@ diff -ur lighttpd-1.4.28.orig/src/connections-glue.c lighttpd-1.4.28/src/connect
  }
 diff -ur lighttpd-1.4.28.orig/src/connections.c lighttpd-1.4.28/src/connections.c
 --- lighttpd-1.4.28.orig/src/connections.c	2010-08-17 18:04:38.000000000 +0900
-+++ lighttpd-1.4.28/src/connections.c	2011-06-17 19:29:57.000000000 +0900
++++ lighttpd-1.4.28/src/connections.c	2011-06-20 08:47:26.000000000 +0900
 @@ -1163,6 +1163,8 @@
  		}
  
@@ -224,7 +203,7 @@ diff -ur lighttpd-1.4.28.orig/src/connections.c lighttpd-1.4.28/src/connections.
  		break;
 diff -ur lighttpd-1.4.28.orig/src/plugin.c lighttpd-1.4.28/src/plugin.c
 --- lighttpd-1.4.28.orig/src/plugin.c	2010-08-17 18:04:38.000000000 +0900
-+++ lighttpd-1.4.28/src/plugin.c	2011-06-17 19:33:49.000000000 +0900
++++ lighttpd-1.4.28/src/plugin.c	2011-06-20 08:47:26.000000000 +0900
 @@ -44,6 +44,7 @@
  		PLUGIN_FUNC_INIT,
  		PLUGIN_FUNC_CLEANUP,
@@ -251,7 +230,7 @@ diff -ur lighttpd-1.4.28.orig/src/plugin.c lighttpd-1.4.28/src/plugin.c
  #undef PLUGIN_TO_SLOT
 diff -ur lighttpd-1.4.28.orig/src/plugin.h lighttpd-1.4.28/src/plugin.h
 --- lighttpd-1.4.28.orig/src/plugin.h	2010-02-02 08:28:20.000000000 +0900
-+++ lighttpd-1.4.28/src/plugin.h	2011-06-17 19:35:26.000000000 +0900
++++ lighttpd-1.4.28/src/plugin.h	2011-06-20 08:47:26.000000000 +0900
 @@ -23,6 +23,7 @@
  #define PHYSICALPATH_FUNC  CONNECTION_FUNC
  #define REQUESTDONE_FUNC   CONNECTION_FUNC
