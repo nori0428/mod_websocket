@@ -1435,7 +1435,7 @@ int websocket_handle_frame(handler_ctx *hctx) {
     chunk *c = NULL;
     char *pdata = NULL;
     char *writebuf = NULL;
-    size_t i, flag = 0, len = 0;
+    size_t i, cnt = 0, len = 0;
     int ret;
 
     if (!hctx->con || !hctx->con->read_queue) {
@@ -1465,30 +1465,34 @@ int websocket_handle_frame(handler_ctx *hctx) {
         case MOD_WEBSOCKET_FRAME_STATE_READ_LENGTH:
             hctx->frame.ctl.mask_flag = ((*pdata & 0x80) == 0x80);
             hctx->frame.ctl.siz = *pdata & 0x7f;
-            if (hctx->frame.ctl.siz == 0x7e ||
-                hctx->frame.ctl.siz == 0x7f) {
+            if (hctx->frame.ctl.siz == MOD_WEBSOCKET_FRAME_LEN16 ||
+                hctx->frame.ctl.siz == MOD_WEBSOCKET_FRAME_LEN63) {
                 hctx->frame.payload.siz = 0;
                 hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_EX_LENGTH;
+            } else if (hctx->frame.ctl.siz == 0) {
+                break;
             } else {
-                hctx->frame.ctl.mask_len = 0;
+                hctx->frame.ctl.mask_cnt = 0;
                 hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_MASK;
             }
             break;
         case MOD_WEBSOCKET_FRAME_STATE_READ_EX_LENGTH:
             hctx->frame.payload.siz =
                 hctx->frame.payload.siz * 256 + (*pdata & 0x0ff);
-            flag++;
-            if ((flag >= 2 && hctx->frame.ctl.siz == 0x7e) ||
-                (flag >= 8 && hctx->frame.ctl.siz == 0x7f)) {
+            cnt++;
+            if ((cnt >= MOD_WEBSOCKET_FRAME_LEN16_CNT &&
+                 hctx->frame.ctl.siz == MOD_WEBSOCKET_FRAME_LEN16) ||
+                (cnt >= MOD_WEBSOCKET_FRAME_LEN63_CNT &&
+                 hctx->frame.ctl.siz == MOD_WEBSOCKET_FRAME_LEN63)) {
                 hctx->frame.ctl.siz = hctx->frame.payload.siz;
-                hctx->frame.ctl.mask_len = 0;
+                hctx->frame.ctl.mask_cnt = 0;
                 hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_MASK;
             }
             break;
         case MOD_WEBSOCKET_FRAME_STATE_READ_MASK:
-            hctx->frame.ctl.mask[hctx->frame.ctl.mask_len] = *pdata;
-            hctx->frame.ctl.mask_len++;
-            if (hctx->frame.ctl.mask_len >= 4) {
+            hctx->frame.ctl.mask[hctx->frame.ctl.mask_cnt] = *pdata;
+            hctx->frame.ctl.mask_cnt++;
+            if (hctx->frame.ctl.mask_cnt >= MOD_WEBSOCKET_MASK_CNT) {
                 hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_PAYLOAD;
             }
             break;
@@ -1590,11 +1594,11 @@ int websocket_create_frame(handler_ctx *hctx,
         c = (char)(0x80 | MOD_WEBSOCKET_OPCODE_TEXT);
     }
     buffer_append_memory(buf, &c, 1);
-    if (siz < 0x7e) {
+    if (siz < MOD_WEBSOCKET_FRAME_LEN16) {
         c = siz;
         buffer_append_memory(buf, &c, 1);
     } else {
-        c = 0x7e;
+        c = MOD_WEBSOCKET_FRAME_LEN16;
         buffer_append_memory(buf, &c, 1);
         c = (siz & 0x0ff00) >> 8;
         buffer_append_memory(buf, &c, 1);

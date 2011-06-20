@@ -88,6 +88,13 @@
 # define	MOD_WEBSOCKET_OPCODE_CLOSE					(0x08)
 # define	MOD_WEBSOCKET_OPCODE_PING					(0x09)
 # define	MOD_WEBSOCKET_OPCODE_PONG					(0x0A)
+
+# define	MOD_WEBSOCKET_FRAME_LEN16					(0x7E)
+# define	MOD_WEBSOCKET_FRAME_LEN63					(0x7F)
+# define	MOD_WEBSOCKET_FRAME_LEN16_CNT				(2)
+# define	MOD_WEBSOCKET_FRAME_LEN63_CNT				(8)
+# define	MOD_WEBSOCKET_MASK_CNT						(4)
+
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
 
 #define	MOD_WEBSOCKET_FRAME_TYPE_TEXT					(0x00)
@@ -166,8 +173,8 @@ typedef struct _mod_websocket_control_t {
     unsigned char rsv;
     unsigned char opcode;
     mod_websocket_bool_t mask_flag;
-    unsigned char mask[4];
-    int mask_len;
+    unsigned char mask[MOD_WEBSOCKET_MASK_CNT];
+    int mask_cnt;
     size_t siz;
 } mod_websocket_control_t;
 #endif /* _MOD_WEBSOCKET_SPEC_IETF_08_ */
