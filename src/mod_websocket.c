@@ -664,6 +664,8 @@ int get_key3_field(buffer *key, const handler_ctx *hctx) {
             }
             ret = buffer_copy_string_len(key, key3buf,
                                          MOD_WEBSOCKET_SEC_WEBSOCKET_KEY3_LEN);
+        } else {
+            ret = -1;
         }
     } else {
         body = &hctx->con->read_queue->first->mem->ptr[hctx->con->read_queue->first->offset];
