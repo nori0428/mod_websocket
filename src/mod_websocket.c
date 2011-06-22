@@ -560,6 +560,8 @@ data_array *get_subproto_extension(const array *subprotos, buffer *subproto) {
     if (buffer_is_empty(subproto) && subprotos->used == 1) {
         ext = (data_array *)subprotos->data[0];
         return ext;
+    } else if (buffer_is_empty(subproto)){
+        return NULL;
     }
     for (i = subprotos->used; i > 0; i--) {
         da_subproto = (data_array *)subprotos->data[i - 1];
@@ -811,7 +813,7 @@ int get_key_field(buffer *key, const array *headers) {
 }
 
 int create_Accept(handler_ctx *hctx) {
-    SHA1Context sha;
+    SHA_CTX sha;
     uint8_t md[MOD_WEBSOCKET_MESSAGE_DIGEST_LEN];
     buffer *key = buffer_init();
     unsigned char buf[32];
@@ -827,15 +829,9 @@ int create_Accept(handler_ctx *hctx) {
     }
 
     /* get SHA1 hash of key */
-    if (SHA1Reset(&sha)) {
-        goto err_out;
-    }
-    if (SHA1Input(&sha, (uint8_t *)key->ptr, key->used - 1)) {
-        goto err_out;
-    }
-    if (SHA1Result(&sha, md)) {
-        goto err_out;
-    }
+    SHA1_Init(&sha);
+    SHA1_Update(&sha, (sha1_byte *)key->ptr, key->used - 1);
+    SHA1_Final(md, &sha);
     /* get base64 encoded SHA1 hash */
     memset(buf, 0, 32);
     b64_encode(buf, md, MOD_WEBSOCKET_MESSAGE_DIGEST_LEN);

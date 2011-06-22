@@ -1,75 +1,79 @@
 /*
- * <URL: http://www.ietf.org/rfc/rfc3174.txt>
+ * sha.h
  *
- *  sha1.h
+ * Originally taken from the public domain SHA1 implementation
+ * written by by Steve Reid <steve@edmweb.com>
+ * 
+ * Modified by Aaron D. Gifford <agifford@infowest.com>
  *
- *  Description:
- *      This is the header file for code which implements the Secure
- *      Hashing Algorithm 1 as defined in FIPS PUB 180-1 published
- *      April 17, 1995.
+ * NO COPYRIGHT - THIS IS 100% IN THE PUBLIC DOMAIN
  *
- *      Many of the variable names in this code, especially the
- *      single character names, were used because those were the names
- *      used in the publication.
+ * The original unmodified version is available at:
+ *    ftp://ftp.funet.fi/pub/crypt/hash/sha/sha1.c
  *
- *      Please read the file sha1.c for more information.
- *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR(S) OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 
-#ifndef _SHA1_H_
-#define _SHA1_H_
+#ifndef __SHA1_H__
+#define __SHA1_H__
 
-#include <stdint.h>
-
-/*
- * If you do not have the ISO standard stdint.h header file, then you
- * must typdef the following:
- *    name              meaning
- *  uint32_t         unsigned 32 bit integer
- *  uint8_t          unsigned 8 bit integer (i.e., unsigned char)
- *  int_least16_t    integer of >= 16 bits
- *
- */
-
-#ifndef _SHA_enum_
-#define _SHA_enum_
-enum
-{
-    shaSuccess = 0,
-    shaNull,            /* Null pointer parameter */
-    shaInputTooLong,    /* input data too long */
-    shaStateError       /* called Input after Result */
-};
+#ifdef __cplusplus
+extern "C" {
 #endif
-#define SHA1HashSize 20
+
+/* Define this if your machine is LITTLE_ENDIAN, otherwise #undef it: */
+#ifdef WORDS_BIGENDIAN
+# undef		LITTLE_ENDIAN
+#else
+# ifndef LITTLE_ENDIAN
+#  define	LITTLE_ENDIAN
+# endif
+#endif
+
+/* Make sure you define these types for your architecture: */
+typedef unsigned int sha1_quadbyte;	/* 4 byte type */
+typedef unsigned char sha1_byte;	/* single byte type */
 
 /*
- *  This structure will hold context information for the SHA-1
- *  hashing operation
+ * Be sure to get the above definitions right.  For instance, on my
+ * x86 based FreeBSD box, I define LITTLE_ENDIAN and use the type
+ * "unsigned long" for the quadbyte.  On FreeBSD on the Alpha, however,
+ * while I still use LITTLE_ENDIAN, I must define the quadbyte type
+ * as "unsigned int" instead.
  */
-typedef struct SHA1Context
-{
-    uint32_t Intermediate_Hash[SHA1HashSize/4]; /* Message Digest  */
 
-    uint32_t Length_Low;            /* Message length in bits      */
-    uint32_t Length_High;           /* Message length in bits      */
+#define SHA1_BLOCK_LENGTH	64
+#define SHA1_DIGEST_LENGTH	20
 
-                               /* Index into message block array   */
-    int_least16_t Message_Block_Index;
-    uint8_t Message_Block[64];      /* 512-bit message blocks      */
+/* The SHA1 structure: */
+typedef struct _SHA_CTX {
+	sha1_quadbyte	state[5];
+	sha1_quadbyte	count[2];
+	sha1_byte	buffer[SHA1_BLOCK_LENGTH];
+} SHA_CTX;
 
-    int Computed;               /* Is the digest computed?         */
-    int Corrupted;             /* Is the message digest corrupted? */
-} SHA1Context;
+#ifndef NOPROTO
+void SHA1_Init(SHA_CTX *context);
+void SHA1_Update(SHA_CTX *context, sha1_byte *data, unsigned int len);
+void SHA1_Final(sha1_byte digest[SHA1_DIGEST_LENGTH], SHA_CTX* context);
+#else
+void SHA1_Init();
+void SHA1_Update();
+void SHA1_Final();
+#endif
 
-/*
- *  Function Prototypes
- */
-int SHA1Reset(  SHA1Context *);
-int SHA1Input(  SHA1Context *,
-                const uint8_t *,
-                unsigned int);
-int SHA1Result( SHA1Context *,
-                uint8_t Message_Digest[SHA1HashSize]);
+#ifdef	__cplusplus
+}
+#endif
 
 #endif
