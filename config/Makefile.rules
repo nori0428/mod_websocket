@@ -1,0 +1,9 @@
+## $Id$
+
+clean-local:
+	${RM} *~
+
+distclean-local:
+	${RM} Makefile.in
+
+## EOF

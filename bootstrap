@@ -1,0 +1,12 @@
+#!/bin/sh
+# $Id$
+
+set -x
+libtoolize --force --copy
+aclocal -I config
+autoheader
+rm -f config/config.guess # XXX
+automake --foreign --add-missing --copy
+autoconf
+
+# EOF
