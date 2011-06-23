@@ -17,7 +17,9 @@ libwebsocket_la_SOURCES = \
 	sha1.c \
 	mod_websocket_types.h \
 	mod_websocket_conv.h \
-	mod_websocket_conv.c
+	mod_websocket_conv.c \
+	mod_websocket_connector.h \
+	mod_websocket_connector.c
 
 include $(top_srcdir)/config/Makefile.rules
 

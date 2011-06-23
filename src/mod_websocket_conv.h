@@ -31,5 +31,5 @@ extern "C" {
 }
 #endif
 
-#endif /* _MOD_WEBSOCKET_BASE64_H_ */
+#endif /* _MOD_WEBSOCKET_CONV_H_ */
 

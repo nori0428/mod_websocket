@@ -90,6 +90,7 @@ mod_websocket_conv_test() {
         CU_ASSERT_EQUAL(memcmp(src, dst2, strlen(dst2)), 0);
         mod_websocket_conv_final(cnv);
     }
+    return 0;
 }
 
 int
