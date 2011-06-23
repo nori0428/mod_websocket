@@ -122,7 +122,22 @@ mod_websocket_connector_test() {
 
     sockfd = mod_websocket_tcp_server_connect("127.0.0.1", "9001");
     CU_ASSERT_EQUAL(sockfd, -1);
+
+    fprintf(stderr, "check: IPv4\n");
     sockfd = mod_websocket_tcp_server_connect("127.0.0.1", "9000");
+    CU_ASSERT_NOT_EQUAL(sockfd, -1);
+    write(sockfd, msg, strlen(msg));
+    memset(buf, 0, sizeof(buf));
+    r = read(sockfd, buf, sizeof(buf));
+    fprintf(stderr, "recv echo: %s\n", buf);
+    CU_ASSERT_EQUAL(r, strlen(msg));
+    CU_ASSERT_EQUAL(memcmp(msg, buf, strlen(msg)), 0);
+    mod_websocket_tcp_server_disconnect(sockfd);
+    CU_ASSERT_EQUAL(write(sockfd, msg, strlen(msg)), -1);
+    CU_ASSERT_EQUAL(errno, EBADF);
+
+    fprintf(stderr, "check: IPv6\n");
+    sockfd = mod_websocket_tcp_server_connect("::1", "9000");
     CU_ASSERT_NOT_EQUAL(sockfd, -1);
     write(sockfd, msg, strlen(msg));
     memset(buf, 0, sizeof(buf));

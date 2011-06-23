@@ -79,6 +79,7 @@ all_test() {
         printf("\t%s\n", resultstr[j]);
         CU_ASSERT_EQUAL(memcmp(md, result[j], sizeof(result[j])), 0);
     }
+    return 0;
 }
 
 int
