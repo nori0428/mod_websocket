@@ -2,9 +2,9 @@
 # $Id$
 
 HOST_OS=`uname -s`
-if test x${HOST_OS} = "xDarwin"; then
+if test "x${HOST_OS}" = "xDarwin"; then
 	LIBTOOLIZE=glibtoolize
-elif test x{$HOST_OS} = "xLinux"; then
+elif test "x${HOST_OS}" = "xLinux"; then
 	LIBTOOLIZE=libtoolize
 fi
 set -x
