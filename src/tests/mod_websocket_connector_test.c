@@ -109,7 +109,7 @@ accept_handler(EV_P_ struct ev_io *w, int revents) {
     watcher = calloc(1, sizeof(ev_io));
     l = w->data;
     ev_io_init(watcher, read_handler, new_fd, EV_READ);
-    ev_io_start(loop, watcher);
+    ev_io_start(l, watcher);
     fprintf(stdout, "accepted = %d\n", new_fd);
 }
 
@@ -128,9 +128,14 @@ mod_websocket_connector_test() {
     CU_ASSERT_NOT_EQUAL(sockfd, -1);
     write(sockfd, msg, strlen(msg));
     memset(buf, 0, sizeof(buf));
-    r = read(sockfd, buf, sizeof(buf));
+
+    while (r = read(sockfd, buf, sizeof(buf)) < 0) {
+        if (errno != EAGAIN) {
+            CU_FAIL("non-block read");
+        }
+    }
     fprintf(stderr, "recv echo: %s\n", buf);
-    CU_ASSERT_EQUAL(r, strlen(msg));
+    CU_ASSERT_EQUAL(strlen(buf), strlen(msg));
     CU_ASSERT_EQUAL(memcmp(msg, buf, strlen(msg)), 0);
     mod_websocket_tcp_server_disconnect(sockfd);
     CU_ASSERT_EQUAL(write(sockfd, msg, strlen(msg)), -1);
@@ -141,9 +146,13 @@ mod_websocket_connector_test() {
     CU_ASSERT_NOT_EQUAL(sockfd, -1);
     write(sockfd, msg, strlen(msg));
     memset(buf, 0, sizeof(buf));
-    r = read(sockfd, buf, sizeof(buf));
+    while (r = read(sockfd, buf, sizeof(buf)) < 0) {
+        if (errno != EAGAIN) {
+            CU_FAIL("non-block read");
+        }
+    }
     fprintf(stderr, "recv echo: %s\n", buf);
-    CU_ASSERT_EQUAL(r, strlen(msg));
+    CU_ASSERT_EQUAL(strlen(buf), strlen(msg));
     CU_ASSERT_EQUAL(memcmp(msg, buf, strlen(msg)), 0);
     mod_websocket_tcp_server_disconnect(sockfd);
 
