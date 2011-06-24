@@ -77,10 +77,8 @@ mod_websocket_tcp_server_connect(const char *host, const char *service) {
                 continue;
             }
             if (getsockopt(p->fd, SOL_SOCKET, SO_ERROR,
-                           &sockret, &socklen) != 0) {
-                break;
-            }
-            if (0 == sockret) {
+                           &sockret, &socklen) == 0 &&
+                sockret == 0) {
                 connfd = p->fd;
                 break;
             }
