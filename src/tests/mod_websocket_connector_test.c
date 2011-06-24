@@ -118,7 +118,6 @@ mod_websocket_connector_test() {
     int sockfd = -1;
     const char *msg = "Hello";
     char buf[256];
-    ssize_t r;
 
     sockfd = mod_websocket_tcp_server_connect("127.0.0.1", "9001");
     CU_ASSERT_EQUAL(sockfd, -1);
@@ -129,7 +128,7 @@ mod_websocket_connector_test() {
     write(sockfd, msg, strlen(msg));
     memset(buf, 0, sizeof(buf));
 
-    while (r = read(sockfd, buf, sizeof(buf)) < 0) {
+    while (read(sockfd, buf, sizeof(buf)) < 0) {
         if (errno != EAGAIN) {
             CU_FAIL("non-block read");
         }
@@ -146,7 +145,7 @@ mod_websocket_connector_test() {
     CU_ASSERT_NOT_EQUAL(sockfd, -1);
     write(sockfd, msg, strlen(msg));
     memset(buf, 0, sizeof(buf));
-    while (r = read(sockfd, buf, sizeof(buf)) < 0) {
+    while (read(sockfd, buf, sizeof(buf)) < 0) {
         if (errno != EAGAIN) {
             CU_FAIL("non-block read");
         }
@@ -155,7 +154,23 @@ mod_websocket_connector_test() {
     CU_ASSERT_EQUAL(strlen(buf), strlen(msg));
     CU_ASSERT_EQUAL(memcmp(msg, buf, strlen(msg)), 0);
     mod_websocket_tcp_server_disconnect(sockfd);
+    CU_ASSERT_EQUAL(write(sockfd, msg, strlen(msg)), -1);
+    CU_ASSERT_EQUAL(errno, EBADF);
 
+    fprintf(stderr, "check: FQDN\n");
+    sockfd = mod_websocket_tcp_server_connect("localhost", "9000");
+    CU_ASSERT_NOT_EQUAL(sockfd, -1);
+    write(sockfd, msg, strlen(msg));
+    memset(buf, 0, sizeof(buf));
+    while (read(sockfd, buf, sizeof(buf)) < 0) {
+        if (errno != EAGAIN) {
+            CU_FAIL("non-block read");
+        }
+    }
+    fprintf(stderr, "recv echo: %s\n", buf);
+    CU_ASSERT_EQUAL(strlen(buf), strlen(msg));
+    CU_ASSERT_EQUAL(memcmp(msg, buf, strlen(msg)), 0);
+    mod_websocket_tcp_server_disconnect(sockfd);
     CU_ASSERT_EQUAL(write(sockfd, msg, strlen(msg)), -1);
     CU_ASSERT_EQUAL(errno, EBADF);
     return 0;
