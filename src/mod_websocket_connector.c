@@ -3,7 +3,6 @@
  * a part of mod_websocket
  **/
 
-
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -20,7 +19,6 @@ mod_websocket_tcp_server_connect(const char *host, const char *service) {
     struct addrinfo hints;
     struct addrinfo *res = NULL;
     struct addrinfo *ai = NULL;
-
     struct fdlist {
         int fd;
         struct fdlist *next;
@@ -78,7 +76,6 @@ mod_websocket_tcp_server_connect(const char *host, const char *service) {
             }
         }
     }
-
     /* connect timeout is to set 5 secs */
     tv.tv_sec = 5;
     tv.tv_usec = 0;
