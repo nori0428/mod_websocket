@@ -24,7 +24,7 @@ mod_websocket_tcp_server_connect(const char *host, const char *service) {
         struct fdlist *next;
     };
     struct fdlist *head = NULL, *p, *pn, *fde = NULL;
-    int flags, maxfd, connfd = -1, ret, sockret = -1;
+    int flags, fd, maxfd = -1, connfd = -1, sockret = -1;
     socklen_t socklen = sizeof(sockret);
     fd_set fds;
     struct timeval tv;
@@ -39,35 +39,25 @@ mod_websocket_tcp_server_connect(const char *host, const char *service) {
     }
     FD_ZERO(&fds);
     for (ai = res; ai; ai = ai->ai_next) {
+        fd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
+        if (fd < 0) {
+            goto go_out;
+        }
+        if ((flags = fcntl(fd, F_GETFL, 0)) < 0 ||
+            fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
+            close(fd);
+            goto go_out;
+        }
         fde = (struct fdlist *)malloc(sizeof(struct fdlist));
         if (!fde) {
+            close(fd);
             goto go_out;
         }
-        fde->fd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
-        if (fde->fd < 0) {
-            free(fde);
-            fde = NULL;
-            goto go_out;
-        }
-        if ((flags = fcntl(fde->fd, F_GETFL, 0)) < 0 ||
-            fcntl(fde->fd, F_SETFL, flags | O_NONBLOCK) < 0) {
-            close(fde->fd);
-            free(fde);
-            fde = NULL;
-            goto go_out;
-        }
-        fde->next = NULL;
-        if (!head) {
-            head = fde;
+        fde->fd = fd;
+        fde->next = head;
+        head = fde;
+        if (fde->fd > maxfd) {
             maxfd = fde->fd;
-        } else {
-            for (p = head; p->next; p = p->next) {
-                ;
-            }
-            p->next = fde;
-            if (fde->fd > maxfd) {
-                maxfd = fde->fd;
-            }
         }
         FD_SET(fde->fd, &fds);
         if (connect(fde->fd, ai->ai_addr, ai->ai_addrlen) < 0) {
@@ -79,18 +69,20 @@ mod_websocket_tcp_server_connect(const char *host, const char *service) {
     /* connect timeout is to set 5 secs */
     tv.tv_sec = 5;
     tv.tv_usec = 0;
-    ret = select(maxfd + 1, NULL, &fds, NULL, &tv);
-    if (ret == 0) {
+    if (select(maxfd + 1, NULL, &fds, NULL, &tv) == 0) {
         goto go_out;
     } else {
         for (p = head; p; p = p->next) {
-            if (FD_ISSET(p->fd, &fds) &&
-                getsockopt(p->fd, SOL_SOCKET, SO_ERROR,
-                           &sockret, &socklen) == 0) {
-                if (0 == sockret) {
-                    connfd = p->fd;
-                    break;
-                }
+            if (!FD_ISSET(p->fd, &fds)) {
+                continue;
+            }
+            if (getsockopt(p->fd, SOL_SOCKET, SO_ERROR,
+                           &sockret, &socklen) != 0) {
+                break;
+            }
+            if (0 == sockret) {
+                connfd = p->fd;
+                break;
             }
         }
     }
