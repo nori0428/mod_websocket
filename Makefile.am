@@ -1,7 +1,7 @@
 ## $Id$
 
 SUBDIRS = \
-	. src
+	. stub src
 
 include $(top_srcdir)/config/Makefile.rules
 

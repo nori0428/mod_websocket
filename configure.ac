@@ -28,6 +28,7 @@ if test "x$ac_cv_c_bigendian" = "xyes"; then
    CFLAGS="$CFLAGS -DWORDS_BIGENDIAN"
 fi
 
+
 # Checks for basic programs
 AC_PROG_LN_S
 AC_PROG_LIBTOOL
@@ -38,8 +39,31 @@ AC_CHECK_FUNCS([memset strcasecmp])
 
 CFLAGS="-g -Werror -W -Wall -Wundef -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wwrite-strings -Wsign-compare -Waggregate-return -Wnested-externs -Wno-long-long -Wunused -Wfloat-equal -Wformat -fno-strict-aliasing"
 
+# Check for websocket version
+AC_MSG_CHECKING(whether --with-websocket option specified)
+AC_ARG_WITH(
+        websocket,
+        [  --with-websocket@<:@=IETF-{00,08}@:>@
+                                  specify draft version : default=IETF-00],
+        [ websocket=$withval ],
+        [ websocket=no ])
+AC_MSG_RESULT(${websocket})
+if test "x${websocket}" == "xyes" ||
+   test "x${websocket}" == "xietf-00" ||
+   test "x${websocket}" == "xIETF-00"; then
+   WEBSOCKET_VERSION_CFLAGS="-D_MOD_WEBSOCKET_SPEC_IETF_00_"
+elif test "x${websocket}" == "xietf-08" ||
+     test "x${websocket}" == "xIETF-08"; then
+   WEBSOCKET_VERSION_CFLAGS="-D_MOD_WEBSOCKET_SPEC_IETF_08_"
+elif test "x${websocket}" != "xno"; then
+   AC_MSG_ERROR([websocket option is invalid. plz specify IETF-{00,08}])
+fi
+AC_SUBST(WEBSOCKET_VERSION_CFLAGS)
+CFLAGS="$CFLAGS $WEBSOCKET_VERSION_CFLAGS"
+
 AC_OUTPUT(\
 	Makefile \
+        stub/Makefile \
 	src/Makefile \
 	src/tests/Makefile \
 )
