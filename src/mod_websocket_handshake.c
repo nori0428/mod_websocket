@@ -190,7 +190,7 @@ create_MD5_sum(unsigned char *md5sum, handler_ctx *hctx) {
     MD5_Final(md5sum, &ctx);
     return 0;
 }
-#endif /* _MOD_WEBSOCKET_SPEC_IETF_00_ */
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
 int
@@ -214,7 +214,7 @@ create_accept_body(unsigned char *digest, handler_ctx *hctx) {
     base64_encode(digest, sha1_digest, SHA1_DIGEST_LENGTH);
     return 0;
 }
-#endif /* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
 
 mod_websocket_bool_t
 is_allowed_origin(handler_ctx *hctx) {
@@ -386,22 +386,22 @@ create_response(handler_ctx *hctx) {
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
         "HTTP/1.1 101 Web Socket Protocol Handshake\r\n"
         "Upgrade: WebSocket\r\n"
-#endif
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
         "HTTP/1.1 101 Switching Protocols\r\n"
         "Upgrade: websocket\r\n"
-#endif
+#endifY	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
 
         "Connection: Upgrade\r\n";
     buffer *resp = NULL;
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
     unsigned char md5sum[MD5_STRLEN];
-#endif
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
     unsigned char accept[ACCEPT_BODY_STRLEN];
-#endif
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
 
     if (!hctx) {
         return MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;

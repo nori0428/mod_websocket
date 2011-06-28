@@ -1,13 +1,14 @@
 /**
  * $Id$
- **/
+ * a part of mod_websocket
+ */
 
 #include "base64.h"
 
 static const char base64_chars[] =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    "abcdefghijklmnopqrstuvwxyz"
-    "0123456789+/";
+	"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	"abcdefghijklmnopqrstuvwxyz"
+	"0123456789+/";
 
 void
 base64_encode(unsigned char *dst, const unsigned char *src, size_t siz) {

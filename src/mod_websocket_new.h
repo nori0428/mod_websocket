@@ -40,17 +40,14 @@
 
 #include "mod_websocket_types.h"
 
-#define	MOD_WEBSOCKET_CONFIG_SERVER						"websocket.server"
-#define	MOD_WEBSOCKET_CONFIG_DEBUG						"websocket.debug"
-#define	MOD_WEBSOCKET_CONFIG_HOST						"host"
-#define	MOD_WEBSOCKET_CONFIG_PORT						"port"
-#define	MOD_WEBSOCKET_CONFIG_SUBPROTO					"subproto"
-#define	MOD_WEBSOCKET_CONFIG_ORIGINS					"origins"
-#define	MOD_WEBSOCKET_CONFIG_LOCALE						"locale"
-#define	MOD_WEBSOCKET_CONFIG_TYPE						"type"
-
-#define	MOD_WEBSOCKET_SCHEME_WS							"ws://"
-#define	MOD_WEBSOCKET_SCHEME_WSS						"wss://"
+#define	MOD_WEBSOCKET_CONFIG_SERVER	"websocket.server"
+#define	MOD_WEBSOCKET_CONFIG_DEBUG	"websocket.debug"
+#define	MOD_WEBSOCKET_CONFIG_HOST	"host"
+#define	MOD_WEBSOCKET_CONFIG_PORT	"port"
+#define	MOD_WEBSOCKET_CONFIG_SUBPROTO	"subproto"
+#define	MOD_WEBSOCKET_CONFIG_ORIGINS	"origins"
+#define	MOD_WEBSOCKET_CONFIG_LOCALE	"locale"
+#define	MOD_WEBSOCKET_CONFIG_TYPE	"type"
 
 #define DEBUG_LOG(format, args...)\
     if (hctx->pd->conf.debug) {\
@@ -89,7 +86,7 @@ typedef struct {
 typedef struct {
     mod_websocket_handshake_t handshake;
 
-    server *srv;		/* server */
+    server *srv;	/* server */
     connection *con;	/* connection */
     data_array *ext;	/* extention */
     plugin_data *pd;	/* config */

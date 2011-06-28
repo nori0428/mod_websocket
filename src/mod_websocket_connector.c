@@ -1,7 +1,7 @@
 /**
  * $Id$
  * a part of mod_websocket
- **/
+ */
 
 #include <stdlib.h>
 #include <string.h>

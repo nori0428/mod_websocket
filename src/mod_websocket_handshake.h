@@ -1,7 +1,7 @@
 /**
  * $Id$
  * a part of mod_websocket
- **/
+ */
 
 #ifndef	_MOD_WEBSOCKET_HANDSHAKE_H_
 #define	_MOD_WEBSOCKET_HANDSHAKE_H_
