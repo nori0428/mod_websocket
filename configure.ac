@@ -28,7 +28,6 @@ if test "x$ac_cv_c_bigendian" = "xyes"; then
    CFLAGS="$CFLAGS -DWORDS_BIGENDIAN"
 fi
 
-
 # Checks for basic programs
 AC_PROG_LN_S
 AC_PROG_LIBTOOL
@@ -46,7 +45,7 @@ AC_ARG_WITH(
         [  --with-websocket@<:@=IETF-{00,08}@:>@
                                   specify draft version : default=IETF-00],
         [ websocket=$withval ],
-        [ websocket=no ])
+        [ websocket=yes ])
 AC_MSG_RESULT(${websocket})
 if test "x${websocket}" == "xyes" ||
    test "x${websocket}" == "xietf-00" ||
@@ -61,9 +60,15 @@ fi
 AC_SUBST(WEBSOCKET_VERSION_CFLAGS)
 CFLAGS="$CFLAGS $WEBSOCKET_VERSION_CFLAGS"
 
+case $host_os in
+     *darwin* ) LIBNCURSES="-lncurses";;
+     * ) LIBNCURSES=;;
+esac
+AC_SUBST(LIBNCURSES)
+
 AC_OUTPUT(\
 	Makefile \
-        stub/Makefile \
+	stub/Makefile \
 	src/Makefile \
 	src/tests/Makefile \
 )

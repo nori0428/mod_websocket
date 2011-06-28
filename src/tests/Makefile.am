@@ -15,6 +15,7 @@ INCLUDES = \
 LDADD = \
 	-L/opt/local/lib \
 	-licui18n -licuuc -lcunit -lev \
+	${LIBNCURSES} \
 	${top_srcdir}/src/libwebsocket.la \
 	${top_srcdir}/stub/libtest.la
 
