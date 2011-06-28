@@ -391,7 +391,7 @@ create_response(handler_ctx *hctx) {
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
         "HTTP/1.1 101 Switching Protocols\r\n"
         "Upgrade: websocket\r\n"
-#endifY	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
 
         "Connection: Upgrade\r\n";
     buffer *resp = NULL;
