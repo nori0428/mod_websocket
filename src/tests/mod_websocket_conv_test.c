@@ -71,7 +71,7 @@ mod_websocket_conv_test() {
     FILE *fp;
     int i;
     char src[1024], dst1[1024], dst2[1024];
-    size_t srcsiz;
+    size_t srcsiz, dstsiz = 1024;
     mod_websocket_conv_t *cnv;
 
     for (i = 0; i < 3; i++) {
@@ -80,14 +80,17 @@ mod_websocket_conv_test() {
         srcsiz = fread(src, 1, sizeof(src), fp);
         fclose(fp);
         cnv = mod_websocket_conv_init(ptns[i].locale);
-        mod_websocket_conv_to_client(cnv, dst1, sizeof(dst1), src, srcsiz);
+        mod_websocket_conv_to_client(cnv, dst1, &dstsiz, src, srcsiz);
         CU_ASSERT_EQUAL(mod_websocket_isUTF8(dst1, strlen(dst1)),
                         MOD_WEBSOCKET_TRUE);
-        mod_websocket_conv_to_server(cnv, dst2, sizeof(dst2),
+        fprintf(stderr, "srcsiz: %lu, dstsiz: %lu\n", srcsiz, dstsiz);
+        dstsiz = 1024;
+        mod_websocket_conv_to_server(cnv, dst2, &dstsiz,
                                      dst1, strlen(dst1));
         CU_ASSERT_EQUAL(mod_websocket_isUTF8(dst2, strlen(dst2)),
                         ptns[i].exp);
         CU_ASSERT_EQUAL(memcmp(src, dst2, strlen(dst2)), 0);
+        fprintf(stderr, "srcsiz: %lu, dstsiz: %lu\n", srcsiz, dstsiz);
         mod_websocket_conv_final(cnv);
     }
     return 0;

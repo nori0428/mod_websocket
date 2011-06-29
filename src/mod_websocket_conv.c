@@ -10,48 +10,49 @@
 #include "mod_websocket_conv.h"
 
 static int mod_websocket_conv(UConverter *, UConverter *,
-                              char *, size_t, const char *, size_t);
+                              char *, size_t *, const char *, size_t);
 
 inline int
 mod_websocket_conv(UConverter *to, UConverter *from,
-                   char *dst, size_t dstlen,
-                   const char *src, size_t srclen) {
+                   char *dst, size_t *dstsiz,
+                   const char *src, size_t srcsiz) {
     UErrorCode err = U_ZERO_ERROR;
-    size_t unisiz, convlen;
+    size_t unisiz, convsiz;
     UChar *unibuf, *punibuf, *ppunibuf;
 
-    if (!to || !from || !dst || !src) {
+    if (!to || !from || !dst || !src || !*dstsiz) {
         return -1;
     }
-    if (!srclen) {
-        memset(dst, 0, dstlen);
+    if (!srcsiz) {
+        memset(dst, 0, *dstsiz);
         return 0;
     }
-    unisiz = srclen / ucnv_getMinCharSize(from);
+    unisiz = srcsiz / ucnv_getMinCharSize(from);
     unibuf = (UChar *)malloc(unisiz);
     if (!unibuf) {
         return -1;
     }
     punibuf = unibuf;
     ucnv_toUnicode(from, &punibuf, punibuf + unisiz,
-                   &src, src + srclen, 0, 1, &err);
+                   &src, src + srcsiz, 0, 1, &err);
     if (U_FAILURE(err)) {
         free(unibuf);
         return -1;
     }
-    convlen = (punibuf - unibuf) * ucnv_getMaxCharSize(to);
-    if (convlen > dstlen) {
+    convsiz = (punibuf - unibuf) * ucnv_getMaxCharSize(to);
+    if (convsiz > *dstsiz) {
         free(unibuf);
         return -1;
     }
     ppunibuf = unibuf;
-    ucnv_fromUnicode(to, &dst, dst + dstlen,
+    ucnv_fromUnicode(to, &dst, dst + *dstsiz,
                      (const UChar **)&ppunibuf, punibuf, 0, 1, &err);
     free(unibuf);
     if (U_FAILURE(err)) {
         return -1;
     }
     *dst = '\0';
+    *dstsiz = convsiz;
     return 0;
 }
 
@@ -123,26 +124,27 @@ mod_websocket_isUTF8(const char *data, size_t siz) {
 
 int
 mod_websocket_conv_to_client(mod_websocket_conv_t *cnv,
-                             char *dst, size_t dstlen,
-                             const char *src, size_t srclen) {
-    if (mod_websocket_isUTF8(src, srclen) == MOD_WEBSOCKET_TRUE) {
-        if (dstlen < srclen) {
+                             char *dst, size_t *dstsiz,
+                             const char *src, size_t srcsiz) {
+    if (mod_websocket_isUTF8(src, srcsiz) == MOD_WEBSOCKET_TRUE) {
+        if (*dstsiz < srcsiz) {
             return -1;
         }
-        memset(dst, 0, dstlen);
-        if (srclen) {
-            memcpy(dst, src, srclen);
+        memset(dst, 0, *dstsiz);
+        if (srcsiz) {
+            memcpy(dst, src, srcsiz);
         }
+        *dstsiz = srcsiz;
         return 0;
     }
-    return mod_websocket_conv(cnv->cli, cnv->srv, dst, dstlen, src, srclen);
+    return mod_websocket_conv(cnv->cli, cnv->srv, dst, dstsiz, src, srcsiz);
 }
 
 int
 mod_websocket_conv_to_server(mod_websocket_conv_t *cnv,
-                             char *dst, size_t dstlen,
-                             const char *src, size_t srclen) {
-    return mod_websocket_conv(cnv->srv, cnv->cli, dst, dstlen, src, srclen);
+                             char *dst, size_t *dstsiz,
+                             const char *src, size_t srcsiz) {
+    return mod_websocket_conv(cnv->srv, cnv->cli, dst, dstsiz, src, srcsiz);
 }
 
 void
