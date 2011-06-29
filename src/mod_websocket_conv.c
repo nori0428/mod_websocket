@@ -29,7 +29,7 @@ mod_websocket_conv(UConverter *to, UConverter *from,
         return 0;
     }
     unisiz = srcsiz / ucnv_getMinCharSize(from);
-    unibuf = (UChar *)malloc(unisiz);
+    unibuf = (UChar *)malloc(sizeof(UChar) * unisiz);
     if (!unibuf) {
         return -1;
     }
