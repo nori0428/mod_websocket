@@ -65,32 +65,42 @@ mod_websocket_conv_test() {
             "mod_websocket_conv.euc.dat",
             "EUC-JP",
             MOD_WEBSOCKET_FALSE
-        }
+        },
     };
 
     FILE *fp;
-    int i;
+    int i, j, ret;
     char src[1024], dst1[1024], dst2[1024];
-    size_t srcsiz, dstsiz = 1024;
+    size_t srcsiz, dst1siz = 1024, dst2siz = 1024;
     mod_websocket_conv_t *cnv;
 
     for (i = 0; i < 3; i++) {
+        memset(src, 0, sizeof(src));
+        memset(dst1, 0, sizeof(dst1));
+        memset(dst2, 0, sizeof(dst2));
         fprintf(stderr, "check: %s\n", ptns[i].fname);
         fp = fopen(ptns[i].fname, "r");
         srcsiz = fread(src, 1, sizeof(src), fp);
         fclose(fp);
+        src[srcsiz] = '\0';
+
         cnv = mod_websocket_conv_init(ptns[i].locale);
-        mod_websocket_conv_to_client(cnv, dst1, &dstsiz, src, srcsiz);
+        if (!cnv) {
+            CU_FAIL("init failed");
+            return 0;
+        }
+
+        dst1siz = 1024;
+        ret = mod_websocket_conv_to_client(cnv, dst1, &dst1siz, src, srcsiz);
+        CU_ASSERT_EQUAL(ret, 0);
         CU_ASSERT_EQUAL(mod_websocket_isUTF8(dst1, strlen(dst1)),
                         MOD_WEBSOCKET_TRUE);
-        fprintf(stderr, "srcsiz: %lu, dstsiz: %lu\n", srcsiz, dstsiz);
-        dstsiz = 1024;
-        mod_websocket_conv_to_server(cnv, dst2, &dstsiz,
-                                     dst1, strlen(dst1));
-        CU_ASSERT_EQUAL(mod_websocket_isUTF8(dst2, strlen(dst2)),
-                        ptns[i].exp);
-        CU_ASSERT_EQUAL(memcmp(src, dst2, strlen(dst2)), 0);
-        fprintf(stderr, "srcsiz: %lu, dstsiz: %lu\n", srcsiz, dstsiz);
+
+        dst2siz = 1024;
+        ret = mod_websocket_conv_to_server(cnv, dst2, &dst2siz, dst1, dst1siz);
+        CU_ASSERT_EQUAL(ret, 0);
+        CU_ASSERT_EQUAL(mod_websocket_isUTF8(dst2, dst2siz), ptns[i].exp);
+        CU_ASSERT_EQUAL(memcmp(src, dst2, dst2siz), 0);
         mod_websocket_conv_final(cnv);
     }
     return 0;

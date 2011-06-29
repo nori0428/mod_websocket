@@ -19,8 +19,9 @@ mod_websocket_conv(UConverter *to, UConverter *from,
     UErrorCode err = U_ZERO_ERROR;
     size_t unisiz, convsiz;
     UChar *unibuf, *punibuf, *ppunibuf;
+    char *pdst;
 
-    if (!to || !from || !dst || !src || !*dstsiz) {
+    if (!to || !from || !dst || !src || !dstsiz || !*dstsiz) {
         return -1;
     }
     if (!srcsiz) {
@@ -45,14 +46,15 @@ mod_websocket_conv(UConverter *to, UConverter *from,
         return -1;
     }
     ppunibuf = unibuf;
-    ucnv_fromUnicode(to, &dst, dst + *dstsiz,
+    pdst = dst;
+    ucnv_fromUnicode(to, &pdst, pdst + *dstsiz,
                      (const UChar **)&ppunibuf, punibuf, 0, 1, &err);
     free(unibuf);
     if (U_FAILURE(err)) {
         return -1;
     }
-    *dst = '\0';
-    *dstsiz = convsiz;
+    *pdst = '\0';
+    *dstsiz = pdst - dst;
     return 0;
 }
 
