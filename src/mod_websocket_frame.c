@@ -104,21 +104,13 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                 chunkqueue_reset(hctx->con->read_queue);
                 return -1;
             }
-            ret = buffer_copy_memory(fragment, c->mem->ptr, c->mem->used);
-            if (ret != 0) {
-                DEBUG_LOG("s", "no memory");
-                buffer_free(fragment);
-                chunkqueue_reset(hctx->con->read_queue);
-                return -1;
-            }
-         } else {
-            ret = buffer_append_memory(fragment, c->mem->ptr, c->mem->used);
-            if (ret != 0) {
-                DEBUG_LOG("s", "no memory");
-                buffer_free(fragment);
-                chunkqueue_reset(hctx->con->read_queue);
-                return -1;
-            }
+        }
+        ret = buffer_append_memory(fragment, c->mem->ptr, c->mem->used);
+        if (ret != 0) {
+            DEBUG_LOG("s", "no memory");
+            buffer_free(fragment);
+            chunkqueue_reset(hctx->con->read_queue);
+            return -1;
         }
     }
     chunkqueue_reset(hctx->con->read_queue);
