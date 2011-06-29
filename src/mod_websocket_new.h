@@ -39,6 +39,7 @@
 #include "log.h"
 
 #include "mod_websocket_types.h"
+#include "mod_websocket_conv.h"
 
 #define	MOD_WEBSOCKET_CONFIG_SERVER	"websocket.server"
 #define	MOD_WEBSOCKET_CONFIG_DEBUG	"websocket.debug"
@@ -83,15 +84,43 @@ typedef struct {
 
 } mod_websocket_handshake_t;
 
+typedef enum {
+    MOD_WEBSOCKET_FRAME_STATE_INIT,
+    MOD_WEBSOCKET_FRAME_STATE_READ_PAYLOAD,
+} mod_websocket_frame_state_t;
+
+typedef enum {
+    MOD_WEBSOCKET_FRAME_TYPE_TEXT,
+    MOD_WEBSOCKET_FRAME_TYPE_BIN,
+    MOD_WEBSOCKET_FRAME_TYPE_PING,
+    MOD_WEBSOCKET_FRAME_TYPE_PONG,
+    MOD_WEBSOCKET_FRAME_TYPE_CLOSE,
+} mod_websocket_frame_type_t;
+
+typedef struct {
+    size_t siz;
+    buffer *data;
+} mod_websocket_payload_t;
+
+typedef struct {
+    mod_websocket_frame_state_t state;
+    mod_websocket_frame_type_t type;
+    mod_websocket_payload_t payload;
+} mod_websocket_frame_t;
+
 typedef struct {
     mod_websocket_handshake_t handshake;
+    mod_websocket_frame_t frame;
+    mod_websocket_conv_t *cnv;
 
-    server *srv;	/* server */
-    connection *con;	/* connection */
-    data_array *ext;	/* extention */
+    /* ref */
+    server      *srv;	/* server */
+    connection  *con;	/* connection */
+    data_array  *ext;	/* extention */
     plugin_data *pd;	/* config */
 
-    chunkqueue *tocli;	/* chunkqueue to client */
+    chunkqueue  *tosrv;	/* chunkqueue to server */
+    chunkqueue  *tocli;	/* chunkqueue to client */
 } handler_ctx;
 
 #endif /* _MOD_WEBSOCKET_H_ */

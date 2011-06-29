@@ -24,7 +24,9 @@ libwebsocket_la_SOURCES = \
 	mod_websocket_connector.h \
 	mod_websocket_connector.c \
 	mod_websocket_handshake.h \
-	mod_websocket_handshake.c
+	mod_websocket_handshake.c \
+	mod_websocket_frame.h \
+	mod_websocket_frame.c
 
 include $(top_srcdir)/config/Makefile.rules
 
