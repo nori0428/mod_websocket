@@ -274,7 +274,7 @@ replace_extension(handler_ctx *hctx) {
 }
 
 mod_websocket_errno_t
-check_request(handler_ctx *hctx) {
+mod_websocket_handshake_check_request(handler_ctx *hctx) {
     size_t i;
     array *hdrs;
     data_string *hdr = NULL;
@@ -380,7 +380,7 @@ check_request(handler_ctx *hctx) {
 }
 
 mod_websocket_errno_t
-create_response(handler_ctx *hctx) {
+mod_websocket_handshake_create_response(handler_ctx *hctx) {
     const char *const_hdrs =
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_

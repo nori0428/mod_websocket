@@ -10,7 +10,7 @@
 #include "mod_websocket_new.h"
 
 CU_TestFunc
-mod_websocket_isUTF8_test() {
+mod_websocket_conv_isUTF8_test() {
     struct tstptns {
         const char *fname;
         mod_websocket_bool_t exp;
@@ -37,7 +37,7 @@ mod_websocket_isUTF8_test() {
         fprintf(stderr, "check: %s\n", ptns[i].fname);
         fp = fopen(ptns[i].fname, "r");
         siz = fread(buf, 1, sizeof(buf), fp);
-        CU_ASSERT_EQUAL(mod_websocket_isUTF8(buf, siz - 1),
+        CU_ASSERT_EQUAL(mod_websocket_conv_isUTF8(buf, siz - 1),
                         ptns[i].exp);
         fclose(fp);
     }
@@ -93,13 +93,14 @@ mod_websocket_conv_test() {
         dst1siz = 1024;
         ret = mod_websocket_conv_to_client(cnv, dst1, &dst1siz, src, srcsiz);
         CU_ASSERT_EQUAL(ret, 0);
-        CU_ASSERT_EQUAL(mod_websocket_isUTF8(dst1, strlen(dst1)),
+        CU_ASSERT_EQUAL(mod_websocket_conv_isUTF8(dst1, strlen(dst1)),
                         MOD_WEBSOCKET_TRUE);
 
         dst2siz = 1024;
         ret = mod_websocket_conv_to_server(cnv, dst2, &dst2siz, dst1, dst1siz);
         CU_ASSERT_EQUAL(ret, 0);
-        CU_ASSERT_EQUAL(mod_websocket_isUTF8(dst2, dst2siz), ptns[i].exp);
+        CU_ASSERT_EQUAL(mod_websocket_conv_isUTF8(dst2, dst2siz),
+                        ptns[i].exp);
         CU_ASSERT_EQUAL(memcmp(src, dst2, dst2siz), 0);
         mod_websocket_conv_final(cnv);
     }
@@ -117,7 +118,7 @@ main() {
     }
     CU_basic_set_mode(CU_BRM_SILENT);
     suite = CU_add_suite("mod_websocket_conv_suite", NULL, NULL);
-    CU_ADD_TEST(suite, mod_websocket_isUTF8_test);
+    CU_ADD_TEST(suite, mod_websocket_conv_isUTF8_test);
     CU_ADD_TEST(suite, mod_websocket_conv_test);
     CU_basic_run_tests();
     ret = CU_get_number_of_failures();

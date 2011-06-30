@@ -183,22 +183,22 @@ typedef struct {
     chunkqueue  *tocli;	/* chunkqueue to client */
 } handler_ctx;
 
+/* prototypes */
 mod_websocket_conv_t *mod_websocket_conv_init(const char *);
-mod_websocket_bool_t mod_websocket_isUTF8(const char *, size_t);
+mod_websocket_bool_t mod_websocket_conv_isUTF8(const char *, size_t);
 int mod_websocket_conv_to_client(mod_websocket_conv_t *,
                                  char *, size_t *, const char *, size_t);
 int mod_websocket_conv_to_server(mod_websocket_conv_t *,
                                  char *, size_t *, const char *, size_t);
 void mod_websocket_conv_final(mod_websocket_conv_t *);
 
-mod_websocket_errno_t check_request(handler_ctx *);
-mod_websocket_errno_t create_response(handler_ctx *);
+mod_websocket_errno_t mod_websocket_handshake_check_request(handler_ctx *);
+mod_websocket_errno_t mod_websocket_handshake_create_response(handler_ctx *);
 
 int mod_websocket_tcp_server_connect(const char *, const char *);
 void mod_websocket_tcp_server_disconnect(int);
 
-int mod_websocket_frame_send(handler_ctx *,
-                             mod_websocket_frame_type_t,
+int mod_websocket_frame_send(handler_ctx *, mod_websocket_frame_type_t,
                              char *, size_t);
 int mod_websocket_frame_recv(handler_ctx *);
 

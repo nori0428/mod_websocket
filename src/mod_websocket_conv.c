@@ -85,7 +85,7 @@ mod_websocket_conv_init(const char *locale) {
 }
 
 mod_websocket_bool_t
-mod_websocket_isUTF8(const char *data, size_t siz) {
+mod_websocket_conv_isUTF8(const char *data, size_t siz) {
     mod_websocket_bool_t ret = MOD_WEBSOCKET_FALSE;
     UErrorCode err = U_ZERO_ERROR;
     UCharsetDetector *detector;
@@ -128,7 +128,7 @@ int
 mod_websocket_conv_to_client(mod_websocket_conv_t *cnv,
                              char *dst, size_t *dstsiz,
                              const char *src, size_t srcsiz) {
-    if (mod_websocket_isUTF8(src, srcsiz) == MOD_WEBSOCKET_TRUE) {
+    if (mod_websocket_conv_isUTF8(src, srcsiz) == MOD_WEBSOCKET_TRUE) {
         if (*dstsiz < srcsiz) {
             return -1;
         }
