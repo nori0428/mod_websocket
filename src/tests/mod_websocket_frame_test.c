@@ -164,6 +164,9 @@ mod_websocket_frame_recv_test() {
     buffer *b = NULL;
     connection con;
     plugin_data pd;
+    const unsigned char head = 0x00;
+    const unsigned char tail = 0xff;
+    const unsigned char cfrm[3] = { 0xff, 0x00, 0x00 };
 
     fprintf(stderr, "check recv\n");
     memset(&hctx, 0, sizeof(hctx));
@@ -192,10 +195,8 @@ mod_websocket_frame_recv_test() {
     for (c = hctx.tosrv->first; c; c = c->next) {
         if (NULL == b) {
             b = buffer_init();
-            buffer_copy_memory(b, c->mem->ptr, c->mem->used);
-        } else {
-            buffer_append_memory(b, c->mem->ptr, c->mem->used);
         }
+        buffer_append_memory(b, c->mem->ptr, c->mem->used);
     }
     if (!buffer_is_empty(b)) {
         CU_ASSERT_EQUAL(memcmp(b->ptr, ASCII_STR, strlen(ASCII_STR)), 0);
@@ -228,10 +229,8 @@ mod_websocket_frame_recv_test() {
         for (c = hctx.tosrv->first; c; c = c->next) {
             if (NULL == b) {
                 b = buffer_init();
-                buffer_copy_memory(b, c->mem->ptr, c->mem->used);
-            } else {
-                buffer_append_memory(b, c->mem->ptr, c->mem->used);
             }
+            buffer_append_memory(b, c->mem->ptr, c->mem->used);
         }
         if (!buffer_is_empty(b)) {
             if (memcmp(b->ptr, buf, b->used) != 0) {
@@ -253,6 +252,120 @@ mod_websocket_frame_recv_test() {
         }
     }
 #endif
+
+    /* recv payload * 2 */
+    fprintf(stderr, "check: double payload\n");
+    hctx.cnv = mod_websocket_conv_init("UTF-8");
+    hctx.frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
+    buffer_reset(hctx.frame.payload.data);
+    chunkqueue_reset(hctx.tosrv);
+    chunkqueue_reset(con.read_queue);
+
+    b = chunkqueue_get_append_buffer(con.read_queue);
+    buffer_append_memory(b, &head, 1);
+    buffer_append_memory(b, ASCII_STR, strlen(ASCII_STR));
+    buffer_append_memory(b, &tail, 1);
+    b = chunkqueue_get_append_buffer(con.read_queue);
+    buffer_append_memory(b, &head, 1);
+    buffer_append_memory(b, ASCII_STR, strlen(ASCII_STR));
+    buffer_append_memory(b, &tail, 1);
+    ret = mod_websocket_frame_recv(&hctx);
+    CU_ASSERT_EQUAL(ret, 0);
+    b = NULL;
+
+    for (c = hctx.tosrv->first; c; c = c->next) {
+        if (NULL == b) {
+            b = buffer_init();
+        }
+        buffer_append_memory(b, c->mem->ptr, c->mem->used);
+    }
+    if (!buffer_is_empty(b)) {
+        if (memcmp(b->ptr, ASCII_STR ASCII_STR, strlen(ASCII_STR) * 2) != 0 ||
+            b->used != strlen(ASCII_STR) * 2) {
+            fprintf(stderr, "res: \n");
+            for (j = 0; j < b->used; j++) {
+                fprintf(stderr, "0x%02x(%c), ",
+                        b->ptr[j] & 0xff, b->ptr[j] & 0xff);
+            }
+            fprintf(stderr, "\n\n");
+            CU_FAIL("invalid recv");
+        }
+        buffer_free(b);
+        b = NULL;
+    } else {
+        CU_FAIL("recv no frames");
+    }
+    mod_websocket_conv_final(hctx.cnv);
+
+    /* recv chunk */
+    fprintf(stderr, "check: chunk\n");
+    hctx.cnv = mod_websocket_conv_init("UTF-8");
+    hctx.frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
+    buffer_reset(hctx.frame.payload.data);
+    chunkqueue_reset(hctx.tosrv);
+    chunkqueue_reset(con.read_queue);
+
+    b = chunkqueue_get_append_buffer(con.read_queue);
+    buffer_append_memory(b, &head, 1);
+    buffer_append_memory(b, ASCII_STR, strlen(ASCII_STR));
+    buffer_append_memory(b, &tail, 1);
+    b = chunkqueue_get_append_buffer(con.read_queue);
+    buffer_append_memory(b, &head, 1);
+    buffer_append_memory(b, ASCII_STR, strlen(ASCII_STR));
+    ret = mod_websocket_frame_recv(&hctx);
+    CU_ASSERT_EQUAL(ret, 0);
+    b = NULL;
+
+    for (c = hctx.tosrv->first; c; c = c->next) {
+        if (NULL == b) {
+            b = buffer_init();
+        }
+        buffer_append_memory(b, c->mem->ptr, c->mem->used);
+    }
+    if (!buffer_is_empty(b)) {
+        if (memcmp(b->ptr, ASCII_STR, strlen(ASCII_STR)) != 0 ||
+            b->used != strlen(ASCII_STR)) {
+            fprintf(stderr, "res: \n");
+            for (j = 0; j < b->used; j++) {
+                fprintf(stderr, "0x%02x(%c), ",
+                        b->ptr[j] & 0xff, b->ptr[j] & 0xff);
+            }
+            fprintf(stderr, "\n\n");
+            CU_FAIL("invalid recv");
+        }
+        buffer_free(b);
+        b = NULL;
+    } else {
+        CU_FAIL("recv no frames");
+    }
+    CU_ASSERT_EQUAL(hctx.frame.state, MOD_WEBSOCKET_FRAME_STATE_READ_PAYLOAD);
+    b = chunkqueue_get_append_buffer(con.read_queue);
+    buffer_append_memory(b, &head, 1);
+    ret = mod_websocket_frame_recv(&hctx);
+    CU_ASSERT_EQUAL(ret, 0);
+    b = NULL;
+    for (c = hctx.tosrv->first; c; c = c->next) {
+        if (NULL == b) {
+            b = buffer_init();
+        }
+        buffer_append_memory(b, c->mem->ptr, c->mem->used);
+    }
+    if (!buffer_is_empty(b)) {
+        if (memcmp(b->ptr, ASCII_STR, strlen(ASCII_STR)) != 0 ||
+            b->used != strlen(ASCII_STR)) {
+            fprintf(stderr, "res: \n");
+            for (j = 0; j < b->used; j++) {
+                fprintf(stderr, "0x%02x(%c), ",
+                        b->ptr[j] & 0xff, b->ptr[j] & 0xff);
+            }
+            fprintf(stderr, "\n\n");
+            CU_FAIL("invalid recv");
+        }
+        buffer_free(b);
+        b = NULL;
+    } else {
+        CU_FAIL("recv no frames");
+    }
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
     CU_FAIL("no tests exist");

@@ -82,8 +82,7 @@ mod_websocket_frame_send(handler_ctx *hctx,
 int
 mod_websocket_frame_recv(handler_ctx *hctx) {
     chunk *c = NULL;
-    buffer *fragment = NULL, *payload = NULL;
-    char *p = NULL;
+    buffer *fragment = NULL, *payload = NULL, *b = NULL;
     int ret;
     char *enc = NULL;
     size_t encsiz;
@@ -114,77 +113,70 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
         }
     }
     chunkqueue_reset(hctx->con->read_queue);
-    p = fragment->ptr;
-    if (hctx->frame.state == MOD_WEBSOCKET_FRAME_STATE_INIT) {
-        if (0x00 == *p) {
-            payload = buffer_init();
-            if (!payload) {
-                DEBUG_LOG("s", "no memory");
+
+    /* get payload from frame */
+    payload = hctx->frame.payload.data;
+    for (i = 0; i < fragment->used; i++) {
+        if (hctx->frame.state == MOD_WEBSOCKET_FRAME_STATE_INIT) {
+            if (0x00 == fragment->ptr[i]) {
+                hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_PAYLOAD;
+            } else {
+                DEBUG_LOG("s", "recv closing or invalid frame");
                 buffer_free(fragment);
+                buffer_reset(payload);
                 return -1;
             }
-            p++;
-            hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_PAYLOAD;
         } else {
-            DEBUG_LOG("s", "recv closing or invalid frame");
-            buffer_free(fragment);
-            return -1;
+            if (-1 == fragment->ptr[i]) { // XXX: equal to tail flag(0xff)
+                hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
+                encsiz = (payload->used) * 3; // XXX
+                enc = (char *)malloc(sizeof(char) * encsiz + 1);
+                if (!enc) {
+                    DEBUG_LOG("s", "no memory");
+                    buffer_free(fragment);
+                    buffer_reset(payload);
+                    return -1;
+                }
+                memset(enc, 0, encsiz);
+                ret = mod_websocket_conv_to_server(hctx->cnv,
+                                                   enc, &encsiz,
+                                                   payload->ptr,
+                                                   payload->used);
+                buffer_reset(payload);
+                if (ret != 0) {
+                    DEBUG_LOG("s", "fail to convert chars");
+                    buffer_free(fragment);
+                    free(enc);
+                    return -1;
+                }
+                b = chunkqueue_get_append_buffer(hctx->tosrv);
+                if (!b) {
+                    DEBUG_LOG("s", "no memory");
+                    buffer_free(fragment);
+                    free(enc);
+                    return -1;
+                }
+                ret = buffer_append_memory(b, enc, encsiz);
+                if (ret != 0) {
+                    DEBUG_LOG("s", "no memory");
+                    buffer_free(fragment);
+                    free(enc);
+                    return -1;
+                }
+                free(enc);
+            } else {
+                ret = buffer_append_memory(payload, &fragment->ptr[i], 1);
+                if (ret != 0) {
+                    DEBUG_LOG("s", "no memory");
+                    hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
+                    buffer_free(fragment);
+                    buffer_reset(payload);
+                    return -1;
+                }
+            }
         }
     }
-    payload = buffer_init();
-    if (!payload) {
-        DEBUG_LOG("s", "no memory");
-        buffer_free(fragment);
-        return -1;
-    }
-    ret = buffer_copy_memory(payload, p,
-                             fragment->used - (p - fragment->ptr));
     buffer_free(fragment);
-    if (ret != 0) {
-        DEBUG_LOG("s", "no memory");
-        buffer_free(payload);
-        return -1;
-    }
-    /* check for abnormal frame */
-    /* like "0x00, ..., 0xff, 0x02" etc. */
-    for (i = 0; i < payload->used; i++) {
-        if (payload->ptr[i] == -1) { // XXX: equal to tail flag(0xff)
-            payload->ptr[i] = '\0';
-            hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
-            break;
-        }
-    }
-    if (buffer_is_empty(hctx->frame.payload.data)) {
-        ret = buffer_copy_memory(hctx->frame.payload.data, payload->ptr, i);
-    } else {
-        ret = buffer_append_memory(hctx->frame.payload.data, payload->ptr, i);
-    }
-    buffer_free(payload);
-    if (ret != 0) {
-        DEBUG_LOG("s", "no memory");
-        return -1;
-    }
-    if (hctx->frame.state == MOD_WEBSOCKET_FRAME_STATE_INIT) {
-        encsiz = (hctx->frame.payload.data->used) * 3; // XXX
-        enc = (char *)malloc(sizeof(char) * encsiz + 1);
-        if (!enc) {
-            DEBUG_LOG("s", "no memory");
-            buffer_reset(hctx->frame.payload.data);
-            return -1;
-        }
-        memset(enc, 0, encsiz);
-        ret = mod_websocket_conv_to_server(hctx->cnv,
-                                           enc, &encsiz,
-                                           hctx->frame.payload.data->ptr,
-                                           hctx->frame.payload.data->used);
-        buffer_reset(hctx->frame.payload.data);
-        if (ret != 0) {
-            DEBUG_LOG("s", "fail to convert chars");
-            free(enc);
-            return -1;
-        }
-        chunkqueue_append_mem(hctx->tosrv, enc, encsiz + 1);
-    }
     return 0;
 }
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
