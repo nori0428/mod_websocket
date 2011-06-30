@@ -40,14 +40,14 @@
 #include "plugin.h"
 #include "log.h"
 
-#define	MOD_WEBSOCKET_CONFIG_SERVER	"websocket.server"
-#define	MOD_WEBSOCKET_CONFIG_DEBUG	"websocket.debug"
-#define	MOD_WEBSOCKET_CONFIG_HOST	"host"
-#define	MOD_WEBSOCKET_CONFIG_PORT	"port"
-#define	MOD_WEBSOCKET_CONFIG_SUBPROTO	"subproto"
-#define	MOD_WEBSOCKET_CONFIG_ORIGINS	"origins"
-#define	MOD_WEBSOCKET_CONFIG_LOCALE	"locale"
-#define	MOD_WEBSOCKET_CONFIG_TYPE	"type"
+#define	MOD_WEBSOCKET_CONFIG_SERVER		"websocket.server"
+#define	MOD_WEBSOCKET_CONFIG_DEBUG		"websocket.debug"
+#define	MOD_WEBSOCKET_CONFIG_HOST		"host"
+#define	MOD_WEBSOCKET_CONFIG_PORT		"port"
+#define	MOD_WEBSOCKET_CONFIG_SUBPROTO		"subproto"
+#define	MOD_WEBSOCKET_CONFIG_ORIGINS		"origins"
+#define	MOD_WEBSOCKET_CONFIG_LOCALE		"locale"
+#define	MOD_WEBSOCKET_CONFIG_TYPE		"type"
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
 # define	MOD_WEBSOCKET_OPCODE_CONT	(0x00)
@@ -64,17 +64,17 @@
 # define	MOD_WEBSOCKET_MASK_CNT		(4)
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
 
-#define	MOD_WEBSOCKET_UTF8_STR	"UTF-8"
+#define	MOD_WEBSOCKET_UTF8_STR			"UTF-8"
 
-#define	MOD_WEBSOCKET_TRUE	(1)
-#define	MOD_WEBSOCKET_FALSE	(0)
+typedef unsigned char mod_websocket_bool_t;
+
+#define	MOD_WEBSOCKET_TRUE			(1)
+#define	MOD_WEBSOCKET_FALSE			(0)
 
 #define DEBUG_LOG(format, args...)\
     if (hctx->pd->conf.debug) {\
         log_error_write(hctx->srv, __FILE__, __LINE__, format, ## args); \
     }
-
-typedef unsigned char mod_websocket_bool_t;
 
 typedef enum {
     MOD_WEBSOCKET_NOT_WEBSOCKET		= -1,
@@ -93,7 +93,6 @@ typedef struct {
 
 typedef struct {
     PLUGIN_DATA;
-
     plugin_config **config_storage;
     plugin_config conf;
 } plugin_data;
