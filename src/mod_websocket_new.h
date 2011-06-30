@@ -31,15 +31,14 @@
 #ifndef	_MOD_WEBSOCKET_H_
 #define	_MOD_WEBSOCKET_H_
 
+#include <unicode/ucnv.h>
+
 #include "array.h"
 #include "buffer.h"
 #include "chunk.h"
 #include "base.h"
 #include "plugin.h"
 #include "log.h"
-
-#include "mod_websocket_types.h"
-#include "mod_websocket_conv.h"
 
 #define	MOD_WEBSOCKET_CONFIG_SERVER	"websocket.server"
 #define	MOD_WEBSOCKET_CONFIG_DEBUG	"websocket.debug"
@@ -65,10 +64,27 @@
 # define	MOD_WEBSOCKET_MASK_CNT		(4)
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
 
+#define	MOD_WEBSOCKET_UTF8_STR	"UTF-8"
+
+#define	MOD_WEBSOCKET_TRUE	(1)
+#define	MOD_WEBSOCKET_FALSE	(0)
+
 #define DEBUG_LOG(format, args...)\
     if (hctx->pd->conf.debug) {\
         log_error_write(hctx->srv, __FILE__, __LINE__, format, ## args); \
     }
+
+typedef unsigned char mod_websocket_bool_t;
+
+typedef enum {
+    MOD_WEBSOCKET_NOT_WEBSOCKET		= -1,
+    MOD_WEBSOCKET_OK			= 200,
+    MOD_WEBSOCKET_BAD_REQUEST		= 400,
+    MOD_WEBSOCKET_FORBIDDEN		= 403,
+    MOD_WEBSOCKET_NOT_FOUND		= 404,
+    MOD_WEBSOCKET_INTERNAL_SERVER_ERROR	= 500,
+    MOD_WEBSOCKET_SERVICE_UNAVAILABLE	= 503,
+} mod_websocket_errno_t;
 
 typedef struct {
     array *exts;
@@ -148,6 +164,11 @@ typedef struct {
 } mod_websocket_frame_t;
 
 typedef struct {
+    UConverter *cli;
+    UConverter *srv;
+} mod_websocket_conv_t;
+
+typedef struct {
     mod_websocket_handshake_t handshake;
     mod_websocket_frame_t frame;
     mod_websocket_conv_t *cnv;
@@ -161,5 +182,24 @@ typedef struct {
     chunkqueue  *tosrv;	/* chunkqueue to server */
     chunkqueue  *tocli;	/* chunkqueue to client */
 } handler_ctx;
+
+mod_websocket_conv_t *mod_websocket_conv_init(const char *);
+mod_websocket_bool_t mod_websocket_isUTF8(const char *, size_t);
+int mod_websocket_conv_to_client(mod_websocket_conv_t *,
+                                 char *, size_t *, const char *, size_t);
+int mod_websocket_conv_to_server(mod_websocket_conv_t *,
+                                 char *, size_t *, const char *, size_t);
+void mod_websocket_conv_final(mod_websocket_conv_t *);
+
+mod_websocket_errno_t check_request(handler_ctx *);
+mod_websocket_errno_t create_response(handler_ctx *);
+
+int mod_websocket_tcp_server_connect(const char *, const char *);
+void mod_websocket_tcp_server_disconnect(int);
+
+int mod_websocket_frame_send(handler_ctx *,
+                             mod_websocket_frame_type_t,
+                             char *, size_t);
+int mod_websocket_frame_recv(handler_ctx *);
 
 #endif /* _MOD_WEBSOCKET_H_ */

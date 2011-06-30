@@ -7,7 +7,7 @@
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 
-#include "mod_websocket_conv.h"
+#include "mod_websocket_new.h"
 
 CU_TestFunc
 mod_websocket_isUTF8_test() {

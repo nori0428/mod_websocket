@@ -6,7 +6,6 @@
 #include <string.h>
 
 #include "mod_websocket_new.h"
-#include "mod_websocket_conv.h"
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
 int

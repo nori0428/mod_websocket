@@ -8,7 +8,7 @@
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 
-#include "mod_websocket_frame.h"
+#include "mod_websocket_new.h"
 
 #define	ASCII_STR	"Hello"
 
@@ -338,7 +338,7 @@ mod_websocket_frame_send_test() {
     siz = ((b->ptr[2] & 0xff) << 8) + (b->ptr[3] & 0xff);
     if (siz != sizeof(buf)) {
         CU_FAIL("extend payload length invalid");
-        fprintf(stderr, "%d\n", siz);
+        fprintf(stderr, "%lu\n", siz);
     }
     CU_ASSERT_EQUAL(memcmp(b->ptr + 4, buf, sizeof(buf)), 0);
     buffer_free(b);
@@ -370,7 +370,7 @@ mod_websocket_frame_send_test() {
     siz = ((b->ptr[2] & 0xff) << 8) + (b->ptr[3] & 0xff);
     if (siz != sizeof(buf)) {
         CU_FAIL("extend payload length invalid");
-        fprintf(stderr, "%d\n", siz);
+        fprintf(stderr, "%lu\n", siz);
     }
     CU_ASSERT_EQUAL(memcmp(b->ptr + 4, buf, sizeof(buf)), 0);
     buffer_free(b);

@@ -12,7 +12,7 @@
 #include <netdb.h>
 #include <errno.h>
 
-#include "mod_websocket_connector.h"
+#include "mod_websocket_new.h"
 
 int
 mod_websocket_tcp_server_connect(const char *host, const char *service) {

@@ -17,7 +17,7 @@
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 
-#include "mod_websocket_connector.h"
+#include "mod_websocket_new.h"
 
 #define BACKLOG 5
 
