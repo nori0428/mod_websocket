@@ -21,10 +21,10 @@ mod_websocket_frame_send(handler_ctx *hctx,
     char *enc = NULL;
     size_t encsiz = siz * 3; // XXX
 
-    if (!hctx || !payload) {
+    if (!hctx || (!payload && type != MOD_WEBSOCKET_FRAME_TYPE_CLOSE)) {
         return -1;
     }
-    if (!siz) {
+    if (!siz && type != MOD_WEBSOCKET_FRAME_TYPE_CLOSE) {
         return 0;
     }
     b = chunkqueue_get_append_buffer(hctx->tocli);

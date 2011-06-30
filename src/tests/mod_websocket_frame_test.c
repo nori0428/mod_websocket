@@ -123,6 +123,27 @@ mod_websocket_frame_send_test() {
         }
         mod_websocket_conv_final(hctx.cnv);
     }
+
+    chunkqueue_reset(hctx.tocli);
+    hctx.cnv = mod_websocket_conv_init("UTF-8");
+    fprintf(stderr, "check: close\n");
+    ret = mod_websocket_frame_send(&hctx, MOD_WEBSOCKET_FRAME_TYPE_CLOSE,
+                                   NULL, 0);
+    CU_ASSERT_EQUAL(ret, 0);
+
+    for (c = hctx.tocli->first; c; c = c->next) {
+        if (NULL == b) {
+            b = buffer_init();
+        }
+        buffer_append_memory(b, c->mem->ptr, c->mem->used);
+    }
+    CU_ASSERT_EQUAL(b->used, 2);
+    if (b->ptr[0] != -1) {
+        CU_FAIL("frame start bit invalid");
+    }
+    if (b->ptr[b->used - 1] != 0x00) {
+        CU_FAIL("frame end bit invalid");
+    }
 #endif
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
@@ -366,6 +387,21 @@ mod_websocket_frame_recv_test() {
     } else {
         CU_FAIL("recv no frames");
     }
+    mod_websocket_conv_final(hctx.cnv);
+
+    /* recv close */
+    fprintf(stderr, "check: close\n");
+    hctx.cnv = mod_websocket_conv_init("UTF-8");
+    hctx.frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
+    buffer_reset(hctx.frame.payload.data);
+    chunkqueue_reset(hctx.tosrv);
+    chunkqueue_reset(con.read_queue);
+
+    b = chunkqueue_get_append_buffer(con.read_queue);
+    buffer_append_memory(b, &tail, 1);
+    buffer_append_memory(b, &head, 1);
+    ret = mod_websocket_frame_recv(&hctx);
+    CU_ASSERT_EQUAL(ret, -1);
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
     CU_FAIL("no tests exist");
