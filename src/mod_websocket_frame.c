@@ -472,7 +472,7 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
             break;
         case MOD_WEBSOCKET_FRAME_STATE_READ_EX_LENGTH:
             hctx->frame.ctl.ex_siz =
-                hctx->frame.ctl.ex_siz * 0xff + (frame->ptr[i] & 0xff);
+                (hctx->frame.ctl.ex_siz << 8) + (frame->ptr[i] & 0xff);
             hctx->frame.ctl.ex_siz_cnt++;
             if ((hctx->frame.ctl.siz == MOD_WEBSOCKET_FRAME_LEN16 &&
                  hctx->frame.ctl.ex_siz_cnt == MOD_WEBSOCKET_FRAME_LEN16_CNT) ||
