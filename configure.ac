@@ -22,6 +22,7 @@ AC_CHECK_HEADERS([stdlib.h string.h unicode/ucnv.h unicode/ucsdet.h CUnit/CUnit.
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_INLINE
 AC_TYPE_SIZE_T
+AC_CHECK_SIZEOF(size_t)
 
 AC_C_BIGENDIAN
 if test "x$ac_cv_c_bigendian" = "xyes"; then

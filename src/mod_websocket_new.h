@@ -50,6 +50,21 @@
 #define	MOD_WEBSOCKET_CONFIG_LOCALE	"locale"
 #define	MOD_WEBSOCKET_CONFIG_TYPE	"type"
 
+#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+# define	MOD_WEBSOCKET_OPCODE_CONT	(0x00)
+# define	MOD_WEBSOCKET_OPCODE_TEXT	(0x01)
+# define	MOD_WEBSOCKET_OPCODE_BIN	(0x02)
+# define	MOD_WEBSOCKET_OPCODE_CLOSE	(0x08)
+# define	MOD_WEBSOCKET_OPCODE_PING	(0x09)
+# define	MOD_WEBSOCKET_OPCODE_PONG	(0x0A)
+
+# define	MOD_WEBSOCKET_FRAME_LEN16	(0x7E)
+# define	MOD_WEBSOCKET_FRAME_LEN63	(0x7F)
+# define	MOD_WEBSOCKET_FRAME_LEN16_CNT	(2)
+# define	MOD_WEBSOCKET_FRAME_LEN63_CNT	(8)
+# define	MOD_WEBSOCKET_MASK_CNT		(4)
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+
 #define DEBUG_LOG(format, args...)\
     if (hctx->pd->conf.debug) {\
         log_error_write(hctx->srv, __FILE__, __LINE__, format, ## args); \
@@ -86,26 +101,50 @@ typedef struct {
 
 typedef enum {
     MOD_WEBSOCKET_FRAME_STATE_INIT,
+
+#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+    MOD_WEBSOCKET_FRAME_STATE_READ_LENGTH,
+    MOD_WEBSOCKET_FRAME_STATE_READ_EX_LENGTH,
+    MOD_WEBSOCKET_FRAME_STATE_READ_MASK,
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+
     MOD_WEBSOCKET_FRAME_STATE_READ_PAYLOAD,
 } mod_websocket_frame_state_t;
 
 typedef enum {
     MOD_WEBSOCKET_FRAME_TYPE_TEXT,
+    MOD_WEBSOCKET_FRAME_TYPE_CLOSE,
+
+#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
     MOD_WEBSOCKET_FRAME_TYPE_BIN,
     MOD_WEBSOCKET_FRAME_TYPE_PING,
     MOD_WEBSOCKET_FRAME_TYPE_PONG,
-    MOD_WEBSOCKET_FRAME_TYPE_CLOSE,
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+
 } mod_websocket_frame_type_t;
 
+#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
 typedef struct {
+    unsigned char rsv;
+    unsigned char opcode;
+    mod_websocket_bool_t mask_flag;
+    unsigned char mask[MOD_WEBSOCKET_MASK_CNT];
+    int mask_cnt;
     size_t siz;
-    buffer *data;
-} mod_websocket_payload_t;
+    size_t ex_siz;
+    int ex_siz_cnt;
+} mod_websocket_frame_control_t;
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
 
 typedef struct {
+
+#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+    mod_websocket_frame_control_t ctl;
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+
     mod_websocket_frame_state_t state;
     mod_websocket_frame_type_t type;
-    mod_websocket_payload_t payload;
+    buffer *payload;
 } mod_websocket_frame_t;
 
 typedef struct {

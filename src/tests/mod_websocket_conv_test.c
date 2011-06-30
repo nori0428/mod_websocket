@@ -69,7 +69,7 @@ mod_websocket_conv_test() {
     };
 
     FILE *fp;
-    int i, j, ret;
+    int i, ret;
     char src[1024], dst1[1024], dst2[1024];
     size_t srcsiz, dst1siz = 1024, dst2siz = 1024;
     mod_websocket_conv_t *cnv;
