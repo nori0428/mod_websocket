@@ -90,9 +90,10 @@ mod_websocket_frame_send(handler_ctx *hctx,
 
 int
 mod_websocket_frame_recv(handler_ctx *hctx) {
+    const char additional = 0x00;
     chunk *c = NULL;
     buffer *frame = NULL;
-    buffer *payload = NULL, *cb = NULL;
+    buffer *payload = NULL, *b = NULL;
     int ret;
     char *enc = NULL;
     size_t i, encsiz;
@@ -159,14 +160,14 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                     free(enc);
                     return -1;
                 }
-                cb = chunkqueue_get_append_buffer(hctx->tosrv);
-                if (!cb) {
+                b = chunkqueue_get_append_buffer(hctx->tosrv);
+                if (!b) {
                     DEBUG_LOG("s", "no memory");
                     buffer_free(frame);
                     free(enc);
                     return -1;
                 }
-                ret = buffer_append_memory(cb, enc, encsiz);
+                ret = buffer_append_memory(b, enc, encsiz);
                 if (ret != 0) {
                     DEBUG_LOG("s", "no memory");
                     buffer_free(frame);
@@ -174,6 +175,14 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                     return -1;
                 }
                 free(enc);
+                /* lighty needs additional char to send */
+                ret = buffer_append_memory(b, &additional, 1);
+                if (ret != 0) {
+                    DEBUG_LOG("s", "no memory");
+                    buffer_free(frame);
+                    chunkqueue_reset(hctx->tosrv);
+                    return -1;
+                }
             } else {
                 ret = buffer_append_memory(payload, &frame->ptr[i], 1);
                 if (ret != 0) {
@@ -360,9 +369,10 @@ unmask_payload(handler_ctx *hctx) {
 
 int
 mod_websocket_frame_recv(handler_ctx *hctx) {
+    const char additional = 0x00;
     chunk *c = NULL;
     buffer *frame = NULL;
-    buffer *payload = NULL, *cb = NULL;
+    buffer *payload = NULL, *b = NULL;
     int ret;
     char *enc = NULL;
     size_t i, encsiz;
@@ -551,14 +561,14 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                         free(enc);
                         return -1;
                     }
-                    cb = chunkqueue_get_append_buffer(hctx->tosrv);
-                    if (!cb) {
+                    b = chunkqueue_get_append_buffer(hctx->tosrv);
+                    if (!b) {
                         DEBUG_LOG("s", "no memory");
                         buffer_free(frame);
                         free(enc);
                         return -1;
                     }
-                    ret = buffer_append_memory(cb, enc, encsiz);
+                    ret = buffer_append_memory(b, enc, encsiz);
                     if (ret != 0) {
                         DEBUG_LOG("s", "no memory");
                         buffer_free(frame);
@@ -566,20 +576,36 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                         return -1;
                     }
                     free(enc);
+                    /* lighty needs additional char to send */
+                    ret = buffer_append_memory(b, &additional, 1);
+                    if (ret != 0) {
+                        DEBUG_LOG("s", "no memory");
+                        buffer_free(frame);
+                        chunkqueue_reset(hctx->tosrv);
+                        return -1;
+                    }
                     break;
                 case MOD_WEBSOCKET_FRAME_TYPE_BIN:
-                    cb = chunkqueue_get_append_buffer(hctx->tosrv);
-                    if (!cb) {
+                    b = chunkqueue_get_append_buffer(hctx->tosrv);
+                    if (!b) {
                         DEBUG_LOG("s", "no memory");
                         buffer_free(frame);
                         buffer_reset(payload);
                         return -1;
                     }
-                    ret = buffer_append_memory(cb, payload->ptr, payload->used);
+                    ret = buffer_append_memory(b, payload->ptr, payload->used);
                     if (ret != 0) {
                         DEBUG_LOG("s", "no memory");
                         buffer_free(frame);
-                        buffer_reset(payload);
+                        return -1;
+                    }
+                    buffer_reset(payload);
+                    /* lighty needs additional char to send */
+                    ret = buffer_append_memory(b, &additional, 1);
+                    if (ret != 0) {
+                        DEBUG_LOG("s", "no memory");
+                        buffer_free(frame);
+                        chunkqueue_reset(hctx->tosrv);
                         return -1;
                     }
                     break;

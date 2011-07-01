@@ -374,7 +374,6 @@ mod_websocket_handshake_create_response_test() {
     mod_websocket_errno_t ret;
     data_array *origins;
     data_string *origin;
-    data_string *subproto;
     data_string *header;
 
     fprintf(stderr, "create_response TEST\n");

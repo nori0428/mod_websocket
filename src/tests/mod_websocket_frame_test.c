@@ -555,9 +555,18 @@ mod_websocket_frame_recv_test() {
         buffer_append_memory(b, c->mem->ptr, c->mem->used);
     }
     if (!buffer_is_empty(b)) {
-        if (memcmp(b->ptr, ASCII_STR ASCII_STR, strlen(ASCII_STR) * 2) != 0 ||
-            b->used != strlen(ASCII_STR) * 2) {
-            fprintf(stderr, "res: \n");
+        memcpy(buf, ASCII_STR, strlen(ASCII_STR));
+        buf[strlen(ASCII_STR)] = 0x00;
+        memcpy(buf + strlen(ASCII_STR) + 1, ASCII_STR, strlen(ASCII_STR));
+        buf[strlen(ASCII_STR) * 2 + 1] = 0x00;
+        if (memcmp(b->ptr, buf, strlen(ASCII_STR) * 2 + 2) != 0 ||
+            b->used != strlen(ASCII_STR) * 2 + 2) {
+            fprintf(stderr, "exp: \n");
+            for (j = 0; j < strlen(ASCII_STR) * 2 + 2; j++) {
+                fprintf(stderr, "0x%02x(%c), ",
+                        buf[j] & 0xff, buf[j] & 0xff);
+            }
+            fprintf(stderr, "\nres: \n");
             for (j = 0; j < b->used; j++) {
                 fprintf(stderr, "0x%02x(%c), ",
                         b->ptr[j] & 0xff, b->ptr[j] & 0xff);
@@ -601,7 +610,7 @@ mod_websocket_frame_recv_test() {
     }
     if (!buffer_is_empty(b)) {
         if (memcmp(b->ptr, ASCII_STR, strlen(ASCII_STR)) != 0 ||
-            b->used != strlen(ASCII_STR)) {
+            b->used != strlen(ASCII_STR) + 1) {
             fprintf(stderr, "res: \n");
             for (j = 0; j < b->used; j++) {
                 fprintf(stderr, "0x%02x(%c), ",
@@ -631,7 +640,7 @@ mod_websocket_frame_recv_test() {
     }
     if (!buffer_is_empty(b)) {
         if (memcmp(b->ptr, ASCII_STR, strlen(ASCII_STR)) != 0 ||
-            b->used != strlen(ASCII_STR)) {
+            b->used != strlen(ASCII_STR) + 1) {
             fprintf(stderr, "res: \n");
             for (j = 0; j < b->used; j++) {
                 fprintf(stderr, "0x%02x(%c), ",
@@ -809,9 +818,18 @@ mod_websocket_frame_recv_test() {
         buffer_append_memory(b, c->mem->ptr, c->mem->used);
     }
     if (!buffer_is_empty(b)) {
-        if (memcmp(b->ptr, ASCII_STR ASCII_STR, strlen(ASCII_STR) * 2) != 0 ||
-            b->used != strlen(ASCII_STR) * 2) {
-            fprintf(stderr, "res: \n");
+        memcpy(buf, ASCII_STR, strlen(ASCII_STR));
+        buf[strlen(ASCII_STR)] = 0x00;
+        memcpy(buf + strlen(ASCII_STR) + 1, ASCII_STR, strlen(ASCII_STR));
+        buf[strlen(ASCII_STR) * 2 + 1] = 0x00;
+        if (memcmp(b->ptr, buf, strlen(ASCII_STR) * 2 + 2) != 0 ||
+            b->used != strlen(ASCII_STR) * 2 + 2) {
+            fprintf(stderr, "exp: \n");
+            for (j = 0; j < strlen(ASCII_STR) * 2 + 2; j++) {
+                fprintf(stderr, "0x%02x(%c), ",
+                        buf[j] & 0xff, buf[j] & 0xff);
+            }
+            fprintf(stderr, "\nres: \n");
             for (j = 0; j < b->used; j++) {
                 fprintf(stderr, "0x%02x(%c), ",
                         b->ptr[j] & 0xff, b->ptr[j] & 0xff);
@@ -857,7 +875,7 @@ mod_websocket_frame_recv_test() {
     }
     if (!buffer_is_empty(b)) {
         if (memcmp(b->ptr, ASCII_STR, strlen(ASCII_STR)) != 0 ||
-            b->used != strlen(ASCII_STR)) {
+            b->used != strlen(ASCII_STR) + 1) {
             fprintf(stderr, "res: \n");
             for (j = 0; j < b->used; j++) {
                 fprintf(stderr, "0x%02x(%c), ",
@@ -886,7 +904,7 @@ mod_websocket_frame_recv_test() {
     }
     if (!buffer_is_empty(b)) {
         if (memcmp(b->ptr, ASCII_STR, strlen(ASCII_STR)) != 0 ||
-            b->used != strlen(ASCII_STR)) {
+            b->used != strlen(ASCII_STR) + 1) {
             fprintf(stderr, "res: \n");
             for (j = 0; j < b->used; j++) {
                 fprintf(stderr, "0x%02x(%c), ",
