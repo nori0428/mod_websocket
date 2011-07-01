@@ -403,7 +403,7 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                 return -1;
             }
         }
-        ret = buffer_append_memory(frame, c->mem->ptr, c->mem->used);
+        ret = buffer_append_memory(frame, c->mem->ptr, c->mem->used - 1);
         if (ret != 0) {
             DEBUG_LOG("s", "no memory");
             buffer_free(frame);

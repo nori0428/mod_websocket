@@ -684,6 +684,7 @@ mod_websocket_frame_recv_test() {
     buffer_append_memory(b, (char *)&len, 1);
     buffer_append_memory(b, (char *)nomask, sizeof(nomask));
     buffer_append_memory(b, ASCII_STR, strlen(ASCII_STR));
+    buffer_append_memory(b, &additional, 1);
     ret = mod_websocket_frame_recv(&hctx);
     CU_ASSERT_EQUAL(ret, 0);
     b = NULL;
@@ -723,6 +724,7 @@ mod_websocket_frame_recv_test() {
         buffer_append_memory(b, (char *)mask, sizeof(mask));
         mask_payload(enc, encsiz, mask);
         buffer_append_memory(b, enc, encsiz);
+        buffer_append_memory(b, &additional, 1);
         ret = mod_websocket_frame_recv(&hctx);
         CU_ASSERT_EQUAL(ret, 0);
         mod_websocket_conv_final(hctx.cnv);
@@ -770,6 +772,7 @@ mod_websocket_frame_recv_test() {
     buffer_append_memory(b, (char *)&len, 1);
     buffer_append_memory(b, (char *)nomask, sizeof(nomask));
     buffer_append_memory(b, buf, 5);
+    buffer_append_memory(b, &additional, 1);
     ret = mod_websocket_frame_recv(&hctx);
     CU_ASSERT_EQUAL(ret, 0);
     b = NULL;
@@ -807,6 +810,7 @@ mod_websocket_frame_recv_test() {
     buffer_append_memory(b, (char *)&len, 1);
     buffer_append_memory(b, (char *)nomask, sizeof(nomask));
     buffer_append_memory(b, ASCII_STR, strlen(ASCII_STR));
+    buffer_append_memory(b, &additional, 1);
     ret = mod_websocket_frame_recv(&hctx);
     CU_ASSERT_EQUAL(ret, 0);
     b = NULL;
@@ -863,6 +867,7 @@ mod_websocket_frame_recv_test() {
     buffer_append_memory(b, (char *)&len, 1);
     buffer_append_memory(b, (char *)nomask, sizeof(nomask));
     buffer_append_memory(b, ASCII_STR, strlen(ASCII_STR) - 1);
+    buffer_append_memory(b, &additional, 1);
     ret = mod_websocket_frame_recv(&hctx);
     CU_ASSERT_EQUAL(ret, 0);
     b = NULL;
@@ -892,6 +897,7 @@ mod_websocket_frame_recv_test() {
     CU_ASSERT_EQUAL(hctx.frame.state, MOD_WEBSOCKET_FRAME_STATE_READ_PAYLOAD);
     b = chunkqueue_get_append_buffer(con.read_queue);
     buffer_append_memory(b, "o", 1);
+    buffer_append_memory(b, &additional, 1);
     chunkqueue_reset(hctx.tosrv);
     ret = mod_websocket_frame_recv(&hctx);
     CU_ASSERT_EQUAL(ret, 0);
@@ -933,6 +939,7 @@ mod_websocket_frame_recv_test() {
     len = 0x80;
     buffer_append_memory(b, (char *)&ctl, 1);
     buffer_append_memory(b, (char *)&len, 1);
+    buffer_append_memory(b, &additional, 1);
     ret = mod_websocket_frame_recv(&hctx);
     CU_ASSERT_EQUAL(ret, 0);
     CU_ASSERT_EQUAL(hctx.frame.state, MOD_WEBSOCKET_FRAME_STATE_INIT);
@@ -954,6 +961,7 @@ mod_websocket_frame_recv_test() {
     buffer_append_memory(b, (char *)&len, 1);
     buffer_append_memory(b, (char *)nomask, sizeof(nomask));
     buffer_append_memory(b, ASCII_STR, strlen(ASCII_STR));
+    buffer_append_memory(b, &additional, 1);
     ret = mod_websocket_frame_recv(&hctx);
     CU_ASSERT_EQUAL(ret, 0);
     CU_ASSERT_EQUAL(hctx.frame.state, MOD_WEBSOCKET_FRAME_STATE_INIT);
@@ -974,6 +982,7 @@ mod_websocket_frame_recv_test() {
     len = 0x80;
     buffer_append_memory(b, (char *)&ctl, 1);
     buffer_append_memory(b, (char *)&len, 1);
+    buffer_append_memory(b, &additional, 1);
     ret = mod_websocket_frame_recv(&hctx);
     CU_ASSERT_EQUAL(ret, 0);
     CU_ASSERT_EQUAL(hctx.frame.state, MOD_WEBSOCKET_FRAME_STATE_INIT);
@@ -995,6 +1004,7 @@ mod_websocket_frame_recv_test() {
     buffer_append_memory(b, (char *)&len, 1);
     buffer_append_memory(b, (char *)nomask, sizeof(nomask));
     buffer_append_memory(b, ASCII_STR, strlen(ASCII_STR));
+    buffer_append_memory(b, &additional, 1);
     ret = mod_websocket_frame_recv(&hctx);
     CU_ASSERT_EQUAL(ret, 0);
     CU_ASSERT_EQUAL(hctx.frame.state, MOD_WEBSOCKET_FRAME_STATE_INIT);
@@ -1015,6 +1025,7 @@ mod_websocket_frame_recv_test() {
     len = 0x80;
     buffer_append_memory(b, (char *)&ctl, 1);
     buffer_append_memory(b, (char *)&len, 1);
+    buffer_append_memory(b, &additional, 1);
     ret = mod_websocket_frame_recv(&hctx);
     CU_ASSERT_EQUAL(ret, -1);
     CU_ASSERT_EQUAL(hctx.frame.state, MOD_WEBSOCKET_FRAME_STATE_INIT);
@@ -1035,6 +1046,7 @@ mod_websocket_frame_recv_test() {
     buffer_append_memory(b, (char *)&ctl, 1);
     buffer_append_memory(b, (char *)&len, 1);
     buffer_append_memory(b, ASCII_STR, strlen(ASCII_STR));
+    buffer_append_memory(b, &additional, 1);
     ret = mod_websocket_frame_recv(&hctx);
     CU_ASSERT_EQUAL(ret, -1);
     CU_ASSERT_EQUAL(hctx.frame.state, MOD_WEBSOCKET_FRAME_STATE_INIT);
@@ -1062,6 +1074,7 @@ mod_websocket_frame_recv_test() {
     buffer_append_memory(b, (char *)&ex_len, 1);
     buffer_append_memory(b, (char *)nomask, sizeof(nomask));
     buffer_append_memory(b, buf, sizeof(buf));
+    buffer_append_memory(b, &additional, 1);
     ret = mod_websocket_frame_recv(&hctx);
     CU_ASSERT_EQUAL(ret, 0);
     b = NULL;
@@ -1100,6 +1113,7 @@ mod_websocket_frame_recv_test() {
     buffer_append_memory(b, (char *)&ex_len, 1);
     buffer_append_memory(b, (char *)nomask, sizeof(nomask));
     buffer_append_memory(b, buf, sizeof(buf));
+    buffer_append_memory(b, &additional, 1);
     ret = mod_websocket_frame_recv(&hctx);
     CU_ASSERT_EQUAL(ret, 0);
     b = NULL;
