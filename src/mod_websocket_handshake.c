@@ -368,14 +368,17 @@ mod_websocket_handshake_check_request(handler_ctx *hctx) {
         return MOD_WEBSOCKET_BAD_REQUEST;
     }
 
+    /* replace hctx->ext if subproto exsists */
+    if (!buffer_is_empty(handshake->subproto) && replace_extension(hctx) < 0) {
+        return MOD_WEBSOCKET_NOT_FOUND;
+    } else if (buffer_is_empty(handshake->subproto)) {
+        hctx->ext = (data_array *)hctx->ext->value->data[0];
+    }
+
     if (is_allowed_origin(hctx) != MOD_WEBSOCKET_TRUE) {
         return MOD_WEBSOCKET_FORBIDDEN;
     }
 
-    /* replace hctx->ext if subproto exsists */
-    if (!buffer_is_empty(handshake->subproto) && replace_extension(hctx) < 0) {
-        return MOD_WEBSOCKET_NOT_FOUND;
-    }
     return MOD_WEBSOCKET_OK;
 }
 

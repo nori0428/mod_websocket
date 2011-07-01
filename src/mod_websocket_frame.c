@@ -12,6 +12,7 @@ int
 mod_websocket_frame_send(handler_ctx *hctx,
                          mod_websocket_frame_type_t type,
                          char *payload, size_t siz) {
+    const char additional = 0x00;
     const unsigned char head = 0x00;
     const unsigned char tail = 0xff;
     const unsigned char cfrm[2] = { 0xff, 0x00 };
@@ -52,6 +53,8 @@ mod_websocket_frame_send(handler_ctx *hctx,
             break;
         }
         ret = buffer_append_memory(b, enc, encsiz);
+        free(enc);
+        enc = NULL;
         if (ret != 0) {
             DEBUG_LOG("s", "no memory");
             break;
@@ -72,11 +75,14 @@ mod_websocket_frame_send(handler_ctx *hctx,
         DEBUG_LOG("s", "not support type");
         break;
     }
-    if (enc) {
-        free(enc);
-        enc = NULL;
-    }
     if (ret != 0) {
+        chunkqueue_reset(hctx->tocli);
+        return ret;
+    }
+    /* lighty needs additional char to send */
+    ret = buffer_append_memory(b, &additional, 1);
+    if (ret != 0) {
+        DEBUG_LOG("s", "no memory");
         chunkqueue_reset(hctx->tocli);
     }
     return ret;
@@ -107,7 +113,7 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                 return -1;
             }
         }
-        ret = buffer_append_memory(frame, c->mem->ptr, c->mem->used);
+        ret = buffer_append_memory(frame, c->mem->ptr, c->mem->used - 1);
         if (ret != 0) {
             DEBUG_LOG("s", "no memory");
             buffer_free(frame);

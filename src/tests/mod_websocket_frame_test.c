@@ -77,11 +77,11 @@ mod_websocket_frame_send_test() {
             buffer_append_memory(b, c->mem->ptr, c->mem->used);
         }
     }
-    CU_ASSERT_EQUAL(b->used - 2, strlen(ASCII_STR));
+    CU_ASSERT_EQUAL(b->used - 3, strlen(ASCII_STR));
     if (b->ptr[0] != 0x00) {
         CU_FAIL("frame start bit invalid");
     }
-    if (b->ptr[b->used - 1] != -1) {
+    if (b->ptr[b->used - 2] != -1) {
         CU_FAIL("frame end bit invalid");
     }
     CU_ASSERT_EQUAL(memcmp(b->ptr + 1, ASCII_STR, strlen(ASCII_STR)), 0);
@@ -113,7 +113,7 @@ mod_websocket_frame_send_test() {
             if (b->ptr[0] != 0x00) {
                 CU_FAIL("frame start bit invalid");
             }
-            if (b->ptr[b->used - 1] != -1) {
+            if (b->ptr[b->used - 2] != -1) {
                 CU_FAIL("frame end bit invalid");
             }
             buffer_free(b);
@@ -137,7 +137,7 @@ mod_websocket_frame_send_test() {
         }
         buffer_append_memory(b, c->mem->ptr, c->mem->used);
     }
-    CU_ASSERT_EQUAL(b->used, 2);
+    CU_ASSERT_EQUAL(b->used, 3);
     if (b->ptr[0] != -1) {
         CU_FAIL("frame start bit invalid");
     }
@@ -424,6 +424,7 @@ mod_websocket_frame_recv_test() {
     buffer *b = NULL;
     connection con;
     plugin_data pd;
+    const char additional = 0x00;
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
     const unsigned char head = 0x00;
@@ -537,10 +538,12 @@ mod_websocket_frame_recv_test() {
     buffer_append_memory(b, (char *)&head, 1);
     buffer_append_memory(b, ASCII_STR, strlen(ASCII_STR));
     buffer_append_memory(b, (char *)&tail, 1);
+    buffer_append_memory(b, &additional, 1);
     b = chunkqueue_get_append_buffer(con.read_queue);
     buffer_append_memory(b, (char *)&head, 1);
     buffer_append_memory(b, ASCII_STR, strlen(ASCII_STR));
     buffer_append_memory(b, (char *)&tail, 1);
+    buffer_append_memory(b, &additional, 1);
     ret = mod_websocket_frame_recv(&hctx);
     CU_ASSERT_EQUAL(ret, 0);
     b = NULL;
@@ -581,9 +584,11 @@ mod_websocket_frame_recv_test() {
     buffer_append_memory(b, (char *)&head, 1);
     buffer_append_memory(b, ASCII_STR, strlen(ASCII_STR));
     buffer_append_memory(b, (char *)&tail, 1);
+    buffer_append_memory(b, &additional, 1);
     b = chunkqueue_get_append_buffer(con.read_queue);
     buffer_append_memory(b, (char *)&head, 1);
     buffer_append_memory(b, ASCII_STR, strlen(ASCII_STR));
+    buffer_append_memory(b, &additional, 1);
     ret = mod_websocket_frame_recv(&hctx);
     CU_ASSERT_EQUAL(ret, 0);
     b = NULL;
@@ -614,6 +619,7 @@ mod_websocket_frame_recv_test() {
     chunkqueue_reset(hctx.tosrv);
     b = chunkqueue_get_append_buffer(con.read_queue);
     buffer_append_memory(b, (char *)&tail, 1);
+    buffer_append_memory(b, &additional, 1);
     ret = mod_websocket_frame_recv(&hctx);
     CU_ASSERT_EQUAL(ret, 0);
     b = NULL;

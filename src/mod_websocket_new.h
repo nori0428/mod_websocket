@@ -65,6 +65,7 @@
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
 
 #define	MOD_WEBSOCKET_UTF8_STR			"UTF-8"
+#define	MOD_WEBSOCKET_BIN_STR			"bin"
 
 typedef unsigned char mod_websocket_bool_t;
 
@@ -96,6 +97,12 @@ typedef struct {
     plugin_config **config_storage;
     plugin_config conf;
 } plugin_data;
+
+typedef enum {
+    MOD_WEBSOCKET_STATE_INIT,
+    MOD_WEBSOCKET_STATE_SEND_RESPONSE,
+    MOD_WEBSOCKET_STATE_CONNECTED,
+} mod_websocket_state_t;
 
 typedef struct {
     buffer *host;
@@ -168,9 +175,13 @@ typedef struct {
 } mod_websocket_conv_t;
 
 typedef struct {
+    mod_websocket_state_t state;
     mod_websocket_handshake_t handshake;
     mod_websocket_frame_t frame;
     mod_websocket_conv_t *cnv;
+
+    /* fd and fd_idx to backend */
+    int fd, fd_idx;
 
     /* ref */
     server      *srv;	/* server */
