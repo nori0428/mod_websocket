@@ -158,7 +158,7 @@ mod_websocket_frame_send_test() {
         }
         buffer_append_memory(b, c->mem->ptr, c->mem->used);
     }
-    CU_ASSERT_EQUAL(b->used, strlen(ASCII_STR) + 2);
+    CU_ASSERT_EQUAL(b->used, strlen(ASCII_STR) + 3);
     if ((b->ptr[0] & 0xff) != 0x81) {
         CU_FAIL("opcode invalid");
         fprintf(stderr, "0x%x\n", b->ptr[0] & 0xff);
@@ -221,7 +221,7 @@ mod_websocket_frame_send_test() {
         }
         buffer_append_memory(b, c->mem->ptr, c->mem->used);
     }
-    CU_ASSERT_EQUAL(b->used, 7);
+    CU_ASSERT_EQUAL(b->used, 8);
     if ((b->ptr[0] & 0xff) != 0x82) {
         CU_FAIL("opcode invalid");
         fprintf(stderr, "0x%x\n", b->ptr[0] & 0xff);
@@ -248,7 +248,7 @@ mod_websocket_frame_send_test() {
         }
         buffer_append_memory(b, c->mem->ptr, c->mem->used);
     }
-    CU_ASSERT_EQUAL(b->used, 7);
+    CU_ASSERT_EQUAL(b->used, 8);
     if ((b->ptr[0] & 0xff) != 0x89) {
         CU_FAIL("opcode invalid");
         fprintf(stderr, "0x%x\n", b->ptr[0] & 0xff);
@@ -275,7 +275,7 @@ mod_websocket_frame_send_test() {
         }
         buffer_append_memory(b, c->mem->ptr, c->mem->used);
     }
-    CU_ASSERT_EQUAL(b->used, 7);
+    CU_ASSERT_EQUAL(b->used, 8);
     if ((b->ptr[0] & 0xff) != 0x8A) {
         CU_FAIL("opcode invalid");
         fprintf(stderr, "0x%x\n", b->ptr[0] & 0xff);
@@ -326,7 +326,7 @@ mod_websocket_frame_send_test() {
         }
         buffer_append_memory(b, c->mem->ptr, c->mem->used);
     }
-    CU_ASSERT_EQUAL(b->used, sizeof(buf) + 4);
+    CU_ASSERT_EQUAL(b->used, sizeof(buf) + 5);
     if ((b->ptr[0] & 0xff) != 0x81) {
         CU_FAIL("opcode invalid");
         fprintf(stderr, "0x%x\n", b->ptr[0] & 0xff);
@@ -358,7 +358,7 @@ mod_websocket_frame_send_test() {
         }
         buffer_append_memory(b, c->mem->ptr, c->mem->used);
     }
-    CU_ASSERT_EQUAL(b->used, sizeof(buf) + 4);
+    CU_ASSERT_EQUAL(b->used, sizeof(buf) + 5);
     if ((b->ptr[0] & 0xff) != 0x82) {
         CU_FAIL("opcode invalid");
         fprintf(stderr, "0x%x\n", b->ptr[0] & 0xff);

@@ -210,6 +210,7 @@ int
 mod_websocket_frame_send(handler_ctx *hctx,
                          mod_websocket_frame_type_t type,
                          char *payload, size_t siz) {
+    const char additional = 0x00;
     int ret = -1;
     char c, len[MOD_WEBSOCKET_FRAME_LEN63 + 1];
     buffer *b = NULL;
@@ -335,11 +336,11 @@ mod_websocket_frame_send(handler_ctx *hctx,
     case MOD_WEBSOCKET_FRAME_TYPE_PING:
     case MOD_WEBSOCKET_FRAME_TYPE_PONG:
         ret = buffer_append_memory(b, enc, siz);
+        free(enc);
         if (ret != 0) {
             DEBUG_LOG("s", "no memory");
             buffer_reset(b);
         }
-        free(enc);
         break;
     case MOD_WEBSOCKET_FRAME_TYPE_BIN:
         ret = buffer_append_memory(b, payload, siz);
@@ -352,6 +353,15 @@ mod_websocket_frame_send(handler_ctx *hctx,
     default:
         /* nothing to do */
         break;
+    }
+    if (ret != 0) {
+        return ret;
+    }
+    /* lighty needs additional char to send */
+    ret = buffer_append_memory(b, &additional, 1);
+    if (ret != 0) {
+        DEBUG_LOG("s", "no memory");
+        buffer_reset(b);
     }
     return ret;
 }
