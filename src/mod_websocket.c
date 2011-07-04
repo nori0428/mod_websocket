@@ -36,7 +36,7 @@
 #include "joblist.h"
 #include "log.h"
 
-#include "mod_websocket_new.h"
+#include "mod_websocket.h"
 
 /* prototypes */
 static handler_ctx *_handler_ctx_init(void);
@@ -681,6 +681,7 @@ SUBREQUEST_FUNC(_handle_subrequest) {
                 } else {
                     DEBUG_LOG("ss", "can't send data to client",
                               strerror(errno));
+                    _tcp_server_disconnect(hctx);
                     break;
                 }
             }
