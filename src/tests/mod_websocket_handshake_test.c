@@ -357,7 +357,8 @@ check_response(chunkqueue *q, char *exp) {
             buffer_append_memory(b, c->mem->ptr, c->mem->used);
         }
     }
-    if (memcmp(b->ptr, exp, strlen(exp)) != 0) {
+    if (memcmp(b->ptr, exp, strlen(exp)) != 0 ||
+        b->used - 1 != strlen(exp)) {
         CU_FAIL("invalid response");
         fprintf(stderr, "exp:\n%s", exp);
         fprintf(stderr, "---, %d\n", strlen(exp));

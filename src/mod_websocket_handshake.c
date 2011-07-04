@@ -480,7 +480,7 @@ mod_websocket_handshake_create_response(handler_ctx *hctx) {
     if (create_MD5_sum(md5sum, hctx) < 0) {
         return MOD_WEBSOCKET_BAD_REQUEST;
     }
-    buffer_append_string_len(resp, (char *)md5sum, MD5_STRLEN + 1);
+    buffer_append_string_len(resp, (char *)md5sum, MD5_STRLEN);
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
     return MOD_WEBSOCKET_OK;
