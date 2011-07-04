@@ -1,7 +1,6 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.65])
 AC_INIT([mod_websocket], [0.1], [nori.0428@gmail.com])
 AC_CONFIG_SRCDIR([src/mod_websocket.c])
 AC_CONFIG_HEADER([config.h])
@@ -15,6 +14,11 @@ AC_PROG_CC
 
 # Checks for libraries.
 # AC_CHECK_LIB([json], [main])
+CFLAGS="$CFLAGS -I/usr/local/lib -I/opt/local/inclue"
+LDFLAGS="$LDFLAGS -L/usr/local/lib -L/opt/local/lib"
+AC_CHECK_LIB(ev, ev_io_start, , AC_MSG_ERROR([cant test mod_websocket]))
+AC_CHECK_LIB(cunit, CU_basic_run_tests, , AC_MSG_ERROR([cant test mod_websocket]))
+AC_CHECK_LIB(icui18n, ucnv_open_4_2, , AC_MSG_ERROR([mod_websocket needs ICU library]))
 
 # Checks for header files.
 AC_CHECK_HEADERS([stdlib.h string.h unicode/ucnv.h unicode/ucsdet.h CUnit/CUnit.h CUnit/Basic.h])

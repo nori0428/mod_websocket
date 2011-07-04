@@ -13,6 +13,7 @@ INCLUDES = \
 	-I.
 
 LDADD = \
+	-L/usr/local/lib \
 	-L/opt/local/lib \
 	-licui18n -licuuc -lcunit -lev \
 	${LIBNCURSES} \
