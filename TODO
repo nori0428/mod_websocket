@@ -1,8 +1,8 @@
 // $Id$
 
 - TODOs
-  1. commit test
-  2. send PING frame if specified at configuration
-  3. timeout handle
+  1. send PING frame if specified at configuration
+  2. timeout handle
+  3. multibyte chars in chunked frame
 
 // EOF
