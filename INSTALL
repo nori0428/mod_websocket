@@ -75,32 +75,32 @@
 
   websocket.server = (
                      "/echo" =>    ( "host" => "127.0.0.1",
-                                     "port" => 7 ),
+                                     "port" => "echo" ),
                      "/binary" =>  ( "host" => "127.0.0.1",
-                                     "port" => 7000,
+                                     "port" => "7000",
                                      "type" => "bin" ),
                      "/func" =>    ( "host" => "192.168.0.10",
-                                     "port" => 8000 ),
+                                     "port" => "8000" ),
                      "/strict1" => ( "host" => "127.0.0.1",
-                                     "port" => 9000,
+                                     "port" => "9000",
                                      "origins" => ( "example.com" ) ),
                      "/strict2" => ( "host" => "127.0.0.1",
-                                     "port" => 9001,
+                                     "port" => "9001",
                                      "origins" => ( "example.com",
                                                     "192.168.0.1" ) ),
                      "/subproto" => (
                                      ( "host" => "127.0.0.1",
-                                       "port" => 9002,
+                                       "port" => "9002",
                                        "subproto" => "subproto1"
                                      ),
                                      ( "host" => "127.0.0.1",
-                                       "port" => 9003,
+                                       "port" => "9003",
                                        "subproto" => "subproto2"
                                      )
                                     ),
                      "/locale" => (
                                     "host" => "192.168.0.5",
-                                    "port" => 9000,
+                                    "port" => "9000",
                                     "locale" => "EUCJP"
                                   )
                      )
@@ -137,7 +137,7 @@
    websocket.server = (
                        "/locale" => (
                                      "host" => "192.168.0.2",
-                                     "port" => 9000,
+                                     "port" => "9000",
                                      "locale" => "EUCJP"
                                     )
                       )
