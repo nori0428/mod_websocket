@@ -262,7 +262,7 @@ replace_extension(handler_ctx *hctx) {
     for (i = subprotos->used; i > 0; i--) {
         da_subproto = (data_array *)subprotos->data[i - 1];
         if (buffer_is_empty(subproto)) {
-            if (buffer_is_empty(da_subproto->key)) {
+            if (da_subproto->is_index_key) {
                 hctx->ext = (data_array *)da_subproto;
                 DEBUG_LOG("s", "found extension w/o subproto");
                 return 0;

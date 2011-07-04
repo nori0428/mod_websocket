@@ -186,6 +186,7 @@ int _set_extension(data_array *dst, const data_array *src) {
     buffer_copy_string_buffer(dst->key, src->key);
     if (src->value->data[0]->type == TYPE_STRING) {
         subproto = data_array_init();
+        buffer_reset(subproto->key);
         ret = _set_subproto_extension(subproto, src);
         array_insert_unique(dst->value, (data_unset *)subproto);
     } else if (src->value->data[0]->type == TYPE_ARRAY) {
@@ -193,6 +194,7 @@ int _set_extension(data_array *dst, const data_array *src) {
             data_array *da_src = (data_array *)src->value->data[i - 1];
 
             subproto = data_array_init();
+            buffer_reset(subproto->key);
             ret = _set_subproto_extension(subproto, da_src);
             if (subproto->key->ptr &&
                 array_get_element(dst->value, subproto->key->ptr)) {
