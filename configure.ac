@@ -67,6 +67,20 @@ case $host_os in
 esac
 AC_SUBST(LIBNCURSES)
 
+# Check for websocket version
+AC_MSG_CHECKING(whether --with-lighttpd option specified)
+AC_ARG_WITH(
+        lighttpd,
+        [  --with-lighttpd
+                                  specify lighttpd location : default=no],
+        [ lighttpd=$withval ],
+        [ lighttpd=no ])
+AC_MSG_RESULT(${lighttpd})
+if test "x${lighttpd}" != "xno"; then
+   LIGHTTPD_LOCATION=${lighttpd}
+   AC_SUBST(LIGHTTPD_LOCATION)
+fi
+
 AC_OUTPUT(\
 	Makefile \
 	stub/Makefile \

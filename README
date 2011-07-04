@@ -2,7 +2,7 @@
 
 - What is this?
   mod_websocket.c provides a WebSocket extension for
-  lighttpd HTTP server ver 1.4.26.( http://www.lighttpd.net/ )
+  lighttpd HTTP server ver 1.4.28( http://www.lighttpd.net/ )
 
 - How does mod_websocket work?
   Please see these figures.
@@ -20,7 +20,6 @@
   If you can read Japanese, a more detailed explanation is on the
   following sites.
 
-  http://blog.bornneet.com/Entry/271/
   http://willibe.blogspot.com/
 
 - LICENCE

@@ -2,93 +2,67 @@
 
 - Install lighty with mod_websocket
 
-1.Get the lighttpd-1.4.28 source from
-
-  http://www.lighttpd.net/download/
-
-  $ tar xzvf lighttpd-1.4.28.tar.gz
-
-2.Install tools and libraries necessary for making lighttpd
-  if you don't have.
-
-  1.autotools
-
-    automake-1.x package contains autoheader, autoconf,
-    automake, m4 etc...
-    But on ubuntu, only libtool has been excluded.
-
+1.Check your environment
+  - dependent tools and libs[mandatory]
+    1.autotools
     exmaple for ubuntu.
     $ sudo apt-get install automake-1.x
     $ sudo apt-get install libtool
 
     And I recommend you to install version 1.9 or later.
 
-  2.pcre lib( http://www.pcre.org/ )
+    2.libicu-dev ( http://site.icu-project.org/ )
+    $ sudo apt-get install libicu42 libicu-dev
+
+    3.libcunit-dev ( http://cunit.sourceforge.net/ )
+    $ sudo apt-get install libcunit1 libcunit1-dev
+
+    4.libpcre-dev ( http://www.pcre.org/ )
     $ sudo apt-get install libpcre3 libpcre3-dev
 
-  3.zlib-dev
+    5.zlib-dev
     $ sudo apt-get install zlib1g-dev
 
-  4.bzip2-dev
+    6.bzip2-dev
     $ sudo apt-get install libbz2-dev
 
-  5.libiconv
-    Linux: iconv func maybe merged glibc. nothing to do.
-    MAC: $ sudo port install libiconv
-
-  If you want to make mod_websocket/src/sample/*.c,
-  need to install libevent.
-
-  6.libevent
-    ( http://www.monkey.org/~provos/libevent/ )
-
-    $ sudo apt-get install libevent-dev
-
-  If you want to use SSL and wss, install openssl and openssl lib.
-
-  7.openssl
+  - dependent libs[optional]
+    1.openssl
+    If you want to use SSL and wss, install openssl and openssl lib.
     $ sudo apt-get install openssl libssl-dev
 
-3.Patch the source
+2.Test mod_websocket
+  $ cd mod_websocket
+  $ ./bootstrap
+  $ ./configure --with-websocket[=IETF-{00,08}]
+  $ make clean check
 
-  $ cd lighttpd-1.4.28/
-  $ patch -p1 < mod_websocket.patch
+  If bootstrap or configure failed, check your environment again.
+  If make check failed, plz send config.log and make check output to
+  me.
 
-  note: this patch contains a part of mod-connect.patch
-  ( http://redmine.lighttpd.net/attachments/997/mod-connect.patch )
+3.Get the lighttpd-1.4.28 source from
+  http://www.lighttpd.net/download/
 
-4.copy mod_websocket and sha1 sources into src dir and make lighty.
+  $ tar xzvf lighttpd-1.4.28.tar.gz
 
-  $ cp mod_websocket.{h,c} lighttd-1.4.28/src/
-  $ cp sha1.{h,c} lighttd-1.4.28/src/
+4.Install mod_websocket into lighty's dir
+
+  $ cd mod_websocket
+  $ ./bootstrap
+  $ ./configure --with-lighttpd=/path/to/your_lighty_dir
+  $ make install
+
+5.Make lighty w/ mod_websocket
+
   $ cd lighttpd-1.4.28
-
-  When you configure the first, do autogen.sh at once.
-  (because of patched some Makefile.am)
-
   $ ./autogen.sh
+  $ ./configure --with-websocket[=IETF-{00,08}] ...
 
-  $ ./configure --with-your-options
-
-  NOTE:
-  websocket configure option is below.
-  --with-websocket[=IETF-{00, 08}]
   If you want to use latest spec, plz specify --with-websocket=IETF-08
 
   $ make
   $ sudo make install
-
-5. check for mod_websocket.so
-
-  $ cd lighttd-1.4.28/src/.libs
-  $ ls -l mod_websocket.*
-
-  or
-
-  $ ls -l /usr/local/lib/mod_websocket.*
-
-  If mod_websocket.* exists in dir, you can use mod_websocket!
-  Write lighttpd.conf like below.
 
 6.Add setting for mod_websocket into lighttpd.conf
 
@@ -134,13 +108,11 @@
   6-3. locale
        If a backend server uses non UTF-8 locale, plz set the locale
        into configration.
-       If not set locale, mod_websocket treats all messages as same
-       locale of OS from which lighttpd is executed.
-       (and If messages are not same locale, disconnect session.)
+       If not set locale, mod_websocket treats all messages as UTF-8.
 
 7. websocket.server section format
    "host"  = STRING          : FQDN or IPAddr [mandatory]
-   "port"  = INTEGER         : port number [mandatory]
+   "service" = STRING        : port number or service name [mandatory]
    "type"  = "bin" or "text" : payload type [optional]
                                case insensitive, default = "text"
                                This parameter becomes effective only at
