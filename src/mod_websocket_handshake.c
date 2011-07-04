@@ -28,7 +28,7 @@
 # include "base64.h"
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
 
-#include "mod_websocket_new.h" // TODO: replace to mod_websocket.h
+#include "mod_websocket.h"
 
 #define	HOST_STR				"Host"
 #define	CONNECTION_STR				"Connection"

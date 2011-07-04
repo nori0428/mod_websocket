@@ -14,7 +14,7 @@
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 
-#include "mod_websocket_new.h"
+#include "mod_websocket.h"
 
 #define	KEY1	"18x 6]8vM;54 *(5:  {   U1]8  z [  8"
 #define	KEY2	"1_ tx7X d  <  nw  334J702) 7]o}` 0"

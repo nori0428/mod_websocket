@@ -18,7 +18,7 @@ libwebsocket_la_SOURCES = \
 	base64.c \
 	sha1.h \
 	sha1.c \
-	mod_websocket_new.h \
+	mod_websocket.h \
 	mod_websocket_conv.c \
 	mod_websocket_connector.c \
 	mod_websocket_handshake.c \

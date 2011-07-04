@@ -7,7 +7,7 @@
 #include <string.h>
 #include <unicode/ucsdet.h>
 
-#include "mod_websocket_new.h"
+#include "mod_websocket.h"
 
 static int mod_websocket_conv(UConverter *, UConverter *,
                               char *, size_t *, const char *, size_t);
