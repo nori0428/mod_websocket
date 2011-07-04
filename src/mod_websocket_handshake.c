@@ -261,15 +261,28 @@ replace_extension(handler_ctx *hctx) {
     subproto = hctx->handshake.subproto;
     for (i = subprotos->used; i > 0; i--) {
         da_subproto = (data_array *)subprotos->data[i - 1];
-        if (strstr(subproto->ptr, da_subproto->key->ptr) != NULL) {
-            hctx->ext = (data_array *)da_subproto;
-            DEBUG_LOG("ss", "found subproto extension:",
-                      hctx->handshake.subproto->ptr);
-            return 0;
+        if (buffer_is_empty(subproto)) {
+            if (buffer_is_empty(da_subproto->key)) {
+                hctx->ext = (data_array *)da_subproto;
+                DEBUG_LOG("s", "found extension w/o subproto");
+                return 0;
+            }
+        } else {
+            if (!buffer_is_empty(da_subproto->key) &&
+                strstr(subproto->ptr, da_subproto->key->ptr) != NULL) {
+                hctx->ext = (data_array *)da_subproto;
+                DEBUG_LOG("ss", "found subproto extension:",
+                          hctx->handshake.subproto->ptr);
+                return 0;
+            }
         }
     }
-    DEBUG_LOG("ss", "not found subproto extension:",
-              hctx->handshake.subproto->ptr);
+    if (buffer_is_empty(subproto)) {
+        DEBUG_LOG("s", "not found extension w/o subproto");
+    } else {
+        DEBUG_LOG("ss", "not found subproto extension:",
+                  hctx->handshake.subproto->ptr);
+    }
     return -1;
 }
 
@@ -369,10 +382,8 @@ mod_websocket_handshake_check_request(handler_ctx *hctx) {
     }
 
     /* replace hctx->ext if subproto exsists */
-    if (!buffer_is_empty(handshake->subproto) && replace_extension(hctx) < 0) {
+    if (replace_extension(hctx) < 0) {
         return MOD_WEBSOCKET_NOT_FOUND;
-    } else if (buffer_is_empty(handshake->subproto)) {
-        hctx->ext = (data_array *)hctx->ext->value->data[0];
     }
 
     if (is_allowed_origin(hctx) != MOD_WEBSOCKET_TRUE) {

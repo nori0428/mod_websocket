@@ -61,13 +61,13 @@ mod_websocket_handshake_check_request_test() {
     server srv;
     connection con;
     data_array *ext;
+    data_string *subproto;
     plugin_data pd;
     handler_ctx hctx;
     mod_websocket_errno_t ret;
     data_array *exts;
     data_array *origins;
     data_string *origin;
-    data_string *subproto;
     data_string *header;
     int pipefd[2];
     ssize_t siz;
@@ -164,6 +164,7 @@ mod_websocket_handshake_check_request_test() {
     CU_ASSERT_EQUAL(ret, MOD_WEBSOCKET_BAD_REQUEST);
 
     hctx.ext = exts;
+    buffer_reset(ext->key);
     header = data_string_init();
     buffer_copy_string(header->key, "Origin");
     buffer_copy_string(header->value, "http://hoge2.com");
@@ -173,6 +174,7 @@ mod_websocket_handshake_check_request_test() {
 
 
     hctx.ext = exts;
+    buffer_reset(ext->key);
     header = data_string_init();
     buffer_copy_string(header->key, "Origin");
     buffer_copy_string(header->value, "http://hoge.com");
@@ -286,14 +288,16 @@ mod_websocket_handshake_check_request_test() {
     CU_ASSERT_EQUAL(ret, MOD_WEBSOCKET_BAD_REQUEST);
 
     hctx.ext = exts;
+    buffer_reset(ext->key);
     header = data_string_init();
     buffer_copy_string(header->key, "Sec-WebSocket-Origin");
     buffer_copy_string(header->value, "http://hoge2.com");
     array_replace(con.request.headers, (data_unset *)header);
     ret = mod_websocket_handshake_check_request(&hctx);
     CU_ASSERT_EQUAL(ret, MOD_WEBSOCKET_FORBIDDEN);
-    hctx.ext = exts;
 
+    hctx.ext = exts;
+    buffer_reset(ext->key);
     header = data_string_init();
     buffer_copy_string(header->key, "Sec-WebSocket-Origin");
     buffer_copy_string(header->value, "http://hoge.com");
@@ -302,7 +306,7 @@ mod_websocket_handshake_check_request_test() {
     CU_ASSERT_EQUAL(ret, MOD_WEBSOCKET_OK);
 
     hctx.ext = exts;
-
+    buffer_reset(ext->key);
     header = data_string_init();
     buffer_copy_string(header->key, "Sec-WebSocket-Protocol");
     buffer_copy_string(header->value, "chat");
@@ -418,6 +422,7 @@ mod_websocket_handshake_create_response_test() {
 
     hctx.ext = exts;
     hctx.pd = &pd;
+    buffer_reset(ext->key);
     hctx.tocli = chunkqueue_init();
 
     header = data_string_init();
@@ -485,6 +490,7 @@ mod_websocket_handshake_create_response_test() {
     hctx.ext = exts;
     hctx.pd = &pd;
     hctx.tocli = chunkqueue_init();
+    buffer_reset(ext->key);
 
     header = data_string_init();
     buffer_copy_string(header->key, "Connection");
@@ -510,6 +516,7 @@ mod_websocket_handshake_create_response_test() {
     buffer_copy_string(header->key, "Sec-WebSocket-Origin");
     buffer_copy_string(header->value, "http://hoge.com");
     array_replace(con.request.headers, (data_unset *)header);
+
     ret = mod_websocket_handshake_check_request(&hctx);
     CU_ASSERT_EQUAL(ret, MOD_WEBSOCKET_OK);
     ret = mod_websocket_handshake_create_response(&hctx);
