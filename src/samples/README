@@ -12,11 +12,14 @@
      $ sudo lighttpd -f /path/to/lighttpd.conf
 
   4. run chat daemon
-     $ chat/src/ws_chat 9000 &
+     $ chat/src/chat 9000 &
 
   5. run smtp daemon
      $ sudo /etc/init.d/postfix start
 
-  6. access w/ your browsers
+  6. run netstat.sh (this use chat srv)
+     $ sh netstat.sh
+
+  7. access w/ your browsers
 
 // EOF
