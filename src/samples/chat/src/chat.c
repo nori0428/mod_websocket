@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/time.h>
@@ -22,7 +23,7 @@ struct chat_client {
 
 struct chat_client *gHead_client = NULL;
 
-int
+static int
 tcp_listen(const char *service) {
     struct addrinfo hints;
     struct addrinfo *res = NULL;
@@ -123,6 +124,8 @@ main(int argc, char *argv[]) {
     struct ev_loop *loop;
     ev_io watcher;
 
+    signal(SIGPIPE, SIG_IGN);
+    signal(SIGHUP, SIG_IGN);
     fd = tcp_listen(argv[1]);
     if (fd < 0) {
         fprintf(stderr, "Usage: %s portnum\n", argv[0]);
