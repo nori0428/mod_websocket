@@ -13,10 +13,10 @@ LDADD = \
 CFLAGS = -Wall -g
 
 noinst_PROGRAMS = \
-	ws_chat
+	chat
 
 ws_chat_SOURCES = \
-        ws_chat.c
+        chat.c
 
 include $(top_srcdir)/config/Makefile.rules
 
