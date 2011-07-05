@@ -35,7 +35,7 @@ mod_websocket_conv(UConverter *to, UConverter *from,
     }
     punibuf = unibuf;
     ucnv_toUnicode(from, &punibuf, punibuf + unisiz,
-                   &src, src + srcsiz, 0, 1, &err);
+                   &src, src + srcsiz, 0, 0, &err);
     if (U_FAILURE(err)) {
         free(unibuf);
         return -1;
@@ -48,7 +48,7 @@ mod_websocket_conv(UConverter *to, UConverter *from,
     ppunibuf = unibuf;
     pdst = dst;
     ucnv_fromUnicode(to, &pdst, pdst + *dstsiz,
-                     (const UChar **)&ppunibuf, punibuf, 0, 1, &err);
+                     (const UChar **)&ppunibuf, punibuf, 0, 0, &err);
     free(unibuf);
     if (U_FAILURE(err)) {
         return -1;

@@ -71,6 +71,8 @@ mod_websocket_conv_test() {
     FILE *fp;
     int i, ret;
     char src[1024], dst1[1024], dst2[1024];
+    char csrc[8192], cdst1[8192], cdst2[8192], cdst[16384];
+    char *pdst;
     size_t srcsiz, dst1siz = 1024, dst2siz = 1024;
     mod_websocket_conv_t *cnv;
 
@@ -104,6 +106,53 @@ mod_websocket_conv_test() {
         CU_ASSERT_EQUAL(memcmp(src, dst2, dst2siz), 0);
         mod_websocket_conv_final(cnv);
     }
+    /* test chunk */
+    /*
+     * But if multibyte chars are chunked,
+     * a websocket frame may be invalid...
+     */
+    cnv = mod_websocket_conv_init(ptns[0].locale);
+    if (!cnv) {
+        CU_FAIL("init failed");
+        return 0;
+    }
+    memset(src, 0, sizeof(src));
+    memset(csrc, 0, sizeof(csrc));
+    memset(cdst, 0, sizeof(cdst));
+    memset(cdst1, 0, sizeof(cdst1));
+    memset(cdst2, 0, sizeof(cdst2));
+    fprintf(stderr, "check chunked: %s\n", ptns[0].fname);
+    fp = fopen(ptns[0].fname, "r");
+    srcsiz = fread(src, 1, sizeof(src), fp);
+    fclose(fp);
+    src[srcsiz] = '\0';
+    for (i = 0; i < srcsiz * 5; i += srcsiz) {
+        memcpy(csrc + i, src, srcsiz);
+    }
+    csrc[i] = '\0';
+    srcsiz = i;
+    dst1siz = sizeof(cdst1);
+    ret = mod_websocket_conv_to_client(cnv, cdst1, &dst1siz, csrc, srcsiz / 2);
+    CU_ASSERT_EQUAL(ret, 0);
+    CU_ASSERT_EQUAL(mod_websocket_conv_isUTF8(cdst1, dst1siz),
+                    MOD_WEBSOCKET_TRUE);
+    memcpy(cdst, cdst1, dst1siz);
+    pdst = cdst + dst1siz;
+    dst1siz = sizeof(cdst2);
+    ret = mod_websocket_conv_to_client(cnv, cdst2, &dst1siz,
+                                       csrc + srcsiz / 2, srcsiz - srcsiz / 2);
+    CU_ASSERT_EQUAL(ret, 0);
+    CU_ASSERT_EQUAL(mod_websocket_conv_isUTF8(cdst, dst1siz),
+                    MOD_WEBSOCKET_TRUE);
+    memcpy(pdst, cdst2, dst1siz);
+    *(pdst + dst1siz) = '\0';
+    for (i = 0; i < srcsiz; i++) {
+        if (cdst[i] != csrc[i]) {
+            CU_ASSERT_EQUAL(cdst[i], csrc[i]);
+            fprintf(stderr, "%02x = %02x, ", cdst[i] & 0xff, csrc[i] & 0xff);
+        }
+    }
+    mod_websocket_conv_final(cnv);
     return 0;
 }
 
