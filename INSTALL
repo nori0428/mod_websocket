@@ -6,28 +6,31 @@
   - dependent tools and libs[mandatory]
     1.autotools
     exmaple for ubuntu.
-    $ sudo apt-get install automake-1.x
+    $ sudo apt-get install automake
     $ sudo apt-get install libtool
 
     And I recommend you to install version 1.9 or later.
 
-    2.libicu-dev ( http://site.icu-project.org/ )
-    $ sudo apt-get install libicu42 libicu-dev
+    2.libev-dev
+    $ sudo apt-get install libev3 libev-dev
 
     3.libcunit-dev ( http://cunit.sourceforge.net/ )
     $ sudo apt-get install libcunit1 libcunit1-dev
 
-    4.libpcre-dev ( http://www.pcre.org/ )
+    4.libicu-dev ( http://site.icu-project.org/ )
+    $ sudo apt-get install libicu42 libicu-dev
+
+    5.libpcre-dev ( http://www.pcre.org/ )
     $ sudo apt-get install libpcre3 libpcre3-dev
 
-    5.zlib-dev
+    6.zlib-dev
     $ sudo apt-get install zlib1g-dev
 
-    6.bzip2-dev
+    7.bzip2-dev
     $ sudo apt-get install libbz2-dev
 
   - dependent libs[optional]
-    1.openssl
+    8.openssl
     If you want to use SSL and wss, install openssl and openssl lib.
     $ sudo apt-get install openssl libssl-dev
 
@@ -50,14 +53,14 @@
 
   $ cd mod_websocket
   $ ./bootstrap
-  $ ./configure --with-lighttpd=/path/to/your_lighty_dir
+  $ ./configure --with-lighttpd=/path/to/lighttpd_top_srcdir
   $ make install
 
 5.Make lighty w/ mod_websocket
 
-  $ cd lighttpd-1.4.28
+  $ cd /path/to/lighttpd_top_srcdir
   $ ./autogen.sh
-  $ ./configure --with-websocket[=IETF-{00,08}] ...
+  $ ./configure --with-websocket[=IETF-{00,08}] [--with-openssl] ...
 
   If you want to use latest spec, plz specify --with-websocket=IETF-08
 
@@ -125,9 +128,10 @@
    "locale" = STRING         : locale string [optional]
                                If you use character encodings other than UTF-8
                                on backend server, set this param properly.
+
    ex.
    +---------+            +--------+            +------------------+
-   | browser | <--------> | lighty | <--------> | TCP server       |
+   | browser | <--------> | lighty | <--------> | CHAT server      |
    |         |  Internet  |        |  Localnet  | 192.168.0.2:9000 |
    |  UTF-8  |            |        |            | encoding = EUCJP |
    +---------+            +--------+            +------------------+
@@ -135,10 +139,15 @@
                   UTF-8                 EUCJP
 
    websocket.server = (
-                       "/locale" => (
-                                     "host" => "192.168.0.2",
-                                     "port" => "9000",
-                                     "locale" => "EUCJP"
-                                    )
+                       "/chat" => (
+                                    "host" => "192.168.0.2",
+                                    "port" => "9000",
+                                    "locale" => "EUCJP"
+                                  )
                       )
+
+   and wrote javascript like this.
+
+   var ws = new WebSocket("ws://lighty.addr/chat");
+
 // EOF
