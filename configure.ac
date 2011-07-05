@@ -12,20 +12,22 @@ AM_INIT_AUTOMAKE
 # Checks for programs.
 AC_PROG_CC
 
+# Checks for header files.
+AC_CHECK_HEADERS([stdlib.h string.h unicode/ucnv.h unicode/ucsdet.h CUnit/CUnit.h CUnit/Basic.h])
+
 # Checks for libraries.
 CFLAGS="$CFLAGS -I/usr/local/lib -I/opt/local/inclue"
 LDFLAGS="$LDFLAGS -L/usr/local/lib -L/opt/local/lib"
+LIBS="-licui18n"
 AC_CHECK_LIB(ev, ev_io_start, has_libev=yes, AC_MSG_ERROR([cant test mod_websocket]))
 AC_CHECK_LIB(cunit, CU_basic_run_tests, has_libcunit=yes, AC_MSG_ERROR([cant test mod_websocket]))
-AC_CHECK_LIB(icui18n, ucnv_open_4_2, has_libicu=yes, has_libicu=no)
-if test "x${has_libicu}" == "xno"; then
-   AC_CHECK_LIB(icui18n, ucnv_open_3_6, has_libicu=yes, AC_MSG_ERROR([mod_websocket needs ICU library]))
-fi
+AC_MSG_CHECKING([libicui18n exists])
+AC_TRY_LINK([#include <unicode/ucnv.h>], [int err; ucnv_open("utf-8", &err)],
+            AC_MSG_RESULT(yes),
+            [AC_MSG_RESULT(no); AC_MSG_ERROR([needs ICU libs])])
 CFLGAS=""
 LDFLAGS=""
-
-# Checks for header files.
-AC_CHECK_HEADERS([stdlib.h string.h unicode/ucnv.h unicode/ucsdet.h CUnit/CUnit.h CUnit/Basic.h])
+LIBS=""
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_INLINE
