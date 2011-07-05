@@ -16,13 +16,13 @@ AC_PROG_CC
 AC_CHECK_HEADERS([stdlib.h string.h unicode/ucnv.h unicode/ucsdet.h CUnit/CUnit.h CUnit/Basic.h])
 
 # Checks for libraries.
-CFLAGS="$CFLAGS -I/usr/local/lib -I/opt/local/inclue"
-LDFLAGS="$LDFLAGS -L/usr/local/lib -L/opt/local/lib"
-LIBS="-licui18n"
+CFLAGS="$CFLAGS -I/usr/local/include/ -I/opt/local/include/"
+LDFLAGS="$LDFLAGS -L/usr/local/lib/ -L/opt/local/lib/"
+LIBS="-licui18n -licuuc"
 AC_CHECK_LIB(ev, ev_io_start, has_libev=yes, AC_MSG_ERROR([cant test mod_websocket]))
 AC_CHECK_LIB(cunit, CU_basic_run_tests, has_libcunit=yes, AC_MSG_ERROR([cant test mod_websocket]))
-AC_MSG_CHECKING([libicui18n exists])
-AC_TRY_LINK([#include <unicode/ucnv.h>], [int err; ucnv_open("utf-8", &err)],
+AC_MSG_CHECKING([for ucnv_open in -licui18n])
+AC_TRY_LINK([#include <unicode/ucnv.h>], [int err; ucnv_open("utf-8", &err);],
             AC_MSG_RESULT(yes),
             [AC_MSG_RESULT(no); AC_MSG_ERROR([needs ICU libs])])
 CFLGAS=""
