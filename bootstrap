@@ -9,9 +9,9 @@ elif test "x${HOST_OS}" = "xLinux"; then
 fi
 set -x
 ${LIBTOOLIZE} --force --copy
-aclocal -I config
+aclocal -I m4 
 autoheader
-rm -f config/config.guess # XXX
+rm -f m4/config.guess # XXX
 automake --foreign --add-missing --copy
 autoconf
 

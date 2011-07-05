@@ -15,9 +15,9 @@ CFLAGS = -Wall -g
 noinst_PROGRAMS = \
 	chat
 
-ws_chat_SOURCES = \
+chat_SOURCES = \
         chat.c
 
-include $(top_srcdir)/config/Makefile.rules
+include $(top_srcdir)/m4/Makefile.rules
 
 ## EOF

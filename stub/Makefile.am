@@ -26,6 +26,6 @@ libtest_la_SOURCES = \
 	md5.h \
 	md5.c
 
-include $(top_srcdir)/config/Makefile.rules
+include $(top_srcdir)/m4/Makefile.rules
 
 ## EOF

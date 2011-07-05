@@ -47,6 +47,6 @@ mod_websocket_handshake_test_SOURCES = \
 mod_websocket_frame_test_SOURCES = \
 	mod_websocket_frame_test.c
 
-include $(top_srcdir)/config/Makefile.rules
+include $(top_srcdir)/m4/Makefile.rules
 
 ## EOF
