@@ -1,7 +1,7 @@
 ## $Id$
 
 SUBDIRS = \
-	. tests
+	. tests samples
 
 INCLUDES = \
 	-I${top_srcdir} \

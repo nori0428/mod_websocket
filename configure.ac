@@ -96,6 +96,9 @@ AC_OUTPUT(\
 	stub/Makefile \
 	src/Makefile \
 	src/tests/Makefile \
+	src/samples/Makefile \
+	src/samples/chat/Makefile \
+	src/samples/chat/src/Makefile \
 )
 
 # EOF

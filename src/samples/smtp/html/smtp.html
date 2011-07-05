@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <title>SMTP terminal w/ WebSocket</title>
+    <style>
+      @-webkit-keyframes blinks {
+        0% {color: white;}
+        50% {color: black;}
+        100% {color: white;}
+      }
+      #caret {
+        -webkit-animation-direction: normal;
+        -webkit-animation-duration: 0.7s;
+        -webkit-animation-iteration-count: infinite;
+        -webkit-animation-name: blinks;
+        -webkit-animation-timing-function: ease-in-out;
+      }
+    </style>
+    <script src="jquery-1.4.2.min.js" type="text/javascript" charset="utf-8"></script>
+    <script src="smtp.js" type="text/javascript" charset="utf-8"></script>
+  </head>
+  <body onload="mua()">
+    <h1>SMTP terminal w/ WebSocket</h1>
+    <div style="background-color: #eeeeee;">
+      <p>This sample is equal to <strong>$ telnet localhost 25</strong></p>
+      <p>When connected SMTP Server, type like this.</p>
+      smtp> HELO your.domain [RET]<br>
+      smtp> MAIL FROM: you@mail.addr [RET]<br>
+      smtp> RCPT TO: someone@mail.addr [RET]<br>
+      smtp> DATA [RET]<br>
+      From: you@mail.addr [RET]<br>
+      Subject: subject [RET]<br>
+      Hello, someone.[RET]<br>
+      .<br>
+      smtp> QUIT [RET]<br><br>
+    </div>
+    <div id="terminal">
+    </div>
+  </body>
+</html>
+

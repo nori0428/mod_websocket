@@ -1,0 +1,22 @@
+// $Id$
+
+- What is this?
+  These are sample applications and configuration for mod_websocket.
+
+- How to use.
+  1. copy conf/websocket.conf into lighttpd config dir.
+
+  2. copy html(s) into dir that is able to access from browsers.
+
+  3. run lighttpd
+     $ sudo lighttpd -f /path/to/lighttpd.conf
+
+  4. run chat daemon
+     $ chat/src/ws_chat 9000 &
+
+  5. run smtp daemon
+     $ sudo /etc/init.d/postfix start
+
+  6. access w/ your browsers
+
+// EOF

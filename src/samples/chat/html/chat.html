@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <title>CHAT w/ WebSocket</title>
+    <script type='text/javascript' src='jquery-1.4.2.min.js'></script>
+    <script type='text/javascript'>
+      var ws;
+
+      function appendTxtNode(msg) {
+          var txtNode = document.createTextNode(msg);
+          var brNode = document.createElement('br');
+          var cnode = document.getElementById('content');
+          cnode.appendChild(txtNode);
+          cnode.appendChild(brNode);
+      }
+      function doSend() {
+          var msg = $('#sendmsg').val();
+          if (!msg.length) {
+              return;
+          }
+          ws.send(msg);
+          $('#sendmsg').val('');
+      }
+      function init() {
+          ws = new WebSocket('ws://' + location.host + '/chat');
+          ws.onopen = function(e) {
+              appendTxtNode('opened WebSocket');
+          };
+          ws.onmessage = function(msg) {
+              appendTxtNode(msg.data);
+          };
+          ws.onclose = function(e) {
+              appendTxtNode('closed WebSocket');
+          };
+      }
+    </script>
+  </head>
+  <body onload="init()">
+    <h1>CHAT w/ WebSocket</h1>
+    <input id="sendmsg" type="text" onChange="doSend()"></input>
+    <button onClick="doSend()">Send</button>
+    <div id="content"></div>
+  </body>
+</html>
