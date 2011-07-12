@@ -51,6 +51,9 @@
 
 4.Install mod_websocket into lighty's dir
 
+  NOTICE:
+  Lighttpd is applied some patches by installing this module.
+
   $ cd mod_websocket
   $ ./bootstrap
   $ ./configure --with-lighttpd=/path/to/lighttpd_top_srcdir
