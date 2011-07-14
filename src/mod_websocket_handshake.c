@@ -414,7 +414,7 @@ mod_websocket_handshake_create_response(handler_ctx *hctx) {
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
-    unsigned char accept[ACCEPT_BODY_STRLEN];
+    unsigned char accept_body[ACCEPT_BODY_STRLEN];
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
 
     if (!hctx) {
@@ -464,12 +464,13 @@ mod_websocket_handshake_create_response(handler_ctx *hctx) {
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
     /* Sec-WebSocket-Accept header */
-    memset(accept, 0, sizeof(accept));
-    if (create_accept_body(accept, hctx) < 0) {
+    memset(accept_body, 0, sizeof(accept_body));
+    if (create_accept_body(accept_body, hctx) < 0) {
         return MOD_WEBSOCKET_BAD_REQUEST;
     }
     buffer_append_string(resp, SEC_WEBSOCKET_ACCEPT_STR ": ");
-    buffer_append_string_len(resp, (char *)accept, strlen((char *)accept));
+    buffer_append_string_len(resp,
+                             (char *)accept_body, strlen((char *)accept_body));
     buffer_append_string(resp, CRLF_STR);
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
 
