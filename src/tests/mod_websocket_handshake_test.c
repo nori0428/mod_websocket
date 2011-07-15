@@ -61,7 +61,9 @@ mod_websocket_handshake_check_request_test() {
     server srv;
     connection con;
     data_array *ext;
+#ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
     data_string *subproto;
+#endif
     plugin_data pd;
     handler_ctx hctx;
     mod_websocket_errno_t ret;

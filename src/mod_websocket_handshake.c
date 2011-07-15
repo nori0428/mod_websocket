@@ -24,7 +24,7 @@
 # ifdef HAVE_INTTYPES_H
 #  include <inttypes.h>
 # endif
-# include "sha1.h"
+# include "mw_sha1.h"
 # include "base64.h"
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
 
@@ -195,8 +195,8 @@ create_MD5_sum(unsigned char *md5sum, handler_ctx *hctx) {
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
 int
 create_accept_body(unsigned char *digest, handler_ctx *hctx) {
-    SHA_CTX sha;
-    uint8_t sha1_digest[SHA1_DIGEST_LENGTH];
+    MW_SHA_CTX sha;
+    uint8_t sha1_digest[MW_SHA1_DIGEST_LENGTH];
 
     if (!hctx) {
         return -1;
@@ -206,12 +206,12 @@ create_accept_body(unsigned char *digest, handler_ctx *hctx) {
         return -1;
     }
     /* get SHA1 hash of key */
-    SHA1_Init(&sha);
-    SHA1_Update(&sha, (sha1_byte *)hctx->handshake.key->ptr,
+    MW_SHA1_Init(&sha);
+    MW_SHA1_Update(&sha, (mw_sha1_byte *)hctx->handshake.key->ptr,
                 hctx->handshake.key->used - 1);
-    SHA1_Final(sha1_digest, &sha);
+    MW_SHA1_Final(sha1_digest, &sha);
     /* get base64 encoded SHA1 hash */
-    base64_encode(digest, sha1_digest, SHA1_DIGEST_LENGTH);
+    base64_encode(digest, sha1_digest, MW_SHA1_DIGEST_LENGTH);
     return 0;
 }
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */

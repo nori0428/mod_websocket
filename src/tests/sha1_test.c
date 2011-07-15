@@ -17,7 +17,7 @@
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 
-#include "sha1.h"
+#include "mw_sha1.h"
 
 /*
  *  Define patterns for testing
@@ -58,17 +58,17 @@ char result[4][20] = {
 
 CU_TestFunc
 all_test() {
-    SHA_CTX sha;
+    MW_SHA_CTX sha;
     int i, j;
-    sha1_byte md[20];
+    mw_sha1_byte md[20];
 
     for(j = 0; j < 4; ++j) {
         printf("check: '%s'\n", testarray[j]);
-        SHA1_Init(&sha);
+        MW_SHA1_Init(&sha);
         for(i = 0; i < repeatcount[j]; ++i) {
-            SHA1_Update(&sha, (sha1_byte *)testarray[j], strlen(testarray[j]));
+            MW_SHA1_Update(&sha, (mw_sha1_byte *)testarray[j], strlen(testarray[j]));
         }
-        SHA1_Final(md, &sha);
+        MW_SHA1_Final(md, &sha);
         printf("Message Digest:\n");
         printf("\t");
         for(i = 0; i < 20 ; ++i) {

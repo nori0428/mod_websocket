@@ -15,7 +15,7 @@ diff -ur lighttpd-1.4.28.orig/configure.ac lighttpd-1.4.28.new/configure.ac
  
  AC_CHECK_MEMBER(struct tm.tm_gmtoff,[AC_DEFINE([HAVE_STRUCT_TM_GMTOFF],[1],[gmtoff in struct tm])],,[#include <time.h>])
  AC_CHECK_TYPES(struct sockaddr_storage,,,[#include <sys/socket.h>])
-@@ -215,6 +222,30 @@
+@@ -215,6 +222,32 @@
   AC_SUBST(ATTR_LIB)
  fi
  
@@ -36,7 +36,9 @@ diff -ur lighttpd-1.4.28.orig/configure.ac lighttpd-1.4.28.new/configure.ac
 +elif test "x${websocket}" == "xietf-08" ||
 +     test "x${websocket}" == "xIETF-08"; then
 +   WEBSOCKET_VERSION_CFLAGS="-D_MOD_WEBSOCKET_SPEC_IETF_08_"
-+elif test "x${websocket}" != "xno"; then
++elif test "x${websocket}" == "xno"; then
++   WEBSOCKET_VERSION_CFLAGS="-D_MOD_WEBSOCKET_SPEC_IETF_00_"
++else
 +   AC_MSG_ERROR([websocket option is invalid. plz specify IETF-{00,08}])
 +fi
 +AC_SUBST(websocket)
@@ -68,7 +70,7 @@ diff -ur lighttpd-1.4.28.orig/src/Makefile.am lighttpd-1.4.28.new/src/Makefile.a
  endif
  
 +lib_LTLIBRARIES += mod_websocket.la
-+mod_websocket_la_SOURCES = mod_websocket.c sha1.c base64.c mod_websocket_conv.c mod_websocket_connector.c mod_websocket_handshake.c mod_websocket_frame.c
++mod_websocket_la_SOURCES = mod_websocket.c mw_sha1.c base64.c mod_websocket_conv.c mod_websocket_connector.c mod_websocket_handshake.c mod_websocket_frame.c
 +mod_websocket_la_LDFLAGS = -module -export-dynamic -avoid-version -no-undefined
 +mod_websocket_la_LIBADD = $(common_libadd) -licui18n -licuuc
 +

@@ -338,7 +338,7 @@ mod_websocket_frame_send_test() {
     siz = ((b->ptr[2] & 0xff) << 8) + (b->ptr[3] & 0xff);
     if (siz != sizeof(buf)) {
         CU_FAIL("extend payload length invalid");
-        fprintf(stderr, "%lu\n", siz);
+        fprintf(stderr, "%u\n", siz);
     }
     CU_ASSERT_EQUAL(memcmp(b->ptr + 4, buf, sizeof(buf)), 0);
     buffer_free(b);
@@ -370,7 +370,7 @@ mod_websocket_frame_send_test() {
     siz = ((b->ptr[2] & 0xff) << 8) + (b->ptr[3] & 0xff);
     if (siz != sizeof(buf)) {
         CU_FAIL("extend payload length invalid");
-        fprintf(stderr, "%lu\n", siz);
+        fprintf(stderr, "%u\n", siz);
     }
     CU_ASSERT_EQUAL(memcmp(b->ptr + 4, buf, sizeof(buf)), 0);
     buffer_free(b);
