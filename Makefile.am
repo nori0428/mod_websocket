@@ -18,7 +18,7 @@ install:
 	fi;
 	@echo "copy mod_websocket files into ${LIGHTTPD_LOCATION}"
 	@cp src/mod_websocket*.{h,c} ${LIGHTTPD_LOCATION}/src
-	@cp src/mw_sha1.{h,c} ${LIGHTTPD_LOCATION}/src
+	@cp src/sha1.{h,c} ${LIGHTTPD_LOCATION}/src
 	@cp src/base64.{h,c} ${LIGHTTPD_LOCATION}/src
 	@echo "done"
 	@echo "patch the lighttpd sources"

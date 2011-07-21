@@ -24,8 +24,8 @@
  * SUCH DAMAGE.
  */
 
-#ifndef __MW_SHA1_H__
-#define __MW_SHA1_H__
+#ifndef __SHA1_H__
+#define __SHA1_H__
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,8 +41,8 @@ extern "C" {
 #endif
 
 /* Make sure you define these types for your architecture: */
-typedef unsigned int mw_sha1_quadbyte;	/* 4 byte type */
-typedef unsigned char mw_sha1_byte;	/* single byte type */
+typedef unsigned int sha1_quadbyte;	/* 4 byte type */
+typedef unsigned char sha1_byte;	/* single byte type */
 
 /*
  * Be sure to get the above definitions right.  For instance, on my
@@ -52,25 +52,25 @@ typedef unsigned char mw_sha1_byte;	/* single byte type */
  * as "unsigned int" instead.
  */
 
-#define MW_SHA1_BLOCK_LENGTH	64
-#define MW_SHA1_DIGEST_LENGTH	20
+#define SHA1_BLOCK_LENGTH	64
+#define SHA1_DIGEST_LENGTH	20
 
-/* The MW_SHA1 structure: */
-typedef struct _MW_SHA_CTX {
-	mw_sha1_quadbyte	state[5];
-	mw_sha1_quadbyte	count[2];
-	mw_sha1_byte	buffer[MW_SHA1_BLOCK_LENGTH];
-} MW_SHA_CTX;
+/* The SHA1 structure: */
+typedef struct _SHA_CTX {
+	sha1_quadbyte	state[5];
+	sha1_quadbyte	count[2];
+	sha1_byte	buffer[SHA1_BLOCK_LENGTH];
+} SHA_CTX;
 
 #ifndef NOPROTO
-void MW_SHA1_Init(MW_SHA_CTX *context);
-void MW_SHA1_Update(MW_SHA_CTX *context, mw_sha1_byte *data, unsigned int len);
-void MW_SHA1_Final(mw_sha1_byte digest[MW_SHA1_DIGEST_LENGTH],
-                   MW_SHA_CTX* context);
+void SHA1_Init(SHA_CTX *context);
+void SHA1_Update(SHA_CTX *context, sha1_byte *data, unsigned int len);
+void SHA1_Final(sha1_byte digest[SHA1_DIGEST_LENGTH],
+                   SHA_CTX* context);
 #else
-void MW_SHA1_Init();
-void MW_SHA1_Update();
-void MW_SHA1_Final();
+void SHA1_Init();
+void SHA1_Update();
+void SHA1_Final();
 #endif
 
 #ifdef	__cplusplus

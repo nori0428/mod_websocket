@@ -16,8 +16,8 @@ noinst_LTLIBRARIES = libwebsocket.la
 libwebsocket_la_SOURCES = \
 	base64.h \
 	base64.c \
-	mw_sha1.h \
-	mw_sha1.c \
+	sha1.h \
+	sha1.c \
 	mod_websocket.h \
 	mod_websocket_conv.c \
 	mod_websocket_connector.c \

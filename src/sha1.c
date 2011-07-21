@@ -25,7 +25,7 @@
 
 #include <string.h>
 
-#include "mw_sha1.h"
+#include "sha1.h"
 
 #define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
 
@@ -33,8 +33,8 @@
 /* I got the idea of expanding during the round function from SSLeay */
 
 #ifdef LITTLE_ENDIAN
-#define blk0(i) (block->l[i] = (rol(block->l[i],24)&(mw_sha1_quadbyte)0xFF00FF00) \
-    |(rol(block->l[i],8)&(mw_sha1_quadbyte)0x00FF00FF))
+#define blk0(i) (block->l[i] = (rol(block->l[i],24)&(sha1_quadbyte)0xFF00FF00) \
+    |(rol(block->l[i],8)&(sha1_quadbyte)0x00FF00FF))
 #else
 #define blk0(i) block->l[i]
 #endif
@@ -50,13 +50,13 @@
 #define R4(v,w,x,y,z,i) z+=(w^x^y)+blk(i)+0xCA62C1D6+rol(v,5);w=rol(w,30);
 
 typedef union _BYTE64QUAD16 {
-    mw_sha1_byte c[64];
-    mw_sha1_quadbyte l[16];
+    sha1_byte c[64];
+    sha1_quadbyte l[16];
 } BYTE64QUAD16;
 
 /* Hash a single 512-bit block. This is the core of the algorithm. */
-void MW_SHA1_Transform(mw_sha1_quadbyte state[5], mw_sha1_byte buffer[64]) {
-    mw_sha1_quadbyte a, b, c, d, e;
+void SHA1_Transform(sha1_quadbyte state[5], sha1_byte buffer[64]) {
+    sha1_quadbyte a, b, c, d, e;
     BYTE64QUAD16 *block;
 
     block = (BYTE64QUAD16*)buffer;
@@ -98,8 +98,8 @@ void MW_SHA1_Transform(mw_sha1_quadbyte state[5], mw_sha1_byte buffer[64]) {
 }
 
 
-/* MW_SHA1_Init - Initialize new context */
-void MW_SHA1_Init(MW_SHA_CTX* context) {
+/* SHA1_Init - Initialize new context */
+void SHA1_Init(SHA_CTX* context) {
     /* SHA1 initialization constants */
     context->state[0] = 0x67452301;
     context->state[1] = 0xEFCDAB89;
@@ -110,7 +110,7 @@ void MW_SHA1_Init(MW_SHA_CTX* context) {
 }
 
 /* Run your data through this. */
-void MW_SHA1_Update(MW_SHA_CTX *context, mw_sha1_byte *data, unsigned int len) {
+void SHA1_Update(SHA_CTX *context, sha1_byte *data, unsigned int len) {
     unsigned int i, j;
 
     j = (context->count[0] >> 3) & 63;
@@ -118,9 +118,9 @@ void MW_SHA1_Update(MW_SHA_CTX *context, mw_sha1_byte *data, unsigned int len) {
     context->count[1] += (len >> 29);
     if ((j + len) > 63) {
         memcpy(&context->buffer[j], data, (i = 64-j));
-        MW_SHA1_Transform(context->state, context->buffer);
+        SHA1_Transform(context->state, context->buffer);
         for ( ; i + 63 < len; i += 64) {
-            MW_SHA1_Transform(context->state, &data[i]);
+            SHA1_Transform(context->state, &data[i]);
         }
         j = 0;
     }
@@ -130,28 +130,28 @@ void MW_SHA1_Update(MW_SHA_CTX *context, mw_sha1_byte *data, unsigned int len) {
 
 
 /* Add padding and return the message digest. */
-void MW_SHA1_Final(mw_sha1_byte digest[MW_SHA1_DIGEST_LENGTH], MW_SHA_CTX *context) {
-    mw_sha1_quadbyte i, j;
-    mw_sha1_byte finalcount[8];
+void SHA1_Final(sha1_byte digest[SHA1_DIGEST_LENGTH], SHA_CTX *context) {
+    sha1_quadbyte i, j;
+    sha1_byte finalcount[8];
 
     for (i = 0; i < 8; i++) {
-        finalcount[i] = (mw_sha1_byte)((context->count[(i >= 4 ? 0 : 1)]
+        finalcount[i] = (sha1_byte)((context->count[(i >= 4 ? 0 : 1)]
          >> ((3-(i & 3)) * 8) ) & 255);  /* Endian independent */
     }
-    MW_SHA1_Update(context, (mw_sha1_byte *)"\200", 1);
+    SHA1_Update(context, (sha1_byte *)"\200", 1);
     while ((context->count[0] & 504) != 448) {
-        MW_SHA1_Update(context, (mw_sha1_byte *)"\0", 1);
+        SHA1_Update(context, (sha1_byte *)"\0", 1);
     }
-    /* Should cause a MW_SHA1_Transform() */
-    MW_SHA1_Update(context, finalcount, 8);
-    for (i = 0; i < MW_SHA1_DIGEST_LENGTH; i++) {
-        digest[i] = (mw_sha1_byte)
+    /* Should cause a SHA1_Transform() */
+    SHA1_Update(context, finalcount, 8);
+    for (i = 0; i < SHA1_DIGEST_LENGTH; i++) {
+        digest[i] = (sha1_byte)
          ((context->state[i>>2] >> ((3-(i & 3)) * 8) ) & 255);
     }
     /* Wipe variables */
     i = j = 0;
-    memset(context->buffer, 0, MW_SHA1_BLOCK_LENGTH);
-    memset(context->state, 0, MW_SHA1_DIGEST_LENGTH);
+    memset(context->buffer, 0, SHA1_BLOCK_LENGTH);
+    memset(context->state, 0, SHA1_DIGEST_LENGTH);
     memset(context->count, 0, 8);
     memset(&finalcount, 0, 8);
 }

@@ -11,6 +11,7 @@
 #include <errno.h>
 
 #include "config.h"
+#include "mod_websocket.h"
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
 # include "md5.h"
@@ -24,11 +25,11 @@
 # ifdef HAVE_INTTYPES_H
 #  include <inttypes.h>
 # endif
-# include "mw_sha1.h"
+# ifndef USE_OPENSSL
+#  include "sha1.h"
+# endif
 # include "base64.h"
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
-
-#include "mod_websocket.h"
 
 #define	HOST_STR				"Host"
 #define	CONNECTION_STR				"Connection"
@@ -195,8 +196,12 @@ create_MD5_sum(unsigned char *md5sum, handler_ctx *hctx) {
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
 int
 create_accept_body(unsigned char *digest, handler_ctx *hctx) {
-    MW_SHA_CTX sha;
-    uint8_t sha1_digest[MW_SHA1_DIGEST_LENGTH];
+    SHA_CTX sha;
+# ifdef	USE_OPENSSL
+    uint8_t sha1_digest[SHA_DIGEST_LENGTH];
+# else
+    uint8_t sha1_digest[SHA1_DIGEST_LENGTH];
+# endif
 
     if (!hctx) {
         return -1;
@@ -206,12 +211,27 @@ create_accept_body(unsigned char *digest, handler_ctx *hctx) {
         return -1;
     }
     /* get SHA1 hash of key */
-    MW_SHA1_Init(&sha);
-    MW_SHA1_Update(&sha, (mw_sha1_byte *)hctx->handshake.key->ptr,
-                hctx->handshake.key->used - 1);
-    MW_SHA1_Final(sha1_digest, &sha);
+# ifdef	USE_OPENSSL
+    if (SHA1_Init(&sha) == 0) {
+        return -1;
+    }
+    if (SHA1_Update(&sha, hctx->handshake.key->ptr,
+                    hctx->handshake.key->used - 1) == 0) {
+        return -1;
+    }
+    if (SHA1_Final(sha1_digest, &sha) == 0) {
+        return -1;
+    }
     /* get base64 encoded SHA1 hash */
-    base64_encode(digest, sha1_digest, MW_SHA1_DIGEST_LENGTH);
+    base64_encode(digest, sha1_digest, SHA_DIGEST_LENGTH);
+# else
+    SHA1_Init(&sha);
+    SHA1_Update(&sha, (sha1_byte *)hctx->handshake.key->ptr,
+                hctx->handshake.key->used - 1);
+    SHA1_Final(sha1_digest, &sha);
+    /* get base64 encoded SHA1 hash */
+    base64_encode(digest, sha1_digest, SHA1_DIGEST_LENGTH);
+#endif
     return 0;
 }
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
