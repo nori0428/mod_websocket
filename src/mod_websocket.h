@@ -33,6 +33,7 @@
 
 #include <unicode/ucnv.h>
 
+#include "config.h"
 #include "array.h"
 #include "buffer.h"
 #include "chunk.h"

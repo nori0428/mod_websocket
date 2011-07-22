@@ -10,7 +10,6 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include "config.h"
 #include "mod_websocket.h"
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
