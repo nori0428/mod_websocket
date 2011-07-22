@@ -140,6 +140,14 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                    MOD_WEBSOCKET_FRAME_STATE_READ_PAYLOAD) {
             if (-1 == frame->ptr[i]) { // XXX: equal to tail flag(0xff)
                 hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
+                if (mod_websocket_conv_isUTF8(payload->ptr,
+                                              payload->used) !=
+                    MOD_WEBSOCKET_TRUE) {
+                    DEBUG_LOG("s", "recv not UTF-8");
+                    buffer_free(frame);
+                    buffer_reset(payload);
+                    return -1;
+                }
                 encsiz = (payload->used) * 3; // XXX
                 enc = (char *)malloc(sizeof(char) * encsiz);
                 if (!enc) {
@@ -551,6 +559,14 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                         return -1;
                     }
 #endif
+                    if (mod_websocket_conv_isUTF8(payload->ptr,
+                                                  payload->used) !=
+                        MOD_WEBSOCKET_TRUE) {
+                        DEBUG_LOG("s", "recv not UTF-8");
+                        buffer_free(frame);
+                        buffer_reset(payload);
+                        return -1;
+                    }
                     encsiz = (payload->used) * 3; // XXX
                     enc = (char *)malloc(sizeof(char) * encsiz);
                     if (!enc) {

@@ -70,16 +70,21 @@ mod_websocket_conv_init(const char *locale) {
     if (!cnv) {
         return NULL;
     }
-    cnv->cli = ucnv_open(MOD_WEBSOCKET_UTF8_STR, &err);
-    if (U_FAILURE(err)) {
-        free(cnv);
-        return NULL;
-    }
-    cnv->srv = ucnv_open(locale, &err);
-    if (U_FAILURE(err)) {
-        ucnv_close(cnv->cli);
-        free(cnv);
-        return NULL;
+    if (strcasecmp(MOD_WEBSOCKET_UTF8_STR, locale) == 0) {
+        cnv->cli = NULL;
+        cnv->srv = NULL;
+    } else {
+        cnv->cli = ucnv_open(MOD_WEBSOCKET_UTF8_STR, &err);
+        if (U_FAILURE(err)) {
+            free(cnv);
+            return NULL;
+        }
+        cnv->srv = ucnv_open(locale, &err);
+        if (U_FAILURE(err)) {
+            ucnv_close(cnv->cli);
+            free(cnv);
+            return NULL;
+        }
     }
     return cnv;
 }
@@ -128,7 +133,7 @@ int
 mod_websocket_conv_to_client(mod_websocket_conv_t *cnv,
                              char *dst, size_t *dstsiz,
                              const char *src, size_t srcsiz) {
-    if (mod_websocket_conv_isUTF8(src, srcsiz) == MOD_WEBSOCKET_TRUE) {
+    if (cnv->cli == NULL) {
         if (*dstsiz < srcsiz) {
             return -1;
         }
@@ -146,6 +151,17 @@ int
 mod_websocket_conv_to_server(mod_websocket_conv_t *cnv,
                              char *dst, size_t *dstsiz,
                              const char *src, size_t srcsiz) {
+    if (cnv->srv == NULL) {
+        if (*dstsiz < srcsiz) {
+            return -1;
+        }
+        memset(dst, 0, *dstsiz);
+        if (srcsiz) {
+            memcpy(dst, src, srcsiz);
+        }
+        *dstsiz = srcsiz;
+        return 0;
+    }
     return mod_websocket_conv(cnv->srv, cnv->cli, dst, dstsiz, src, srcsiz);
 }
 
