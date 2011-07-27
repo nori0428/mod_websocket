@@ -1,7 +1,6 @@
 // $Id$
 
 - TODOs
-  1. send PING frame if specified at configuration
-  2. multibyte chars in chunked frame
+  1. multibyte chars in chunked frame
 
 // EOF
