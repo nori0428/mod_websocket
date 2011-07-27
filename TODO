@@ -2,7 +2,6 @@
 
 - TODOs
   1. send PING frame if specified at configuration
-  2. timeout handle
-  3. multibyte chars in chunked frame
+  2. multibyte chars in chunked frame
 
 // EOF

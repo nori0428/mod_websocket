@@ -116,6 +116,13 @@
        into configration.
        If not set locale, mod_websocket treats all messages as UTF-8.
 
+  6-4. handling TIMEOUT
+       add websocket.timeout section.
+       default value is 30(sec). And if set to 0, never timeout
+       websocket connection.(be care!)
+
+  websocket.timeout = 30
+
 7. websocket.server section format
    "host"  = STRING          : FQDN or IPAddr [mandatory]
    "service" = STRING        : port number or service name [mandatory]

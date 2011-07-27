@@ -31,6 +31,7 @@
 #ifndef	_MOD_WEBSOCKET_H_
 #define	_MOD_WEBSOCKET_H_
 
+#include <time.h>
 #include <unicode/ucnv.h>
 
 #include "config.h"
@@ -43,6 +44,7 @@
 
 #define	MOD_WEBSOCKET_CONFIG_SERVER		"websocket.server"
 #define	MOD_WEBSOCKET_CONFIG_DEBUG		"websocket.debug"
+#define	MOD_WEBSOCKET_CONFIG_TIMEOUT		"websocket.timeout"
 #define	MOD_WEBSOCKET_CONFIG_HOST		"host"
 #define	MOD_WEBSOCKET_CONFIG_PORT		"port"
 #define	MOD_WEBSOCKET_CONFIG_SUBPROTO		"subproto"
@@ -72,6 +74,7 @@ typedef unsigned char mod_websocket_bool_t;
 
 #define	MOD_WEBSOCKET_TRUE			(1)
 #define	MOD_WEBSOCKET_FALSE			(0)
+#define	MOD_WEBSOCKET_DEFAULT_TIMEOUT_SEC	(30)
 
 #define DEBUG_LOG(format, args...)\
     if (hctx->pd->conf.debug) {\
@@ -91,6 +94,7 @@ typedef enum {
 typedef struct {
     array *exts;
     unsigned int debug;
+    unsigned int timeout;
 } plugin_config;
 
 typedef struct {
@@ -180,6 +184,7 @@ typedef struct {
     mod_websocket_handshake_t handshake;
     mod_websocket_frame_t frame;
     mod_websocket_conv_t *cnv;
+    time_t last_access;
 
     /* fd and fd_idx to backend */
     int fd, fd_idx;

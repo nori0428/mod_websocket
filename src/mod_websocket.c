@@ -96,6 +96,7 @@ void _handler_ctx_free(handler_ctx *hctx) {
     if (!hctx) {
         return;
     }
+
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
     buffer_free(hctx->handshake.key3);
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
@@ -358,6 +359,7 @@ int _dispatch_request(server *srv, connection *con, plugin_data *p) {
 
     PATCH(exts);
     PATCH(debug);
+    PATCH(timeout);
 
     /* skip the first, the global context */
     for (i = 1; i < srv->config_context->used; i++) {
@@ -493,6 +495,8 @@ SETDEFAULTS_FUNC(_set_defaults) {
         config_values_t cv[] = {
             { MOD_WEBSOCKET_CONFIG_SERVER, NULL,
               T_CONFIG_LOCAL, T_CONFIG_SCOPE_CONNECTION },
+            { MOD_WEBSOCKET_CONFIG_TIMEOUT,  NULL,
+              T_CONFIG_SHORT, T_CONFIG_SCOPE_CONNECTION },
             { MOD_WEBSOCKET_CONFIG_DEBUG,  NULL,
               T_CONFIG_SHORT, T_CONFIG_SCOPE_CONNECTION },
             { NULL,                        NULL,
@@ -505,9 +509,11 @@ SETDEFAULTS_FUNC(_set_defaults) {
             return HANDLER_ERROR;
         }
         s->exts = array_init();
+        s->timeout = MOD_WEBSOCKET_DEFAULT_TIMEOUT_SEC;
         s->debug = 0;
         cv[0].destination = s->exts;
-        cv[1].destination = &(s->debug);
+        cv[1].destination = &(s->timeout);
+        cv[2].destination = &(s->debug);
         p->config_storage[i] = s;
 
         ca = ((data_config *)(cfg_ctx->data[i]))->value;
@@ -623,6 +629,7 @@ SUBREQUEST_FUNC(_handle_subrequest) {
             hctx->state = MOD_WEBSOCKET_STATE_CONNECTED;
         }
         connection_set_state(srv, hctx->con, CON_STATE_READ_CONTINUOUS);
+        hctx->last_access = time(NULL);
         return HANDLER_WAIT_FOR_EVENT;
         break;
 
@@ -643,6 +650,7 @@ SUBREQUEST_FUNC(_handle_subrequest) {
                               strerror(errno));
                     break;
                 }
+                hctx->last_access = time(NULL);
             }
         }
         if (hctx->fd < 0) {
@@ -712,6 +720,49 @@ SUBREQUEST_FUNC(_handle_subrequest) {
     return HANDLER_FINISHED;
 }
 
+TRIGGER_FUNC(_handle_trigger) {
+    connection *con;
+    handler_ctx *hctx;
+    plugin_data *p = p_d;
+    size_t i;
+
+    for (i = 0; i < srv->conns->used; i++) {
+        con = srv->conns->ptr[i];
+        if (con->mode != p->id) {
+            continue;
+        }
+        hctx = con->plugin_ctx[p->id];
+        if (!hctx) {
+            continue;
+        }
+        if (p->conf.timeout != 0 &&
+            srv->cur_ts - hctx->last_access >= (time_t)p->conf.timeout) {
+            DEBUG_LOG("sd", "timeout client:", con->fd);
+            mod_websocket_frame_send(hctx, MOD_WEBSOCKET_FRAME_TYPE_CLOSE,
+                                     NULL, 0);
+            if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
+
+#ifdef	USE_OPENSSL
+                srv->network_ssl_backend_write(srv, con,
+                                               hctx->con->ssl,
+                                               hctx->tocli);
+#endif	/* USE_OPENSSL */
+
+            } else {
+                srv->network_backend_write(srv, con, hctx->con->fd,
+                                           hctx->tocli);
+            }
+            _tcp_server_disconnect(hctx);
+            chunkqueue_remove_finished_chunks(hctx->tocli);
+            chunkqueue_reset(hctx->tosrv);
+            connection_set_state(srv, con, CON_STATE_CLOSE);
+            _handler_ctx_free(hctx);
+            con->plugin_ctx[p->id] = NULL;
+        }
+    }
+    return HANDLER_GO_ON;
+}
+
 int mod_websocket_plugin_init(plugin *p) {
     p->version = LIGHTTPD_VERSION_ID;
     p->name = buffer_init_string("mod_websocket");
@@ -723,6 +774,7 @@ int mod_websocket_plugin_init(plugin *p) {
     p->handle_uri_clean = _check_request;
     p->handle_subrequest = _handle_subrequest;
     p->read_continuous = _handle_subrequest;
+    p->handle_trigger = _handle_trigger;
     p->data = NULL;
     return 0;
 }
