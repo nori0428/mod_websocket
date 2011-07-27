@@ -123,6 +123,13 @@
 
   websocket.timeout = 30
 
+  6-5. send PING frame
+       This parameter becomes effective only at --with-websocket=IETF-08.
+       add websocket.ping_interval section.(sec)
+       not send PING frame by default.
+
+  websocket.ping_interval = 5
+
 7. websocket.server section format
    "host"  = STRING          : FQDN or IPAddr [mandatory]
    "service" = STRING        : port number or service name [mandatory]

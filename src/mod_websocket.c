@@ -361,6 +361,10 @@ int _dispatch_request(server *srv, connection *con, plugin_data *p) {
     PATCH(debug);
     PATCH(timeout);
 
+#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+    PATCH(ping);
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+
     /* skip the first, the global context */
     for (i = 1; i < srv->config_context->used; i++) {
         data_config *dc = (data_config *)srv->config_context->data[i];
@@ -499,6 +503,12 @@ SETDEFAULTS_FUNC(_set_defaults) {
               T_CONFIG_SHORT, T_CONFIG_SCOPE_CONNECTION },
             { MOD_WEBSOCKET_CONFIG_DEBUG,  NULL,
               T_CONFIG_SHORT, T_CONFIG_SCOPE_CONNECTION },
+
+#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+            { MOD_WEBSOCKET_CONFIG_PING_INTERVAL,  NULL,
+              T_CONFIG_SHORT, T_CONFIG_SCOPE_CONNECTION },
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+
             { NULL,                        NULL,
               T_CONFIG_UNSET, T_CONFIG_SCOPE_UNSET }
         };
@@ -511,9 +521,16 @@ SETDEFAULTS_FUNC(_set_defaults) {
         s->exts = array_init();
         s->timeout = MOD_WEBSOCKET_DEFAULT_TIMEOUT_SEC;
         s->debug = 0;
+
         cv[0].destination = s->exts;
         cv[1].destination = &(s->timeout);
         cv[2].destination = &(s->debug);
+
+#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+        s->ping = 0;
+        cv[3].destination = &(s->ping);
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+
         p->config_storage[i] = s;
 
         ca = ((data_config *)(cfg_ctx->data[i]))->value;
@@ -629,7 +646,12 @@ SUBREQUEST_FUNC(_handle_subrequest) {
             hctx->state = MOD_WEBSOCKET_STATE_CONNECTED;
         }
         connection_set_state(srv, hctx->con, CON_STATE_READ_CONTINUOUS);
-        hctx->last_access = time(NULL);
+        hctx->last_access = srv->cur_ts;
+
+#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+        hctx->ping_ts = srv->cur_ts;
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+
         return HANDLER_WAIT_FOR_EVENT;
         break;
 
@@ -650,8 +672,8 @@ SUBREQUEST_FUNC(_handle_subrequest) {
                               strerror(errno));
                     break;
                 }
-                hctx->last_access = time(NULL);
             }
+            hctx->last_access = srv->cur_ts;
         }
         if (hctx->fd < 0) {
             mod_websocket_frame_send(hctx, MOD_WEBSOCKET_FRAME_TYPE_CLOSE,
@@ -735,6 +757,29 @@ TRIGGER_FUNC(_handle_trigger) {
         if (!hctx) {
             continue;
         }
+
+#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+        if (p->conf.ping != 0 &&
+            srv->cur_ts - hctx->ping_ts >= (time_t)p->conf.ping) {
+            mod_websocket_frame_send(hctx, MOD_WEBSOCKET_FRAME_TYPE_PING,
+                                     MOD_WEBSOCKET_PING_STR,
+                                     strlen(MOD_WEBSOCKET_PING_STR));
+            if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
+
+# ifdef	USE_OPENSSL
+                srv->network_ssl_backend_write(srv, con,
+                                               hctx->con->ssl,
+                                               hctx->tocli);
+# endif	/* USE_OPENSSL */
+
+            } else {
+                srv->network_backend_write(srv, con, hctx->con->fd,
+                                           hctx->tocli);
+            }
+            hctx->ping_ts = srv->cur_ts;
+        }
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+
         if (p->conf.timeout != 0 &&
             srv->cur_ts - hctx->last_access >= (time_t)p->conf.timeout) {
             DEBUG_LOG("sd", "timeout client:", con->fd);

@@ -45,6 +45,8 @@
 #define	MOD_WEBSOCKET_CONFIG_SERVER		"websocket.server"
 #define	MOD_WEBSOCKET_CONFIG_DEBUG		"websocket.debug"
 #define	MOD_WEBSOCKET_CONFIG_TIMEOUT		"websocket.timeout"
+#define	MOD_WEBSOCKET_CONFIG_PING_INTERVAL	"websocket.ping_interval"
+
 #define	MOD_WEBSOCKET_CONFIG_HOST		"host"
 #define	MOD_WEBSOCKET_CONFIG_PORT		"port"
 #define	MOD_WEBSOCKET_CONFIG_SUBPROTO		"subproto"
@@ -69,6 +71,7 @@
 
 #define	MOD_WEBSOCKET_UTF8_STR			"UTF-8"
 #define	MOD_WEBSOCKET_BIN_STR			"bin"
+#define	MOD_WEBSOCKET_PING_STR			"ping"
 
 typedef unsigned char mod_websocket_bool_t;
 
@@ -95,6 +98,11 @@ typedef struct {
     array *exts;
     unsigned int debug;
     unsigned int timeout;
+
+#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+    unsigned int ping;
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+
 } plugin_config;
 
 typedef struct {
@@ -185,6 +193,10 @@ typedef struct {
     mod_websocket_frame_t frame;
     mod_websocket_conv_t *cnv;
     time_t last_access;
+
+#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+    time_t ping_ts;
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
 
     /* fd and fd_idx to backend */
     int fd, fd_idx;
