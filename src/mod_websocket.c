@@ -30,6 +30,7 @@
 
 #include <string.h>
 #include <errno.h>
+#include <sys/filio.h>
 
 #include "connections.h"
 #include "fdevent.h"
