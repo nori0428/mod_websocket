@@ -30,7 +30,6 @@
 
 #include <string.h>
 #include <errno.h>
-#include <sys/filio.h>
 
 #include "connections.h"
 #include "fdevent.h"
@@ -38,6 +37,10 @@
 #include "log.h"
 
 #include "mod_websocket.h"
+
+#ifdef HAVE_SYS_FILIO_H
+# include <sys/filio.h>
+#endif
 
 /* prototypes */
 static handler_ctx *_handler_ctx_init(void);
