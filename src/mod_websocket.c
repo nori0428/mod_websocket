@@ -289,6 +289,7 @@ void _tcp_server_disconnect(handler_ctx *hctx) {
         fdevent_event_del(hctx->srv->ev, &(hctx->fd_idx), hctx->fd);
         fdevent_unregister(hctx->srv->ev, hctx->fd);
         mod_websocket_tcp_server_disconnect(hctx->fd);
+        hctx->srv->cur_fds--;
         hctx->fd = -1;
     }
 }
