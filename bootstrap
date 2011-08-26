@@ -4,7 +4,7 @@
 HOST_OS=`uname -s`
 if test "x${HOST_OS}" = "xDarwin"; then
 	LIBTOOLIZE=glibtoolize
-elif test "x${HOST_OS}" = "xLinux"; then
+else
 	LIBTOOLIZE=libtoolize
 fi
 set -x
