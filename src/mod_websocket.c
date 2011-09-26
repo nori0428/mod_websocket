@@ -782,6 +782,7 @@ TRIGGER_FUNC(_handle_trigger) {
                                            hctx->tocli);
             }
             hctx->ping_ts = srv->cur_ts;
+            chunkqueue_remove_finished_chunks(hctx->tocli);
         }
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
 
