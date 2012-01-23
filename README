@@ -7,6 +7,7 @@
     plz specify --without-libicu (But this option may occur severe security hole.)
 
 - Roadmaps for near future
+  add patches for lighttpd-1.4.29 and lighttpd-1.4.30.
   I'll delete IETF-00 and IETF-08 option when iOS supports RFC-6455 specs.
 
 - What is this?
