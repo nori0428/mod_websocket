@@ -49,9 +49,12 @@ mod_websocket_frame_send_test() {
     memset(&hctx, 0, sizeof(hctx));
     pd.conf.debug = 1;
     hctx.pd = &pd;
+
     hctx.tocli = chunkqueue_init();
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     hctx.cnv = mod_websocket_conv_init("UTF-8");
     CU_ASSERT_NOT_EQUAL(NULL, hctx.cnv);
+#endif
 
     ret = mod_websocket_frame_send(NULL, MOD_WEBSOCKET_FRAME_TYPE_TEXT,
                                    NULL, 0);
@@ -87,11 +90,18 @@ mod_websocket_frame_send_test() {
     CU_ASSERT_EQUAL(memcmp(b->ptr + 1, ASCII_STR, strlen(ASCII_STR)), 0);
     buffer_free(b);
     b = NULL;
+
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     mod_websocket_conv_final(hctx.cnv);
+#endif
 
     for (i = 0; i < 3; i++) {
         chunkqueue_reset(hctx.tocli);
+
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
         hctx.cnv = mod_websocket_conv_init(ptns[i].locale);
+#endif
+
         fprintf(stderr, "check: %s\n", ptns[i].fname);
         fp = fopen(ptns[i].fname, "r");
         siz = fread(buf, 1, sizeof(buf), fp);
@@ -121,11 +131,17 @@ mod_websocket_frame_send_test() {
         } else {
             CU_FAIL("send buffer is empty");
         }
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
         mod_websocket_conv_final(hctx.cnv);
+#endif
     }
 
     chunkqueue_reset(hctx.tocli);
+
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     hctx.cnv = mod_websocket_conv_init("UTF-8");
+#endif
+
     fprintf(stderr, "check: close\n");
     ret = mod_websocket_frame_send(&hctx, MOD_WEBSOCKET_FRAME_TYPE_CLOSE,
                                    NULL, 0);
@@ -146,7 +162,8 @@ mod_websocket_frame_send_test() {
     }
 #endif
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
     fprintf(stderr, "check: ASCII\n");
     ret = mod_websocket_frame_send(&hctx, MOD_WEBSOCKET_FRAME_TYPE_TEXT,
                                    ASCII_STR, strlen(ASCII_STR));
@@ -170,12 +187,18 @@ mod_websocket_frame_send_test() {
     CU_ASSERT_EQUAL(memcmp(b->ptr + 2, ASCII_STR, strlen(ASCII_STR)), 0);
     buffer_free(b);
     b = NULL;
+
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     mod_websocket_conv_final(hctx.cnv);
+#endif
 
     for (i = 0; i < 3; i++) {
         fprintf(stderr, "check: %s\n", ptns[i].fname);
         chunkqueue_reset(hctx.tocli);
+
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
         hctx.cnv = mod_websocket_conv_init(ptns[i].locale);
+#endif
         fp = fopen(ptns[i].fname, "r");
         siz = fread(buf, 1, sizeof(buf), fp);
         fclose(fp);
@@ -200,12 +223,16 @@ mod_websocket_frame_send_test() {
         } else {
             CU_FAIL("send buffer is empty");
         }
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
         mod_websocket_conv_final(hctx.cnv);
+#endif
     }
 
     fprintf(stderr, "check: BINARY\n");
     chunkqueue_reset(hctx.tocli);
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     hctx.cnv = mod_websocket_conv_init("UTF-8");
+#endif
     buf[0] = 0x00;
     buf[1] = 0x01;
     buf[2] = 0x02;
@@ -233,11 +260,15 @@ mod_websocket_frame_send_test() {
     CU_ASSERT_EQUAL(memcmp(b->ptr + 2, buf, 5), 0);
     buffer_free(b);
     b = NULL;
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     mod_websocket_conv_final(hctx.cnv);
+#endif
 
     fprintf(stderr, "check: PING\n");
     chunkqueue_reset(hctx.tocli);
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     hctx.cnv = mod_websocket_conv_init("UTF-8");
+#endif
     ret = mod_websocket_frame_send(&hctx, MOD_WEBSOCKET_FRAME_TYPE_PING,
                                    ASCII_STR, strlen(ASCII_STR));
     CU_ASSERT_EQUAL(ret, 0);
@@ -260,11 +291,15 @@ mod_websocket_frame_send_test() {
     CU_ASSERT_EQUAL(memcmp(b->ptr + 2, ASCII_STR, strlen(ASCII_STR)), 0);
     buffer_free(b);
     b = NULL;
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     mod_websocket_conv_final(hctx.cnv);
+#endif
 
     fprintf(stderr, "check: PONG\n");
     chunkqueue_reset(hctx.tocli);
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     hctx.cnv = mod_websocket_conv_init("UTF-8");
+#endif
     ret = mod_websocket_frame_send(&hctx, MOD_WEBSOCKET_FRAME_TYPE_PONG,
                                    ASCII_STR, strlen(ASCII_STR));
     CU_ASSERT_EQUAL(ret, 0);
@@ -287,11 +322,15 @@ mod_websocket_frame_send_test() {
     CU_ASSERT_EQUAL(memcmp(b->ptr + 2, ASCII_STR, strlen(ASCII_STR)), 0);
     buffer_free(b);
     b = NULL;
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     mod_websocket_conv_final(hctx.cnv);
+#endif
 
     fprintf(stderr, "check: close\n");
     chunkqueue_reset(hctx.tocli);
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     hctx.cnv = mod_websocket_conv_init("UTF-8");
+#endif
     ret = mod_websocket_frame_send(&hctx, MOD_WEBSOCKET_FRAME_TYPE_CLOSE,
                                    NULL, 0);
     CU_ASSERT_EQUAL(ret, 0);
@@ -311,11 +350,15 @@ mod_websocket_frame_send_test() {
     }
     buffer_free(b);
     b = NULL;
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     mod_websocket_conv_final(hctx.cnv);
+#endif
 
     fprintf(stderr, "check: 16bit length TEXT\n");
     chunkqueue_reset(hctx.tocli);
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     hctx.cnv = mod_websocket_conv_init("UTF-8");
+#endif
     memset(buf, 'a', sizeof(buf));
     ret = mod_websocket_frame_send(&hctx, MOD_WEBSOCKET_FRAME_TYPE_TEXT,
                                    buf, sizeof(buf));
@@ -343,11 +386,15 @@ mod_websocket_frame_send_test() {
     CU_ASSERT_EQUAL(memcmp(b->ptr + 4, buf, sizeof(buf)), 0);
     buffer_free(b);
     b = NULL;
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     mod_websocket_conv_final(hctx.cnv);
+#endif
 
     fprintf(stderr, "check: 16bit length BINARY\n");
     chunkqueue_reset(hctx.tocli);
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     hctx.cnv = mod_websocket_conv_init("UTF-8");
+#endif
     memset(buf, 0, sizeof(buf));
     ret = mod_websocket_frame_send(&hctx, MOD_WEBSOCKET_FRAME_TYPE_BIN,
                                    buf, sizeof(buf));
@@ -375,7 +422,9 @@ mod_websocket_frame_send_test() {
     CU_ASSERT_EQUAL(memcmp(b->ptr + 4, buf, sizeof(buf)), 0);
     buffer_free(b);
     b = NULL;
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     mod_websocket_conv_final(hctx.cnv);
+#endif
 #endif
 
     return 0;
@@ -432,7 +481,8 @@ mod_websocket_frame_recv_test() {
     const unsigned char cfrm[2] = { 0xff, 0x00 };
 #endif
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
     unsigned char ctl;
     unsigned char len;
     unsigned char ex_len;
@@ -453,7 +503,9 @@ mod_websocket_frame_recv_test() {
     pd.conf.debug = 1;
     hctx.pd = &pd;
 
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     hctx.cnv = mod_websocket_conv_init("UTF-8");
+#endif
     ret = mod_websocket_frame_recv(NULL);
     CU_ASSERT_EQUAL(ret, -1);
     ret = mod_websocket_frame_recv(&hctx);
@@ -476,7 +528,9 @@ mod_websocket_frame_recv_test() {
         CU_ASSERT_EQUAL(memcmp(b->ptr, ASCII_STR, strlen(ASCII_STR)), 0);
         buffer_free(b);
         b = NULL;
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
         mod_websocket_conv_final(hctx.cnv);
+#endif
     } else {
         CU_FAIL("recv no frames");
     }
@@ -484,7 +538,9 @@ mod_websocket_frame_recv_test() {
     for (i = 0; i < 3; i++) {
         chunkqueue_reset(hctx.tosrv);
         chunkqueue_reset(hctx.tocli);
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
         hctx.cnv = mod_websocket_conv_init(ptns[i].locale);
+#endif
 
         fprintf(stderr, "check: %s\n", ptns[i].fname);
         fp = fopen(ptns[i].fname, "r");
@@ -498,7 +554,9 @@ mod_websocket_frame_recv_test() {
         CU_ASSERT_EQUAL(ret, 0);
         ret = mod_websocket_frame_recv(&hctx);
         CU_ASSERT_EQUAL(ret, 0);
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
         mod_websocket_conv_final(hctx.cnv);
+#endif
 
         for (c = hctx.tosrv->first; c; c = c->next) {
             if (NULL == b) {
@@ -528,7 +586,9 @@ mod_websocket_frame_recv_test() {
 
     /* recv payload * 2 */
     fprintf(stderr, "check: double payload\n");
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     hctx.cnv = mod_websocket_conv_init("UTF-8");
+#endif
     hctx.frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
     buffer_reset(hctx.frame.payload);
     chunkqueue_reset(hctx.tosrv);
@@ -579,11 +639,15 @@ mod_websocket_frame_recv_test() {
     } else {
         CU_FAIL("recv no frames");
     }
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     mod_websocket_conv_final(hctx.cnv);
+#endif
 
     /* recv chunk */
     fprintf(stderr, "check: chunk\n");
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     hctx.cnv = mod_websocket_conv_init("UTF-8");
+#endif
     hctx.frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
     buffer_reset(hctx.frame.payload);
     chunkqueue_reset(hctx.tosrv);
@@ -654,11 +718,15 @@ mod_websocket_frame_recv_test() {
     } else {
         CU_FAIL("recv no frames");
     }
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     mod_websocket_conv_final(hctx.cnv);
+#endif
 
     /* recv close */
     fprintf(stderr, "check: close\n");
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     hctx.cnv = mod_websocket_conv_init("UTF-8");
+#endif
     hctx.frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
     buffer_reset(hctx.frame.payload);
     chunkqueue_reset(hctx.tosrv);
@@ -670,7 +738,8 @@ mod_websocket_frame_recv_test() {
     CU_ASSERT_EQUAL(ret, -1);
 #endif
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
     fprintf(stderr, "check: ASCII\n");
     hctx.frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
     buffer_reset(hctx.frame.payload);
@@ -701,12 +770,16 @@ mod_websocket_frame_recv_test() {
         CU_FAIL("recv no frames");
     }
     b = NULL;
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     mod_websocket_conv_final(hctx.cnv);
+#endif
 
     for (i = 0; i < 3; i++) {
         chunkqueue_reset(hctx.tosrv);
         chunkqueue_reset(con.read_queue);
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
         hctx.cnv = mod_websocket_conv_init(ptns[i].locale);
+#endif
 
         fprintf(stderr, "check: %s\n", ptns[i].fname);
         fp = fopen(ptns[i].fname, "r");
@@ -715,7 +788,12 @@ mod_websocket_frame_recv_test() {
         fclose(fp);
 
         encsiz = 4096;
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
         mod_websocket_conv_to_client(hctx.cnv, enc, &encsiz, buf, siz);
+#else
+        memcpy(enc, buf, siz);
+        encsiz = siz;
+#endif
         b = chunkqueue_get_append_buffer(con.read_queue);
         ctl = 0x81; // TEXT
         len = 0x80 | encsiz;
@@ -727,7 +805,9 @@ mod_websocket_frame_recv_test() {
         buffer_append_memory(b, &additional, 1);
         ret = mod_websocket_frame_recv(&hctx);
         CU_ASSERT_EQUAL(ret, 0);
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
         mod_websocket_conv_final(hctx.cnv);
+#endif
         b = NULL;
 
         for (c = hctx.tosrv->first; c; c = c->next) {
@@ -758,7 +838,9 @@ mod_websocket_frame_recv_test() {
 
     /* binary */
     fprintf(stderr, "check: BINARY\n");
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     hctx.cnv = mod_websocket_conv_init("UTF-8");
+#endif
     hctx.frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
     buffer_reset(hctx.frame.payload);
     chunkqueue_reset(hctx.tosrv);
@@ -789,11 +871,15 @@ mod_websocket_frame_recv_test() {
         CU_FAIL("recv no frames");
     }
     b = NULL;
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     mod_websocket_conv_final(hctx.cnv);
+#endif
 
     /* recv payload * 2 */
     fprintf(stderr, "check: double payload\n");
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     hctx.cnv = mod_websocket_conv_init("UTF-8");
+#endif
     hctx.frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
     buffer_reset(hctx.frame.payload);
     chunkqueue_reset(hctx.tosrv);
@@ -846,11 +932,15 @@ mod_websocket_frame_recv_test() {
     } else {
         CU_FAIL("recv no frames");
     }
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     mod_websocket_conv_final(hctx.cnv);
+#endif
 
     /* recv chunk */
     fprintf(stderr, "check: chunk\n");
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     hctx.cnv = mod_websocket_conv_init("UTF-8");
+#endif
     hctx.frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
     buffer_reset(hctx.frame.payload);
     chunkqueue_reset(hctx.tosrv);
@@ -924,11 +1014,15 @@ mod_websocket_frame_recv_test() {
     } else {
         CU_FAIL("recv no frames");
     }
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     mod_websocket_conv_final(hctx.cnv);
+#endif
 
     /* recv ping */
     fprintf(stderr, "check: ping w/o body\n");
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     hctx.cnv = mod_websocket_conv_init("UTF-8");
+#endif
     hctx.frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
     buffer_reset(hctx.frame.payload);
     chunkqueue_reset(hctx.tosrv);
@@ -945,10 +1039,14 @@ mod_websocket_frame_recv_test() {
     CU_ASSERT_EQUAL(hctx.frame.state, MOD_WEBSOCKET_FRAME_STATE_INIT);
     CU_ASSERT_EQUAL(buffer_is_empty(hctx.frame.payload), 1);
     CU_ASSERT_EQUAL(chunkqueue_is_empty(hctx.tosrv), 1);
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     mod_websocket_conv_final(hctx.cnv);
+#endif
 
     fprintf(stderr, "check: ping w/ body\n");
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     hctx.cnv = mod_websocket_conv_init("UTF-8");
+#endif
     hctx.frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
     buffer_reset(hctx.frame.payload);
     chunkqueue_reset(hctx.tosrv);
@@ -967,11 +1065,15 @@ mod_websocket_frame_recv_test() {
     CU_ASSERT_EQUAL(hctx.frame.state, MOD_WEBSOCKET_FRAME_STATE_INIT);
     CU_ASSERT_EQUAL(buffer_is_empty(hctx.frame.payload), 1);
     CU_ASSERT_EQUAL(chunkqueue_is_empty(hctx.tosrv), 1);
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     mod_websocket_conv_final(hctx.cnv);
+#endif
 
     /* recv pong */
     fprintf(stderr, "check: pong w/o body\n");
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     hctx.cnv = mod_websocket_conv_init("UTF-8");
+#endif
     hctx.frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
     buffer_reset(hctx.frame.payload);
     chunkqueue_reset(hctx.tosrv);
@@ -988,10 +1090,14 @@ mod_websocket_frame_recv_test() {
     CU_ASSERT_EQUAL(hctx.frame.state, MOD_WEBSOCKET_FRAME_STATE_INIT);
     CU_ASSERT_EQUAL(buffer_is_empty(hctx.frame.payload), 1);
     CU_ASSERT_EQUAL(chunkqueue_is_empty(hctx.tosrv), 1);
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     mod_websocket_conv_final(hctx.cnv);
+#endif
 
     fprintf(stderr, "check: pong w/ body\n");
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     hctx.cnv = mod_websocket_conv_init("UTF-8");
+#endif
     hctx.frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
     buffer_reset(hctx.frame.payload);
     chunkqueue_reset(hctx.tosrv);
@@ -1010,11 +1116,15 @@ mod_websocket_frame_recv_test() {
     CU_ASSERT_EQUAL(hctx.frame.state, MOD_WEBSOCKET_FRAME_STATE_INIT);
     CU_ASSERT_EQUAL(buffer_is_empty(hctx.frame.payload), 1);
     CU_ASSERT_EQUAL(chunkqueue_is_empty(hctx.tosrv), 1);
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     mod_websocket_conv_final(hctx.cnv);
+#endif
 
     /* recv close */
     fprintf(stderr, "check: close w/o body\n");
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     hctx.cnv = mod_websocket_conv_init("UTF-8");
+#endif
     hctx.frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
     buffer_reset(hctx.frame.payload);
     chunkqueue_reset(hctx.tosrv);
@@ -1031,10 +1141,14 @@ mod_websocket_frame_recv_test() {
     CU_ASSERT_EQUAL(hctx.frame.state, MOD_WEBSOCKET_FRAME_STATE_INIT);
     CU_ASSERT_EQUAL(buffer_is_empty(hctx.frame.payload), 1);
     CU_ASSERT_EQUAL(chunkqueue_is_empty(hctx.tosrv), 1);
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     mod_websocket_conv_final(hctx.cnv);
+#endif
 
     fprintf(stderr, "check: close w/ body\n");
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     hctx.cnv = mod_websocket_conv_init("UTF-8");
+#endif
     hctx.frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
     buffer_reset(hctx.frame.payload);
     chunkqueue_reset(hctx.tosrv);
@@ -1052,11 +1166,15 @@ mod_websocket_frame_recv_test() {
     CU_ASSERT_EQUAL(hctx.frame.state, MOD_WEBSOCKET_FRAME_STATE_INIT);
     CU_ASSERT_EQUAL(buffer_is_empty(hctx.frame.payload), 1);
     CU_ASSERT_EQUAL(chunkqueue_is_empty(hctx.tosrv), 1);
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     mod_websocket_conv_final(hctx.cnv);
+#endif
 
     /* recv 16bit length text */
     fprintf(stderr, "check: 16bits length TEXT\n");
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     hctx.cnv = mod_websocket_conv_init("UTF-8");
+#endif
     hctx.frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
     buffer_reset(hctx.frame.payload);
     chunkqueue_reset(hctx.tosrv);
@@ -1091,11 +1209,15 @@ mod_websocket_frame_recv_test() {
         CU_FAIL("recv no frames");
     }
     b = NULL;
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     mod_websocket_conv_final(hctx.cnv);
+#endif
 
     /* recv 16bit length binary */
     fprintf(stderr, "check: 16bits length BINARY\n");
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     hctx.cnv = mod_websocket_conv_init("UTF-8");
+#endif
     hctx.frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
     buffer_reset(hctx.frame.payload);
     chunkqueue_reset(hctx.tosrv);
@@ -1130,7 +1252,9 @@ mod_websocket_frame_recv_test() {
         CU_FAIL("recv no frames");
     }
     b = NULL;
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     mod_websocket_conv_final(hctx.cnv);
+#endif
 
 #endif
     return 0;

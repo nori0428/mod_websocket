@@ -1,9 +1,16 @@
 ## $Id$
 
+if WITH_LIBICU
 TESTS = \
 	base64_test.sh sha1_test \
 	mod_websocket_conv_test mod_websocket_connector_test \
 	mod_websocket_handshake_test mod_websocket_frame_test
+else
+TESTS = \
+	base64_test.sh sha1_test \
+	mod_websocket_connector_test \
+	mod_websocket_handshake_test mod_websocket_frame_test
+endif
 
 INCLUDES = \
 	-I${top_srcdir}/stub/ \
@@ -15,19 +22,26 @@ INCLUDES = \
 LDADD = \
 	-L/usr/local/lib \
 	-L/opt/local/lib \
-	-licui18n -licuuc -lcunit -lev \
-	${LIBNCURSES} \
 	${top_srcdir}/src/libwebsocket.la \
-	${top_srcdir}/stub/libtest.la
+	${top_srcdir}/stub/libtest.la \
+	${LIBNCURSES} ${WEBSOCKET_ICU_LIBS} -lcunit -lev 
 
-CFLAGS = -Wall -g ${WEBSOCKET_VERSION_CFLAGS}
+CFLAGS = -Wall -g ${WEBSOCKET_VERSION_CFLAGS} ${WEBSOCKET_ICU_CFLAGS}
 
+if WITH_LIBICU
 noinst_PROGRAMS = \
 	base64_test sha1_test \
 	mod_websocket_conv_test \
 	mod_websocket_connector_test \
 	mod_websocket_handshake_test \
 	mod_websocket_frame_test
+else
+noinst_PROGRAMS = \
+	base64_test sha1_test \
+	mod_websocket_connector_test \
+	mod_websocket_handshake_test \
+	mod_websocket_frame_test
+endif
 
 sha1_test_SOURCES = \
 	sha1_test.c
@@ -35,8 +49,10 @@ sha1_test_SOURCES = \
 base64_test_SOURCES = \
 	base64_test.c
 
+if WITH_LIBICU
 mod_websocket_conv_test_SOURCES = \
 	mod_websocket_conv_test.c
+endif
 
 mod_websocket_connector_test_SOURCES = \
 	mod_websocket_connector_test.c

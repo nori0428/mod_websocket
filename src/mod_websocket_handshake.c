@@ -14,9 +14,19 @@
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
 # include "md5.h"
+
+# if (LIGHTTPD_VERSION_ID >= (1 << 16 | 4 << 8 | 29))
+typedef li_MD5_CTX MD5_CTX;
+
+#  define	MD5_Init	li_MD5_Init
+#  define	MD5_Update	li_MD5_Update
+#  define	MD5_Final	li_MD5_Final
+# endif
+
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined _MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined _MOD_WEBSOCKET_SPEC_RFC_6455_
 # include <limits.h>
 # ifdef HAVE_STDINT_H
 #  include <stdint.h>
@@ -37,10 +47,10 @@
 
 #define	SEC_WEBSOCKET_PROTOCOL_STR		"Sec-WebSocket-Protocol"
 #define	SEC_WEBSOCKET_ORIGIN_STR		"Sec-WebSocket-Origin"
+#define	ORIGIN_STR				"Origin"
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
 # define	WEBSOCKET_STR			"WebSocket"
-# define	ORIGIN_STR			"Origin"
 # define	SEC_WEBSOCKET_LOCATION_STR	"Sec-WebSocket-Location"
 # define	SEC_WEBSOCKET_KEY1_STR		"Sec-WebSocket-Key1"
 # define	SEC_WEBSOCKET_KEY2_STR		"Sec-WebSocket-Key2"
@@ -50,7 +60,8 @@
 # define	MD5_STRLEN			(16)
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined _MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined _MOD_WEBSOCKET_SPEC_RFC_6455_
 # define	WEBSOCKET_STR			"websocket"
 # define	SEC_WEBSOCKET_KEY_STR		"Sec-WebSocket-Key"
 # define	SEC_WEBSOCKET_ACCEPT_STR	"Sec-WebSocket-Accept"
@@ -69,7 +80,8 @@ static int get_key_number(uint32_t *, buffer *);
 static int create_MD5_sum(unsigned char *, handler_ctx *);
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined _MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined _MOD_WEBSOCKET_SPEC_RFC_6455_
 static int create_accept_body(unsigned char *, handler_ctx *);
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
 
@@ -192,7 +204,8 @@ create_MD5_sum(unsigned char *md5sum, handler_ctx *hctx) {
 }
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined _MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined _MOD_WEBSOCKET_SPEC_RFC_6455_
 int
 create_accept_body(unsigned char *digest, handler_ctx *hctx) {
     SHA_CTX sha;
@@ -359,6 +372,17 @@ mod_websocket_handshake_check_request(handler_ctx *hctx) {
                                    CONST_STR_LEN(SEC_WEBSOCKET_ORIGIN_STR))) {
             handshake->origin = hdr->value;
         }
+#endif
+
+#ifdef	_MOD_WEBSOCKET_SPEC_RFC_6455_
+        if (buffer_is_equal_string(hdr->key,
+                                   CONST_STR_LEN(ORIGIN_STR))) {
+            handshake->origin = hdr->value;
+        }
+#endif
+
+#if defined _MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined _MOD_WEBSOCKET_SPEC_RFC_6455_
         if (buffer_is_equal_string(hdr->key,
                                    CONST_STR_LEN(SEC_WEBSOCKET_KEY_STR))) {
             handshake->key = hdr->value;
@@ -388,7 +412,8 @@ mod_websocket_handshake_check_request(handler_ctx *hctx) {
     }
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined _MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined _MOD_WEBSOCKET_SPEC_RFC_6455_
     if (buffer_is_empty(handshake->key)) {
         DEBUG_LOG("s", "not found Sec-WebSocket-Key header");
         return MOD_WEBSOCKET_BAD_REQUEST;
@@ -421,7 +446,8 @@ mod_websocket_handshake_create_response(handler_ctx *hctx) {
         "Upgrade: WebSocket\r\n"
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined _MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined _MOD_WEBSOCKET_SPEC_RFC_6455_
         "HTTP/1.1 101 Switching Protocols\r\n"
         "Upgrade: websocket\r\n"
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
@@ -432,7 +458,8 @@ mod_websocket_handshake_create_response(handler_ctx *hctx) {
     unsigned char md5sum[MD5_STRLEN];
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined _MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined _MOD_WEBSOCKET_SPEC_RFC_6455_
     unsigned char accept_body[ACCEPT_BODY_STRLEN];
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
 
@@ -450,7 +477,8 @@ mod_websocket_handshake_create_response(handler_ctx *hctx) {
         buffer_append_string_buffer(resp, hctx->handshake.subproto);
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined _MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined _MOD_WEBSOCKET_SPEC_RFC_6455_
         buffer_append_string_buffer(resp, hctx->ext->key);
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
 
@@ -481,7 +509,8 @@ mod_websocket_handshake_create_response(handler_ctx *hctx) {
     buffer_append_string(resp, CRLF_STR);
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined _MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined _MOD_WEBSOCKET_SPEC_RFC_6455_
     /* Sec-WebSocket-Accept header */
     memset(accept_body, 0, sizeof(accept_body));
     if (create_accept_body(accept_body, hctx) < 0) {

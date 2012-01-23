@@ -38,9 +38,9 @@
 
 #include "mod_websocket.h"
 
-#ifdef HAVE_SYS_FILIO_H
+#ifdef	HAVE_SYS_FILIO_H
 # include <sys/filio.h>
-#endif
+#endif	/* HAVE_SYS_FILIO_H */
 
 /* prototypes */
 static handler_ctx *_handler_ctx_init(void);
@@ -73,14 +73,17 @@ handler_ctx *_handler_ctx_init(void) {
     hctx->handshake.key3 = buffer_init();
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined	_MOD_WEBSOCKET_RFC_6455_
     hctx->handshake.key = NULL;
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_RFC_6455_ */
 
     hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
     hctx->frame.payload = buffer_init();
 
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     hctx->cnv = NULL;
+#endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
 
     hctx->fd = -1;
     hctx->fd_idx = -1;
@@ -106,7 +109,11 @@ void _handler_ctx_free(handler_ctx *hctx) {
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
     buffer_free(hctx->frame.payload);
+
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     mod_websocket_conv_final(hctx->cnv);
+#endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
+
     _tcp_server_disconnect(hctx);
     free(hctx);
     return;
@@ -120,9 +127,12 @@ int _set_subproto_extension(data_array *dst, const data_array *src) {
     data_array *da_origins = NULL;
     data_array *origins = NULL;
     data_string *origin = NULL;
-    data_string *locale = NULL;
     data_string *type = NULL;
     buffer *key = NULL;
+
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
+    data_string *locale = NULL;
+#endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
 
     for (i = src->value->used; i > 0; i--) {
         data = src->value->data[i - 1];
@@ -160,12 +170,16 @@ int _set_subproto_extension(data_array *dst, const data_array *src) {
                 }
             }
             array_insert_unique(dst->value, (data_unset *)origins);
+
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
         } else if ( 0 == strcmp(key->ptr, MOD_WEBSOCKET_CONFIG_LOCALE) ) {
             locale = data_string_init();
             buffer_copy_string_buffer(locale->key, key);
             buffer_copy_string_buffer(locale->value,
                                       ((data_string *)data)->value);
             array_insert_unique(dst->value, (data_unset *)locale);
+#endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
+
         } else if ( 0 == strcmp(key->ptr, MOD_WEBSOCKET_CONFIG_TYPE) ) {
             type = data_string_init();
             buffer_copy_string_buffer(type->key, key);
@@ -221,7 +235,10 @@ int _tcp_server_connect(handler_ctx *hctx) {
     data_unset *du;
     buffer *host = NULL;
     buffer *port = NULL;
+
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     char *locale = NULL;
+#endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
 
     du = array_get_element(hctx->ext->value, MOD_WEBSOCKET_CONFIG_HOST);
     if (!du) {
@@ -258,6 +275,8 @@ int _tcp_server_connect(handler_ctx *hctx) {
         hctx->con->mode = DIRECT;
         return -1;
     }
+
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     du = array_get_element(hctx->ext->value, MOD_WEBSOCKET_CONFIG_LOCALE);
     if (!du) {
         locale = MOD_WEBSOCKET_UTF8_STR;
@@ -273,13 +292,23 @@ int _tcp_server_connect(handler_ctx *hctx) {
         hctx->con->mode = DIRECT;
         return HANDLER_FINISHED;
     }
+#endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
+
     hctx->fd_idx = -1;
     hctx->srv->cur_fds++;
     fdevent_register(hctx->srv->ev, hctx->fd, _handle_fdevent, hctx);
     fdevent_event_set(hctx->srv->ev, &(hctx->fd_idx), hctx->fd, FDEVENT_IN);
+
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     DEBUG_LOG("sdsdsssssss", "connected:", hctx->con->fd, " -> ",
               hctx->fd, "(", host->ptr, ":", port->ptr, ")",
               ", locale:", locale);
+#else
+    DEBUG_LOG("sdsdssssss", "connected:", hctx->con->fd, " -> ",
+              hctx->fd, "(", host->ptr, ":", port->ptr, ")",
+              ", not used locale");
+#endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
+
     return 0;
 }
 
@@ -301,9 +330,10 @@ handler_t _handle_fdevent(server *srv, void *ctx, int revents) {
     char readbuf[UINT16_MAX + 1];
     ssize_t siz;
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
     data_string *type;
-#endif
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_RFC_6455_ */
 
     if (revents & FDEVENT_NVAL) {
         DEBUG_LOG("sdsd",
@@ -324,7 +354,8 @@ handler_t _handle_fdevent(server *srv, void *ctx, int revents) {
         if (siz > 0) {
             if (hctx->state == MOD_WEBSOCKET_STATE_CONNECTED) {
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
                 type = (data_string *)
                     array_get_element(hctx->ext->value,
                                       MOD_WEBSOCKET_CONFIG_TYPE);
@@ -333,13 +364,14 @@ handler_t _handle_fdevent(server *srv, void *ctx, int revents) {
                     0 == strcasecmp(type->value->ptr, MOD_WEBSOCKET_BIN_STR)) {
                     frame_type = MOD_WEBSOCKET_FRAME_TYPE_BIN;
                 } else {
-#endif
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_RFC_6455_ */
 
                     frame_type = MOD_WEBSOCKET_FRAME_TYPE_TEXT;
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
                 }
-#endif
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_RFC_6455_ */
 
                 if (mod_websocket_frame_send(hctx, frame_type,
                                              readbuf, (size_t)siz) < 0) {
@@ -366,9 +398,10 @@ int _dispatch_request(server *srv, connection *con, plugin_data *p) {
     PATCH(debug);
     PATCH(timeout);
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
     PATCH(ping);
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_RFC_6455_ */
 
     /* skip the first, the global context */
     for (i = 1; i < srv->config_context->used; i++) {
@@ -509,10 +542,11 @@ SETDEFAULTS_FUNC(_set_defaults) {
             { MOD_WEBSOCKET_CONFIG_DEBUG,  NULL,
               T_CONFIG_SHORT, T_CONFIG_SCOPE_CONNECTION },
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
             { MOD_WEBSOCKET_CONFIG_PING_INTERVAL,  NULL,
               T_CONFIG_SHORT, T_CONFIG_SCOPE_CONNECTION },
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
             { NULL,                        NULL,
               T_CONFIG_UNSET, T_CONFIG_SCOPE_UNSET }
@@ -531,10 +565,11 @@ SETDEFAULTS_FUNC(_set_defaults) {
         cv[1].destination = &(s->timeout);
         cv[2].destination = &(s->debug);
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
         s->ping = 0;
         cv[3].destination = &(s->ping);
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
         p->config_storage[i] = s;
 
@@ -653,9 +688,10 @@ SUBREQUEST_FUNC(_handle_subrequest) {
         connection_set_state(srv, hctx->con, CON_STATE_READ_CONTINUOUS);
         hctx->last_access = srv->cur_ts;
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
         hctx->ping_ts = srv->cur_ts;
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
         return HANDLER_WAIT_FOR_EVENT;
         break;
@@ -763,7 +799,8 @@ TRIGGER_FUNC(_handle_trigger) {
             continue;
         }
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
         if (p->conf.ping != 0 &&
             srv->cur_ts - hctx->ping_ts >= (time_t)p->conf.ping) {
             mod_websocket_frame_send(hctx, MOD_WEBSOCKET_FRAME_TYPE_PING,
@@ -784,7 +821,7 @@ TRIGGER_FUNC(_handle_trigger) {
             hctx->ping_ts = srv->cur_ts;
             chunkqueue_remove_finished_chunks(hctx->tocli);
         }
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
         if (p->conf.timeout != 0 &&
             srv->cur_ts - hctx->last_access >= (time_t)p->conf.timeout) {

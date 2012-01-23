@@ -13,6 +13,7 @@ INCLUDES = \
 
 noinst_LTLIBRARIES = libwebsocket.la
 
+if WITH_LIBICU
 libwebsocket_la_SOURCES = \
 	base64.h \
 	base64.c \
@@ -23,6 +24,17 @@ libwebsocket_la_SOURCES = \
 	mod_websocket_connector.c \
 	mod_websocket_handshake.c \
 	mod_websocket_frame.c
+else
+libwebsocket_la_SOURCES = \
+	base64.h \
+	base64.c \
+	sha1.h \
+	sha1.c \
+	mod_websocket.h \
+	mod_websocket_connector.c \
+	mod_websocket_handshake.c \
+	mod_websocket_frame.c
+endif
 
 include $(top_srcdir)/m4/Makefile.rules
 

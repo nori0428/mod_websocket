@@ -1,0 +1,58 @@
+--- lighttpd-1.4.28.orig/src/connections.c	2010-08-17 18:04:38.000000000 +0900
++++ lighttpd-1.4.28.new/src/connections.c	2012-01-18 15:00:40.440002227 +0900
+@@ -1163,6 +1163,8 @@
+ 		}
+ 
+ 		break;
++	case CON_STATE_READ_CONTINUOUS:
++		break;
+ 	default: break;
+ 	}
+ 
+@@ -1236,7 +1238,8 @@
+ 	}
+ 
+ 	if (con->state == CON_STATE_READ ||
+-	    con->state == CON_STATE_READ_POST) {
++	    con->state == CON_STATE_READ_POST ||
++	    con->state == CON_STATE_READ_CONTINUOUS) {
+ 		connection_handle_read_state(srv, con);
+ 	}
+ 
+@@ -1499,6 +1502,9 @@
+ 				done = -1;
+ 			case HANDLER_WAIT_FOR_EVENT:
+ 				/* come back here */
++				if (con->state == CON_STATE_READ_CONTINUOUS) {
++					break;
++				}
+ 				connection_set_state(srv, con, CON_STATE_HANDLE_REQUEST);
+ 
+ 				break;
+@@ -1638,12 +1644,16 @@
+ 			break;
+ 		case CON_STATE_READ_POST:
+ 		case CON_STATE_READ:
++		case CON_STATE_READ_CONTINUOUS:
+ 			if (srv->srvconf.log_state_handling) {
+ 				log_error_write(srv, __FILE__, __LINE__, "sds",
+ 						"state for fd", con->fd, connection_get_state(con->state));
+ 			}
+ 
+ 			connection_handle_read_state(srv, con);
++			if (con->state == CON_STATE_READ_CONTINUOUS) {
++				plugins_call_read_continuous(srv, con);
++			}
+ 			break;
+ 		case CON_STATE_WRITE:
+ 			if (srv->srvconf.log_state_handling) {
+@@ -1807,6 +1817,9 @@
+ 			fdevent_event_del(srv->ev, &(con->fde_ndx), con->fd);
+ 		}
+ 		break;
++	case CON_STATE_READ_CONTINUOUS:
++		/* leave up to plugins */
++		break;
+ 	default:
+ 		fdevent_event_del(srv->ev, &(con->fde_ndx), con->fd);
+ 		break;

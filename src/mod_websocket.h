@@ -51,10 +51,15 @@
 #define	MOD_WEBSOCKET_CONFIG_PORT		"port"
 #define	MOD_WEBSOCKET_CONFIG_SUBPROTO		"subproto"
 #define	MOD_WEBSOCKET_CONFIG_ORIGINS		"origins"
-#define	MOD_WEBSOCKET_CONFIG_LOCALE		"locale"
+
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
+# define	MOD_WEBSOCKET_CONFIG_LOCALE	"locale"
+#endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
+
 #define	MOD_WEBSOCKET_CONFIG_TYPE		"type"
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
 # define	MOD_WEBSOCKET_OPCODE_CONT	(0x00)
 # define	MOD_WEBSOCKET_OPCODE_TEXT	(0x01)
 # define	MOD_WEBSOCKET_OPCODE_BIN	(0x02)
@@ -67,7 +72,7 @@
 # define	MOD_WEBSOCKET_FRAME_LEN16_CNT	(2)
 # define	MOD_WEBSOCKET_FRAME_LEN63_CNT	(8)
 # define	MOD_WEBSOCKET_MASK_CNT		(4)
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
 #define	MOD_WEBSOCKET_UTF8_STR			"UTF-8"
 #define	MOD_WEBSOCKET_BIN_STR			"bin"
@@ -99,9 +104,10 @@ typedef struct {
     unsigned int debug;
     unsigned int timeout;
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
     unsigned int ping;
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
 } plugin_config;
 
@@ -128,20 +134,22 @@ typedef struct {
     buffer *key3;
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
     buffer *key;
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
 } mod_websocket_handshake_t;
 
 typedef enum {
     MOD_WEBSOCKET_FRAME_STATE_INIT,
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
     MOD_WEBSOCKET_FRAME_STATE_READ_LENGTH,
     MOD_WEBSOCKET_FRAME_STATE_READ_EX_LENGTH,
     MOD_WEBSOCKET_FRAME_STATE_READ_MASK,
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
     MOD_WEBSOCKET_FRAME_STATE_READ_PAYLOAD,
 } mod_websocket_frame_state_t;
@@ -150,15 +158,17 @@ typedef enum {
     MOD_WEBSOCKET_FRAME_TYPE_TEXT,
     MOD_WEBSOCKET_FRAME_TYPE_CLOSE,
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
     MOD_WEBSOCKET_FRAME_TYPE_BIN,
     MOD_WEBSOCKET_FRAME_TYPE_PING,
     MOD_WEBSOCKET_FRAME_TYPE_PONG,
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
 } mod_websocket_frame_type_t;
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
 typedef struct {
     unsigned char rsv;
     unsigned char opcode;
@@ -169,34 +179,41 @@ typedef struct {
     size_t ex_siz;
     int ex_siz_cnt;
 } mod_websocket_frame_control_t;
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
 typedef struct {
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
     mod_websocket_frame_control_t ctl;
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
     mod_websocket_frame_state_t state;
     mod_websocket_frame_type_t type;
     buffer *payload;
 } mod_websocket_frame_t;
 
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
 typedef struct {
     UConverter *cli;
     UConverter *srv;
 } mod_websocket_conv_t;
+#endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
 
 typedef struct {
     mod_websocket_state_t state;
     mod_websocket_handshake_t handshake;
     mod_websocket_frame_t frame;
-    mod_websocket_conv_t *cnv;
     time_t last_access;
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
+    mod_websocket_conv_t *cnv;
+#endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
+
+#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
     time_t ping_ts;
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
     /* fd and fd_idx to backend */
     int fd, fd_idx;
@@ -212,6 +229,7 @@ typedef struct {
 } handler_ctx;
 
 /* prototypes */
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
 mod_websocket_conv_t *mod_websocket_conv_init(const char *);
 mod_websocket_bool_t mod_websocket_conv_isUTF8(const char *, size_t);
 int mod_websocket_conv_to_client(mod_websocket_conv_t *,
@@ -219,6 +237,7 @@ int mod_websocket_conv_to_client(mod_websocket_conv_t *,
 int mod_websocket_conv_to_server(mod_websocket_conv_t *,
                                  char *, size_t *, const char *, size_t);
 void mod_websocket_conv_final(mod_websocket_conv_t *);
+#endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
 
 mod_websocket_errno_t mod_websocket_handshake_check_request(handler_ctx *);
 mod_websocket_errno_t mod_websocket_handshake_create_response(handler_ctx *);

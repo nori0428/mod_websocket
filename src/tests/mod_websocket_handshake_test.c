@@ -55,6 +55,21 @@
 					"\r\n"
 #endif
 
+#ifdef	_MOD_WEBSOCKET_SPEC_RFC_6455_
+# define	RESP1	"HTTP/1.1 101 Switching Protocols\r\n"\
+					"Upgrade: websocket\r\n"\
+					"Connection: Upgrade\r\n"\
+					"Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n"\
+					"\r\n"
+
+# define	RESP2	"HTTP/1.1 101 Switching Protocols\r\n"\
+					"Upgrade: websocket\r\n"\
+					"Connection: Upgrade\r\n"\
+					"Sec-WebSocket-Protocol: chat\r\n"\
+					"Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n"\
+					"\r\n"
+#endif
+
 CU_TestFunc
 mod_websocket_handshake_check_request_test() {
     server_socket srv_sock;
@@ -344,6 +359,127 @@ mod_websocket_handshake_check_request_test() {
     }
 #endif
 
+#ifdef	_MOD_WEBSOCKET_SPEC_RFC_6455_
+    hctx.handshake.key = NULL;
+
+    hctx.srv = &srv;
+    hctx.con = &con;
+
+    hctx.srv = &srv;
+    hctx.con = &con;
+    exts = data_array_init();
+    ext = data_array_init();
+    array_insert_unique(exts->value, (data_unset *)ext);
+    origins = data_array_init();
+    buffer_copy_string(origins->key, "origins");
+    array_insert_unique(ext->value, (data_unset *)origins);
+
+    hctx.ext = exts;
+    hctx.pd = &pd;
+    hctx.tocli = chunkqueue_init();
+
+    header = data_string_init();
+    buffer_copy_string(header->key, "Connection");
+    buffer_copy_string(header->value, "Upgrade");
+    array_insert_unique(con.request.headers, (data_unset *)header);
+
+    ret = mod_websocket_handshake_check_request(&hctx);
+    CU_ASSERT_EQUAL(ret, MOD_WEBSOCKET_NOT_WEBSOCKET);
+
+    hctx.ext = exts;
+    header = data_string_init();
+    buffer_copy_string(header->key, "Upgrade");
+    buffer_copy_string(header->value, "websocket");
+    array_insert_unique(con.request.headers, (data_unset *)header);
+    ret = mod_websocket_handshake_check_request(&hctx);
+    CU_ASSERT_EQUAL(ret, MOD_WEBSOCKET_BAD_REQUEST);
+
+    hctx.ext = exts;
+    header = data_string_init();
+    buffer_copy_string(header->key, "Host");
+    buffer_copy_string(header->value, "localhost");
+    array_insert_unique(con.request.headers, (data_unset *)header);
+    ret = mod_websocket_handshake_check_request(&hctx);
+    CU_ASSERT_EQUAL(ret, MOD_WEBSOCKET_BAD_REQUEST);
+
+    hctx.ext = exts;
+    header = data_string_init();
+    buffer_copy_string(header->key, "Sec-WebSocket-Key");
+    buffer_copy_string(header->value, KEY);
+    array_insert_unique(con.request.headers, (data_unset *)header);
+    ret = mod_websocket_handshake_check_request(&hctx);
+    CU_ASSERT_EQUAL(ret, MOD_WEBSOCKET_BAD_REQUEST);
+
+    hctx.ext = exts;
+    origin = data_string_init();
+    buffer_copy_string(origin->value, "hoge.com");
+    array_insert_unique(origins->value, (data_unset *)origin);
+    ret = mod_websocket_handshake_check_request(&hctx);
+    CU_ASSERT_EQUAL(ret, MOD_WEBSOCKET_BAD_REQUEST);
+
+    hctx.ext = exts;
+    header = data_string_init();
+    buffer_copy_string(header->key, "origin");
+    buffer_copy_string(header->value, "http://hoge2.com");
+    array_insert_unique(con.request.headers, (data_unset *)header);
+    ret = mod_websocket_handshake_check_request(&hctx);
+    CU_ASSERT_EQUAL(ret, MOD_WEBSOCKET_BAD_REQUEST);
+
+    hctx.ext = exts;
+    buffer_reset(ext->key);
+    header = data_string_init();
+    buffer_copy_string(header->key, "Origin");
+    buffer_copy_string(header->value, "http://hoge2.com");
+    array_replace(con.request.headers, (data_unset *)header);
+    ret = mod_websocket_handshake_check_request(&hctx);
+    CU_ASSERT_EQUAL(ret, MOD_WEBSOCKET_FORBIDDEN);
+
+    hctx.ext = exts;
+    buffer_reset(ext->key);
+    header = data_string_init();
+    buffer_copy_string(header->key, "Origin");
+    buffer_copy_string(header->value, "http://hoge.com");
+    array_replace(con.request.headers, (data_unset *)header);
+    ret = mod_websocket_handshake_check_request(&hctx);
+    CU_ASSERT_EQUAL(ret, MOD_WEBSOCKET_OK);
+
+    hctx.ext = exts;
+    buffer_reset(ext->key);
+    header = data_string_init();
+    buffer_copy_string(header->key, "Sec-WebSocket-Protocol");
+    buffer_copy_string(header->value, "chat");
+    array_insert_unique(con.request.headers, (data_unset *)header);
+    ret = mod_websocket_handshake_check_request(&hctx);
+    CU_ASSERT_EQUAL(ret, MOD_WEBSOCKET_NOT_FOUND);
+
+    buffer_copy_string(ext->key, "chat");
+    ret = mod_websocket_handshake_check_request(&hctx);
+    CU_ASSERT_EQUAL(ret, MOD_WEBSOCKET_OK);
+
+    hctx.ext = exts;
+    chunkqueue_reset(con.read_queue);
+    if (pipe(pipefd) < 0) {
+        CU_FAIL("fail to create pipe");
+        return 0;
+    }
+    if (fork() == 0) {
+        close(pipefd[0]);
+        siz = write(pipefd[1], KEY3, strlen(KEY3));
+        if (siz < 0) {
+            CU_FAIL("fail to write pipe");
+        }
+        close(pipefd[1]);
+        _exit(0);
+    } else {
+        wait(NULL);
+        con.fd = pipefd[0];
+        close(pipefd[1]);
+        ret = mod_websocket_handshake_check_request(&hctx);
+        close(pipefd[0]);
+        CU_ASSERT_EQUAL(ret, MOD_WEBSOCKET_OK);
+    }
+#endif
+
     return 0;
 }
 
@@ -475,7 +611,6 @@ mod_websocket_handshake_create_response_test() {
     ret = mod_websocket_handshake_create_response(&hctx);
     CU_ASSERT_EQUAL(ret, MOD_WEBSOCKET_OK);
     check_response(hctx.tocli, RESP2);
-
 #endif
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_08_
@@ -543,7 +678,73 @@ mod_websocket_handshake_create_response_test() {
     ret = mod_websocket_handshake_create_response(&hctx);
     CU_ASSERT_EQUAL(ret, MOD_WEBSOCKET_OK);
     check_response(hctx.tocli, RESP2);
+#endif
 
+#ifdef	_MOD_WEBSOCKET_SPEC_RFC_6455_
+    hctx.handshake.key = NULL;
+
+    hctx.srv = &srv;
+    hctx.con = &con;
+    exts = data_array_init();
+    ext = data_array_init();
+    array_insert_unique(exts->value, (data_unset *)ext);
+    origins = data_array_init();
+    buffer_copy_string(origins->key, "origins");
+    array_insert_unique(ext->value, (data_unset *)origins);
+
+    hctx.ext = exts;
+    hctx.pd = &pd;
+    hctx.tocli = chunkqueue_init();
+    buffer_reset(ext->key);
+
+    header = data_string_init();
+    buffer_copy_string(header->key, "Connection");
+    buffer_copy_string(header->value, "Upgrade");
+    array_insert_unique(con.request.headers, (data_unset *)header);
+    header = data_string_init();
+    buffer_copy_string(header->key, "Upgrade");
+    buffer_copy_string(header->value, "websocket");
+    array_insert_unique(con.request.headers, (data_unset *)header);
+    header = data_string_init();
+    buffer_copy_string(header->key, "Host");
+    buffer_copy_string(header->value, "localhost");
+    array_insert_unique(con.request.headers, (data_unset *)header);
+    header = data_string_init();
+    buffer_copy_string(header->key, "Sec-WebSocket-Key");
+    buffer_copy_string(header->value, KEY);
+    array_insert_unique(con.request.headers, (data_unset *)header);
+    ret = mod_websocket_handshake_check_request(&hctx);
+    origin = data_string_init();
+    buffer_copy_string(origin->value, "hoge.com");
+    array_insert_unique(origins->value, (data_unset *)origin);
+    header = data_string_init();
+    buffer_copy_string(header->key, "Origin");
+    buffer_copy_string(header->value, "http://hoge.com");
+    array_replace(con.request.headers, (data_unset *)header);
+
+    ret = mod_websocket_handshake_check_request(&hctx);
+    CU_ASSERT_EQUAL(ret, MOD_WEBSOCKET_OK);
+    ret = mod_websocket_handshake_create_response(&hctx);
+    CU_ASSERT_EQUAL(ret, MOD_WEBSOCKET_OK);
+    check_response(hctx.tocli, RESP1);
+
+    hctx.ext = exts;
+    header = data_string_init();
+    buffer_copy_string(header->key, "Sec-WebSocket-Key");
+    buffer_copy_string(header->value, KEY);
+    array_replace(con.request.headers, (data_unset *)header);
+    header = data_string_init();
+    buffer_copy_string(header->key, "Sec-WebSocket-Protocol");
+    buffer_copy_string(header->value, "chat");
+    array_insert_unique(con.request.headers, (data_unset *)header);
+
+    buffer_copy_string(ext->key, "chat");
+    ret = mod_websocket_handshake_check_request(&hctx);
+    CU_ASSERT_EQUAL(ret, MOD_WEBSOCKET_OK);
+    chunkqueue_reset(hctx.tocli);
+    ret = mod_websocket_handshake_create_response(&hctx);
+    CU_ASSERT_EQUAL(ret, MOD_WEBSOCKET_OK);
+    check_response(hctx.tocli, RESP2);
 #endif
 
     return 0;

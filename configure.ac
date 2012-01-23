@@ -53,23 +53,48 @@ CFLAGS="-g -Werror -W -Wall -Wundef -Wshadow -Wpointer-arith -Wbad-function-cast
 AC_MSG_CHECKING(whether --with-websocket option specified)
 AC_ARG_WITH(
         websocket,
-        [  --with-websocket@<:@=IETF-{00,08}@:>@
-                                  specify draft version : default=IETF-00],
+        AC_HELP_STRING([--with-websocket@<:@={RFC-6455, IETF-{00,08}}@:>@],
+                       [specify draft version@<:@default=RFC-6455@:>@]),
         [ websocket=$withval ],
         [ websocket=yes ])
 AC_MSG_RESULT(${websocket})
 if test "x${websocket}" == "xyes" ||
-   test "x${websocket}" == "xietf-00" ||
-   test "x${websocket}" == "xIETF-00"; then
+   test "x${websocket}" == "xrfc-6455" ||
+   test "x${websocket}" == "xRFC-6455"; then
+   websocket="RFC-6455"
+   WEBSOCKET_VERSION_CFLAGS="-D_MOD_WEBSOCKET_SPEC_RFC_6455_"
+elif test "x${websocket}" == "xietf-00" ||
+     test "x${websocket}" == "xIETF-00"; then
    WEBSOCKET_VERSION_CFLAGS="-D_MOD_WEBSOCKET_SPEC_IETF_00_"
 elif test "x${websocket}" == "xietf-08" ||
      test "x${websocket}" == "xIETF-08"; then
    WEBSOCKET_VERSION_CFLAGS="-D_MOD_WEBSOCKET_SPEC_IETF_08_"
 elif test "x${websocket}" != "xno"; then
-   AC_MSG_ERROR([websocket option is invalid. plz specify IETF-{00,08}])
+   AC_MSG_ERROR([websocket option is invalid. plz specify IETF-{00,08}, RFC-6455])
 fi
 AC_SUBST(WEBSOCKET_VERSION_CFLAGS)
 CFLAGS="$CFLAGS $WEBSOCKET_VERSION_CFLAGS"
+
+dnl check for icu lib
+AC_MSG_CHECKING(whether --with-libicu option specified)
+AC_ARG_WITH(
+        libicu,
+        AC_HELP_STRING([--with-libicu],
+                       [use ICU lib for websocket@<:@default=yes@:>@]),
+        [ with_icu=$withval ],
+        [ with_icu=yes ])
+AC_MSG_RESULT(${with_icu})
+if test "x${with_icu}" != "xno"; then
+   WEBSOCKET_ICU_CFLAGS="-D_MOD_WEBSOCKET_WITH_ICU_"
+   WEBSOCKET_ICU_LIBS="-licui18n -licuuc"
+else
+   WEBSOCKET_ICU_CFLAGS=
+   WEBSOCKET_ICU_LIBS=
+fi
+AC_SUBST(WEBSOCKET_ICU_CFLAGS)
+AC_SUBST(WEBSOCKET_ICU_LIBS)
+AM_CONDITIONAL(WITH_LIBICU, test x$with_icu != xno)
+CFLAGS="$CFLAGS $WEBSOCKET_ICU_CFLAGS"
 
 case $host_os in
      *darwin* ) LIBNCURSES="-lncurses";;
