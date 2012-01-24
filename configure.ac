@@ -53,7 +53,7 @@ CFLAGS="-g -Werror -W -Wall -Wundef -Wshadow -Wpointer-arith -Wbad-function-cast
 AC_MSG_CHECKING(whether --with-websocket option specified)
 AC_ARG_WITH(
         websocket,
-        AC_HELP_STRING([--with-websocket@<:@={RFC-6455, IETF-{00,08}}@:>@],
+        AC_HELP_STRING([--with-websocket=@<:@=RFC-6455/IETF-00/IETF-08@:>@],
                        [specify draft version@<:@default=RFC-6455@:>@]),
         [ websocket=$withval ],
         [ websocket=yes ])
