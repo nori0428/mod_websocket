@@ -89,6 +89,18 @@ typedef unsigned char mod_websocket_bool_t;
         log_error_write(hctx->srv, __FILE__, __LINE__, format, ## args); \
     }
 
+#if (LIGHTTPD_VERSION_ID >= (1 << 16 | 4 << 8 | 30))
+# define	NETWORK_SSL_BACKEND_WRITE(a,b,c,d)\
+    network_ssl_backend_write(a, b, c, d, MAX_WRITE_LIMIT)
+# define	NETWORK_BACKEND_WRITE(a,b,c,d)\
+    network_backend_write(a, b, c, d, MAX_WRITE_LIMIT)
+#else
+# define	NETWORK_SSL_BACKEND_WRITE(a,b,c,d)\
+    network_ssl_backend_write(a, b, c, d)
+# define	NETWORK_BACKEND_WRITE(a,b,c,d)\
+    network_backend_write(a, b, c, d)
+#endif
+
 typedef enum {
     MOD_WEBSOCKET_NOT_WEBSOCKET		= -1,
     MOD_WEBSOCKET_OK			= 200,

@@ -660,15 +660,13 @@ SUBREQUEST_FUNC(_handle_subrequest) {
         if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
 
 #ifdef	USE_OPENSSL
-            ret = srv->network_ssl_backend_write(srv, con, hctx->con->ssl,
-                                                 hctx->tocli);
+            ret = srv->NETWORK_SSL_BACKEND_WRITE(srv, con, hctx->con->ssl, hctx->tocli);
 #else	/* SSL is not available */
             ret = -1;
 #endif	/* USE_OPENSSL */
 
         } else {
-            ret = srv->network_backend_write(srv, con, hctx->con->fd,
-                                             hctx->tocli);
+            ret = srv->NETWORK_BACKEND_WRITE(srv, con, hctx->con->fd, hctx->tocli);
         }
         if (0 <= ret) {
             chunkqueue_remove_finished_chunks(hctx->tocli);
@@ -704,8 +702,7 @@ SUBREQUEST_FUNC(_handle_subrequest) {
                 break;
             }
             if (!chunkqueue_is_empty(hctx->tosrv)) {
-                ret = srv->network_backend_write(srv, con,
-                                                 hctx->fd, hctx->tosrv);
+                ret = srv->NETWORK_BACKEND_WRITE(srv, con, hctx->fd, hctx->tosrv);
                 if (0 <= ret) {
                     chunkqueue_remove_finished_chunks(hctx->tosrv);
                 } else {
@@ -722,14 +719,13 @@ SUBREQUEST_FUNC(_handle_subrequest) {
             if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
 
 #ifdef	USE_OPENSSL
-                srv->network_ssl_backend_write(srv, con,
+                srv->NETWORK_SSL_BACKEND_WRITE(srv, con,
                                                hctx->con->ssl,
                                                hctx->tocli);
 #endif	/* USE_OPENSSL */
 
             } else {
-                srv->network_backend_write(srv, con, hctx->con->fd,
-                                           hctx->tocli);
+                srv->NETWORK_BACKEND_WRITE(srv, con, hctx->con->fd, hctx->tocli);
             }
             chunkqueue_remove_finished_chunks(hctx->tocli);
             break;
@@ -738,7 +734,7 @@ SUBREQUEST_FUNC(_handle_subrequest) {
                 if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
 
 #ifdef	USE_OPENSSL
-                    ret = srv->network_ssl_backend_write(srv, con,
+                    ret = srv->NETWORK_SSL_BACKEND_WRITE(srv, con,
                                                          hctx->con->ssl,
                                                          hctx->tocli);
 #else	/* SSL is not available */
@@ -746,7 +742,7 @@ SUBREQUEST_FUNC(_handle_subrequest) {
 #endif	/* USE_OPENSSL */
 
                 } else {
-                    ret = srv->network_backend_write(srv, con, hctx->con->fd,
+                    ret = srv->NETWORK_BACKEND_WRITE(srv, con, hctx->con->fd,
                                                      hctx->tocli);
                 }
                 if (0 <= ret) {
@@ -809,13 +805,13 @@ TRIGGER_FUNC(_handle_trigger) {
             if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
 
 # ifdef	USE_OPENSSL
-                srv->network_ssl_backend_write(srv, con,
+                srv->NETWORK_SSL_BACKEND_WRITE(srv, con,
                                                hctx->con->ssl,
                                                hctx->tocli);
 # endif	/* USE_OPENSSL */
 
             } else {
-                srv->network_backend_write(srv, con, hctx->con->fd,
+                srv->NETWORK_BACKEND_WRITE(srv, con, hctx->con->fd,
                                            hctx->tocli);
             }
             hctx->ping_ts = srv->cur_ts;
@@ -831,13 +827,13 @@ TRIGGER_FUNC(_handle_trigger) {
             if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
 
 #ifdef	USE_OPENSSL
-                srv->network_ssl_backend_write(srv, con,
+                srv->NETWORK_SSL_BACKEND_WRITE(srv, con,
                                                hctx->con->ssl,
                                                hctx->tocli);
 #endif	/* USE_OPENSSL */
 
             } else {
-                srv->network_backend_write(srv, con, hctx->con->fd,
+                srv->NETWORK_BACKEND_WRITE(srv, con, hctx->con->fd,
                                            hctx->tocli);
             }
             _tcp_server_disconnect(hctx);
