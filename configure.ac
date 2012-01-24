@@ -47,7 +47,7 @@ AC_PROG_LIBTOOL
 AC_FUNC_MALLOC
 AC_CHECK_FUNCS([memset strcasecmp])
 
-CFLAGS="-g -Werror -W -Wall -Wundef -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wwrite-strings -Wsign-compare -Waggregate-return -Wnested-externs -Wno-long-long -Wunused -Wfloat-equal -Wformat -fno-strict-aliasing"
+CFLAGS="$CFLAGS -g -Werror -W -Wall -Wundef -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wwrite-strings -Wsign-compare -Waggregate-return -Wnested-externs -Wno-long-long -Wunused -Wfloat-equal -Wformat -fno-strict-aliasing"
 
 # Check for websocket version
 AC_MSG_CHECKING(whether --with-websocket option specified)

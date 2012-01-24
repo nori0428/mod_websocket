@@ -327,7 +327,7 @@ handler_t _handle_fdevent(server *srv, void *ctx, int revents) {
     int b = 0;
     handler_ctx *hctx = (handler_ctx *)ctx;
     mod_websocket_frame_type_t frame_type;
-    char readbuf[UINT16_MAX + 1];
+    char readbuf[UINT16_MAX];
     ssize_t siz;
 
 #if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
@@ -346,10 +346,11 @@ handler_t _handle_fdevent(server *srv, void *ctx, int revents) {
             _tcp_server_disconnect(hctx);
             return _handle_subrequest(srv, hctx->con, hctx->pd);
         }
-        if (!b || b > (int)sizeof(readbuf)) {
-            b = sizeof(readbuf);
+        if (!b || b > UINT16_MAX - 1) {
+            b = UINT16_MAX - 1;
         }
         errno = 0;
+        memset(readbuf, 0, sizeof(readbuf));
         siz = read(hctx->fd, readbuf, b);
         if (siz > 0) {
             if (hctx->state == MOD_WEBSOCKET_STATE_CONNECTED) {
