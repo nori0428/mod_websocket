@@ -10,6 +10,9 @@
   add patches for lighttpd-1.4.29 and lighttpd-1.4.30.
   I'll delete IETF-00 and IETF-08 option when iOS supports RFC-6455 specs.
 
+  see below for browser support
+  <URL: http://en.wikipedia.org/wiki/WebSocket#Browser_support>
+
 - What is this?
   mod_websocket.c provides a WebSocket extension for
   lighttpd HTTP server ver 1.4.28( http://www.lighttpd.net/ )
