@@ -235,6 +235,7 @@ int _tcp_server_connect(handler_ctx *hctx) {
     data_unset *du;
     buffer *host = NULL;
     buffer *port = NULL;
+    int flag = 1;
 
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
     char *locale = NULL;
@@ -274,6 +275,22 @@ int _tcp_server_connect(handler_ctx *hctx) {
         hctx->con->http_status = MOD_WEBSOCKET_SERVICE_UNAVAILABLE;
         hctx->con->mode = DIRECT;
         return -1;
+    }
+    if (setsockopt(hctx->fd, IPPROTO_TCP, TCP_NODELAY,
+                   &flag, sizeof(flag)) == -1) {
+        DEBUG_LOG("s", "fail to set TCP_NODELAY");
+        _tcp_server_disconnect(hctx);
+        hctx->con->http_status = MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
+        hctx->con->mode = DIRECT;
+        return HANDLER_FINISHED;
+    }
+    if (setsockopt(hctx->con->fd, IPPROTO_TCP, TCP_NODELAY,
+                   &flag, sizeof(flag)) == -1) {
+        DEBUG_LOG("s", "fail to set TCP_NODELAY");
+        _tcp_server_disconnect(hctx);
+        hctx->con->http_status = MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
+        hctx->con->mode = DIRECT;
+        return HANDLER_FINISHED;
     }
 
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
