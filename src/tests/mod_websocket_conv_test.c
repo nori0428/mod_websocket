@@ -34,10 +34,12 @@ mod_websocket_conv_isUTF8_test() {
     size_t siz;
 
     for (i = 0; i < 3; i++) {
-        fprintf(stderr, "check: %s\n", ptns[i].fname);
+        fprintf(stderr, "check isUTF8(%s) == %s\n",
+                ptns[i].fname, ptns[i].exp ? "true" : "false");
         fp = fopen(ptns[i].fname, "r");
+        memset(buf, 0, sizeof(buf));
         siz = fread(buf, 1, sizeof(buf), fp);
-        CU_ASSERT_EQUAL(mod_websocket_conv_isUTF8(buf, siz - 1),
+        CU_ASSERT_EQUAL(mod_websocket_conv_isUTF8(buf, siz),
                         ptns[i].exp);
         fclose(fp);
     }
@@ -69,17 +71,15 @@ mod_websocket_conv_test() {
     };
 
     FILE *fp;
-    int i, ret;
-    char src[1024], dst1[1024], dst2[1024];
-    char csrc[8192], cdst1[8192], cdst2[8192], cdst[16384];
+    int i, j, ret;
+    char src[1024], *dst1 = NULL, *dst2 = NULL;
+    char csrc[1024], *cdst1 = NULL, *cdst2 = NULL, cdst[4096];
     char *pdst;
-    size_t srcsiz, dst1siz = 1024, dst2siz = 1024;
+    size_t srcsiz, dst1siz, dst2siz;
     mod_websocket_conv_t *cnv;
 
     for (i = 0; i < 3; i++) {
         memset(src, 0, sizeof(src));
-        memset(dst1, 0, sizeof(dst1));
-        memset(dst2, 0, sizeof(dst2));
         fprintf(stderr, "check: %s\n", ptns[i].fname);
         fp = fopen(ptns[i].fname, "r");
         srcsiz = fread(src, 1, sizeof(src), fp);
@@ -92,18 +92,20 @@ mod_websocket_conv_test() {
             return 0;
         }
 
-        dst1siz = 1024;
-        ret = mod_websocket_conv_to_client(cnv, dst1, &dst1siz, src, srcsiz);
+        ret = mod_websocket_conv_to_client(cnv, &dst1, &dst1siz, src, srcsiz);
         CU_ASSERT_EQUAL(ret, 0);
         CU_ASSERT_EQUAL(mod_websocket_conv_isUTF8(dst1, strlen(dst1)),
                         MOD_WEBSOCKET_TRUE);
 
-        dst2siz = 1024;
-        ret = mod_websocket_conv_to_server(cnv, dst2, &dst2siz, dst1, dst1siz);
+        ret = mod_websocket_conv_to_server(cnv, &dst2, &dst2siz, dst1, dst1siz);
         CU_ASSERT_EQUAL(ret, 0);
         CU_ASSERT_EQUAL(mod_websocket_conv_isUTF8(dst2, dst2siz),
                         ptns[i].exp);
         CU_ASSERT_EQUAL(memcmp(src, dst2, dst2siz), 0);
+        free(dst1);
+        dst1 = NULL;
+        free(dst2);
+        dst2 = NULL;
         mod_websocket_conv_final(cnv);
     }
     /* test chunk */
@@ -111,48 +113,59 @@ mod_websocket_conv_test() {
      * But if multibyte chars are chunked,
      * a websocket frame may be invalid...
      */
-    cnv = mod_websocket_conv_init(ptns[0].locale);
-    if (!cnv) {
-        CU_FAIL("init failed");
-        return 0;
-    }
-    memset(src, 0, sizeof(src));
-    memset(csrc, 0, sizeof(csrc));
-    memset(cdst, 0, sizeof(cdst));
-    memset(cdst1, 0, sizeof(cdst1));
-    memset(cdst2, 0, sizeof(cdst2));
-    fprintf(stderr, "check chunked: %s\n", ptns[0].fname);
-    fp = fopen(ptns[0].fname, "r");
-    srcsiz = fread(src, 1, sizeof(src), fp);
-    fclose(fp);
-    src[srcsiz] = '\0';
-    for (i = 0; i < srcsiz * 5; i += srcsiz) {
-        memcpy(csrc + i, src, srcsiz);
-    }
-    csrc[i] = '\0';
-    srcsiz = i;
-    dst1siz = sizeof(cdst1);
-    ret = mod_websocket_conv_to_client(cnv, cdst1, &dst1siz, csrc, srcsiz / 2);
-    CU_ASSERT_EQUAL(ret, 0);
-    CU_ASSERT_EQUAL(mod_websocket_conv_isUTF8(cdst1, dst1siz),
-                    MOD_WEBSOCKET_TRUE);
-    memcpy(cdst, cdst1, dst1siz);
-    pdst = cdst + dst1siz;
-    dst1siz = sizeof(cdst2);
-    ret = mod_websocket_conv_to_client(cnv, cdst2, &dst1siz,
-                                       csrc + srcsiz / 2, srcsiz - srcsiz / 2);
-    CU_ASSERT_EQUAL(ret, 0);
-    CU_ASSERT_EQUAL(mod_websocket_conv_isUTF8(cdst, dst1siz),
-                    MOD_WEBSOCKET_TRUE);
-    memcpy(pdst, cdst2, dst1siz);
-    *(pdst + dst1siz) = '\0';
-    for (i = 0; i < srcsiz; i++) {
-        if (cdst[i] != csrc[i]) {
-            CU_ASSERT_EQUAL(cdst[i], csrc[i]);
-            fprintf(stderr, "%02x = %02x, ", cdst[i] & 0xff, csrc[i] & 0xff);
+    for (i = 0; i < 3; i++) {
+        memset(cdst, 0, sizeof(cdst));
+        cnv = mod_websocket_conv_init(ptns[i].locale);
+        if (!cnv) {
+            CU_FAIL("init failed");
+            return 0;
         }
+        memset(src, 0, sizeof(src));
+        memset(csrc, 0, sizeof(csrc));
+        fprintf(stderr, "check chunked: %s\n", ptns[i].fname);
+        fp = fopen(ptns[i].fname, "r");
+        srcsiz = fread(src, 1, sizeof(src), fp);
+        fclose(fp);
+        src[srcsiz] = '\0';
+        for (j = 0; j < srcsiz * 5; j += srcsiz) {
+            memcpy(csrc + j, src, srcsiz);
+        }
+        csrc[j] = '\0';
+        srcsiz = j;
+        ret = mod_websocket_conv_to_client(cnv, &cdst1, &dst1siz, csrc, srcsiz / 2);
+        CU_ASSERT_EQUAL(ret, 0);
+        CU_ASSERT_EQUAL(mod_websocket_conv_isUTF8(cdst1, dst1siz), MOD_WEBSOCKET_TRUE);
+        ret = mod_websocket_conv_to_server(cnv, &cdst2, &dst2siz, cdst1, dst1siz);
+        CU_ASSERT_EQUAL(ret, 0);
+        CU_ASSERT_EQUAL(mod_websocket_conv_isUTF8(cdst2, dst2siz), ptns[i].exp);
+        memcpy(cdst, cdst2, dst2siz);
+        free(cdst1);
+        cdst1 = NULL;
+        free(cdst2);
+        cdst2 = NULL;
+        pdst = cdst + dst2siz;
+
+        ret = mod_websocket_conv_to_client(cnv, &cdst1, &dst1siz,
+                                           csrc + srcsiz / 2, srcsiz - srcsiz / 2);
+        CU_ASSERT_EQUAL(ret, 0);
+        CU_ASSERT_EQUAL(mod_websocket_conv_isUTF8(cdst2, dst2siz), MOD_WEBSOCKET_TRUE);
+        ret = mod_websocket_conv_to_server(cnv, &cdst2, &dst2siz, cdst1, dst1siz);
+        CU_ASSERT_EQUAL(ret, 0);
+        CU_ASSERT_EQUAL(mod_websocket_conv_isUTF8(cdst2, dst2siz), ptns[i].exp);
+        memcpy(pdst, cdst2, dst2siz);
+        *(pdst + dst2siz) = '\0';
+        free(cdst1);
+        cdst1 = NULL;
+        free(cdst2);
+        cdst2 = NULL;
+        for (j = 0; j < srcsiz; j++) {
+            if (cdst[j] != csrc[j]) {
+                CU_ASSERT_EQUAL(cdst[j], csrc[j]);
+                fprintf(stderr, "%02x = %02x, ", cdst[j] & 0xff, csrc[j] & 0xff);
+            }
+        }
+        mod_websocket_conv_final(cnv);
     }
-    mod_websocket_conv_final(cnv);
     return 0;
 }
 

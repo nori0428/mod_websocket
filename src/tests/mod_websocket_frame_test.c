@@ -488,7 +488,7 @@ mod_websocket_frame_recv_test() {
     unsigned char ex_len;
     const char nomask[4] = { 0x00, 0x00, 0x00, 0x00 };
     const char mask[4] = { 0x11, 0x11, 0x11, 0x11 };
-    char enc[4096];
+    char *enc;
     size_t encsiz;
 #endif
 
@@ -789,10 +789,11 @@ mod_websocket_frame_recv_test() {
         siz = fread(buf, 1, sizeof(buf), fp);
         fclose(fp);
 
-        encsiz = 4096;
+        encsiz = 0;
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
-        mod_websocket_conv_to_client(hctx.cnv, enc, &encsiz, buf, siz);
+        mod_websocket_conv_to_client(hctx.cnv, &enc, &encsiz, buf, siz);
 #else
+        enc = (char *)malloc(siz);
         memcpy(enc, buf, siz);
         encsiz = siz;
 #endif

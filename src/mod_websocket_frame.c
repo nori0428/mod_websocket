@@ -21,7 +21,7 @@ mod_websocket_frame_send(handler_ctx *hctx,
 
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
     char *enc = NULL;
-    size_t encsiz = siz * 3; // XXX
+    size_t encsiz = 0;
 #endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
 
     if (!hctx || (!payload && type != MOD_WEBSOCKET_FRAME_TYPE_CLOSE)) {
@@ -43,15 +43,8 @@ mod_websocket_frame_send(handler_ctx *hctx,
             break;
         }
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
-        enc = (char *)malloc(sizeof(char) * encsiz);
-        if (!enc) {
-            DEBUG_LOG("s", "no memory");
-            ret = -1;
-            break;
-        }
-        memset(enc, 0, encsiz);
         ret = mod_websocket_conv_to_client(hctx->cnv,
-                                           enc, &encsiz, payload, siz);
+                                           &enc, &encsiz, payload, siz);
         if (ret != 0) {
             DEBUG_LOG("s", "failed to convert char encodings");
             break;
@@ -107,7 +100,7 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
 
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
     char *enc = NULL;
-    size_t encsiz;
+    size_t encsiz = 0;
 #endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
 
     if (!hctx || !hctx->con || !hctx->con->read_queue) {
@@ -162,17 +155,8 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                     buffer_reset(payload);
                     return -1;
                 }
-                encsiz = (payload->used) * 3; // XXX
-                enc = (char *)malloc(sizeof(char) * encsiz);
-                if (!enc) {
-                    DEBUG_LOG("s", "no memory");
-                    buffer_free(frame);
-                    buffer_reset(payload);
-                    return -1;
-                }
-                memset(enc, 0, encsiz);
                 ret = mod_websocket_conv_to_server(hctx->cnv,
-                                                   enc, &encsiz,
+                                                   &enc, &encsiz,
                                                    payload->ptr,
                                                    payload->used);
                 buffer_reset(payload);
@@ -258,7 +242,7 @@ mod_websocket_frame_send(handler_ctx *hctx,
 
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
     char *enc = NULL;
-    size_t encsiz = siz * 3; // XXX
+    size_t encsiz = 0;
 #endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
 
     if (!hctx ||
@@ -281,15 +265,8 @@ mod_websocket_frame_send(handler_ctx *hctx,
         if (siz == 0) {
             break;
         }
-        enc = (char *)malloc(sizeof(char) * encsiz);
-        if (!enc) {
-            DEBUG_LOG("s", "no memory");
-            buffer_reset(b);
-            return -1;
-        }
-        memset(enc, 0, encsiz);
         ret = mod_websocket_conv_to_client(hctx->cnv,
-                                           enc, &encsiz, payload, siz);
+                                           &enc, &encsiz, payload, siz);
         if (ret != 0) {
             DEBUG_LOG("s", "failed to convert char encodings");
             buffer_reset(b);
@@ -450,7 +427,7 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
 
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
     char *enc = NULL;
-    size_t encsiz;
+    size_t encsiz = 0;
 #endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
 
     if (!hctx || !hctx->con || !hctx->con->read_queue) {
@@ -615,23 +592,6 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                 case MOD_WEBSOCKET_FRAME_TYPE_TEXT:
 
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
-
-# if (SIZEOF_SIZE_T == 4)
-                    if (UINT32_MAX / 3 < payload->used) { // XXX
-                        DEBUG_LOG("s", "no memory");
-                        buffer_free(frame);
-                        buffer_reset(payload);
-                        return -1;
-                    }
-# elif (SIZEOF_SIZE_T == 8)
-                    if (UINT64_MAX / 3 < payload->used) { // XXX
-                        DEBUG_LOG("s", "no memory");
-                        buffer_free(frame);
-                        buffer_reset(payload);
-                        return -1;
-                    }
-# endif
-
                     if (mod_websocket_conv_isUTF8(payload->ptr,
                                                   payload->used) !=
                         MOD_WEBSOCKET_TRUE) {
@@ -640,17 +600,8 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                         buffer_reset(payload);
                         return -1;
                     }
-                    encsiz = (payload->used) * 3; // XXX
-                    enc = (char *)malloc(sizeof(char) * encsiz);
-                    if (!enc) {
-                        DEBUG_LOG("s", "no memory");
-                        buffer_free(frame);
-                        buffer_reset(payload);
-                        return -1;
-                    }
-                    memset(enc, 0, encsiz);
                     ret = mod_websocket_conv_to_server(hctx->cnv,
-                                                       enc, &encsiz,
+                                                       &enc, &encsiz,
                                                        payload->ptr,
                                                        payload->used);
                     buffer_reset(payload);
