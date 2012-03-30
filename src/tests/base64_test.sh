@@ -3,7 +3,7 @@
 
 set -e
 
-FILES=$(find *.png -type f)
+FILES=$(find *.{png,txt} -type f)
 
 for file in $FILES; do
     perlf=${file}-perl-out
@@ -12,11 +12,12 @@ for file in $FILES; do
     echo "check: $file"
 
     perl base64.pl $file > $perlf
-    ./base64_test $file > $cf
+    ./base64_encode_test $file > $cf
 
     cmp $perlf $cf
 
     rm -rf $perlf $cf
+    ./base64_decode_test $file
 done
 
 # EOF

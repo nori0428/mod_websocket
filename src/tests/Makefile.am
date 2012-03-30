@@ -30,14 +30,14 @@ CFLAGS = -Wall -g ${WEBSOCKET_VERSION_CFLAGS} ${WEBSOCKET_ICU_CFLAGS}
 
 if WITH_LIBICU
 noinst_PROGRAMS = \
-	base64_test sha1_test \
+	base64_encode_test base64_decode_test sha1_test \
 	mod_websocket_conv_test \
 	mod_websocket_connector_test \
 	mod_websocket_handshake_test \
 	mod_websocket_frame_test
 else
 noinst_PROGRAMS = \
-	base64_test sha1_test \
+	base64_encode_test base64_decode_test sha1_test \
 	mod_websocket_connector_test \
 	mod_websocket_handshake_test \
 	mod_websocket_frame_test
@@ -46,8 +46,11 @@ endif
 sha1_test_SOURCES = \
 	sha1_test.c
 
-base64_test_SOURCES = \
-	base64_test.c
+base64_encode_test_SOURCES = \
+	base64_encode_test.c
+
+base64_decode_test_SOURCES = \
+	base64_decode_test.c
 
 if WITH_LIBICU
 mod_websocket_conv_test_SOURCES = \
