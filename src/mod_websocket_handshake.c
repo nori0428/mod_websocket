@@ -15,7 +15,7 @@
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
 # include "md5.h"
 
-# if (LIGHTTPD_VERSION_ID >= (1 << 16 | 4 << 8 | 29))
+# if defined (LIGHTTPD_VERSION_ID) && (LIGHTTPD_VERSION_ID >= (1 << 16 | 4 << 8 | 29))
 typedef li_MD5_CTX MD5_CTX;
 
 #  define	MD5_Init	li_MD5_Init
