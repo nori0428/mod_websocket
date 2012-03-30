@@ -317,13 +317,13 @@ int _tcp_server_connect(handler_ctx *hctx) {
     fdevent_event_set(hctx->srv->ev, &(hctx->fd_idx), hctx->fd, FDEVENT_IN);
 
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
-    DEBUG_LOG("sdsdsssssss", "connected:", hctx->con->fd, " -> ",
-              hctx->fd, "(", host->ptr, ":", port->ptr, ")",
-              ", locale:", locale);
+    DEBUG_LOG("sdsdssssss", "connected client fd:", hctx->con->fd,
+              " -> server fd:", hctx->fd,
+              "(", host->ptr, ":", port->ptr, "), locale:", locale);
 #else
-    DEBUG_LOG("sdsdssssss", "connected:", hctx->con->fd, " -> ",
-              hctx->fd, "(", host->ptr, ":", port->ptr, ")",
-              ", not used locale");
+    DEBUG_LOG("sdsdsssss", "connected client fd:", hctx->con->fd,
+              " -> server fd:", hctx->fd,
+              "(", host->ptr, ":", port->ptr, "), not used locale");
 #endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
 
     return 0;
@@ -369,6 +369,8 @@ handler_t _handle_fdevent(server *srv, void *ctx, int revents) {
         errno = 0;
         memset(readbuf, 0, sizeof(readbuf));
         siz = read(hctx->fd, readbuf, b);
+        DEBUG_LOG("sdsx", "recv from server fd:", hctx->fd,
+                  ", size:", siz);
         if (siz > 0) {
             if (hctx->state == MOD_WEBSOCKET_STATE_CONNECTED) {
 
@@ -720,11 +722,13 @@ SUBREQUEST_FUNC(_handle_subrequest) {
                 break;
             }
             if (!chunkqueue_is_empty(hctx->tosrv)) {
+                DEBUG_LOG("sdsx", "send to server fd:", hctx->fd,
+                          ", size:", chunkqueue_length(hctx->tosrv));
                 ret = srv->NETWORK_BACKEND_WRITE(srv, con, hctx->fd, hctx->tosrv);
                 if (0 <= ret) {
                     chunkqueue_remove_finished_chunks(hctx->tosrv);
                 } else {
-                    DEBUG_LOG("ss", "can't send data to server",
+                    DEBUG_LOG("ss", "can't send data to backend:",
                               strerror(errno));
                     break;
                 }
@@ -752,6 +756,9 @@ SUBREQUEST_FUNC(_handle_subrequest) {
                 if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
 
 #ifdef	USE_OPENSSL
+                    DEBUG_LOG("sdsx",
+                              "[SSL]send to client fd:", hctx->con->ssl,
+                              ", size:", chunkqueue_length(hctx->tocli));
                     ret = srv->NETWORK_SSL_BACKEND_WRITE(srv, con,
                                                          hctx->con->ssl,
                                                          hctx->tocli);
@@ -760,13 +767,15 @@ SUBREQUEST_FUNC(_handle_subrequest) {
 #endif	/* USE_OPENSSL */
 
                 } else {
+                    DEBUG_LOG("sdsx", "send to client fd:", hctx->con->fd,
+                              ", size:", chunkqueue_length(hctx->tocli));
                     ret = srv->NETWORK_BACKEND_WRITE(srv, con, hctx->con->fd,
                                                      hctx->tocli);
                 }
                 if (0 <= ret) {
                     chunkqueue_remove_finished_chunks(hctx->tocli);
                 } else {
-                    DEBUG_LOG("ss", "can't send data to client",
+                    DEBUG_LOG("ss", "can't send data to client:",
                               strerror(errno));
                     _tcp_server_disconnect(hctx);
                     break;
@@ -823,12 +832,17 @@ TRIGGER_FUNC(_handle_trigger) {
             if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
 
 # ifdef	USE_OPENSSL
+                DEBUG_LOG("sdsx",
+                          "[SSL]send to client fd:", hctx->con->ssl,
+                          ", size:", chunkqueue_length(hctx->tocli));
                 srv->NETWORK_SSL_BACKEND_WRITE(srv, con,
                                                hctx->con->ssl,
                                                hctx->tocli);
 # endif	/* USE_OPENSSL */
 
             } else {
+                DEBUG_LOG("sdsx", "send to client fd:", hctx->con->fd,
+                          ", size:", chunkqueue_length(hctx->tocli));
                 srv->NETWORK_BACKEND_WRITE(srv, con, hctx->con->fd,
                                            hctx->tocli);
             }

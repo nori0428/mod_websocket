@@ -494,6 +494,8 @@ mod_websocket_frame_recv_test() {
 
     fprintf(stderr, "check recv\n");
     memset(&hctx, 0, sizeof(hctx));
+    hctx.fd = 1;
+    con.fd = 2;
     hctx.tosrv = chunkqueue_init();
     hctx.tocli = chunkqueue_init();
     con.read_queue = hctx.tocli;

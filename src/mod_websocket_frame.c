@@ -309,18 +309,23 @@ mod_websocket_frame_send(handler_ctx *hctx,
     switch (type) {
     case MOD_WEBSOCKET_FRAME_TYPE_TEXT:
         c = (char)(0x80 | MOD_WEBSOCKET_OPCODE_TEXT);
+        DEBUG_LOG("s", "type == text");
         break;
     case MOD_WEBSOCKET_FRAME_TYPE_BIN:
         c = (char)(0x80 | MOD_WEBSOCKET_OPCODE_BIN);
+        DEBUG_LOG("s", "type == binary");
         break;
     case MOD_WEBSOCKET_FRAME_TYPE_PING:
         c = (char) (0x80 | MOD_WEBSOCKET_OPCODE_PING);
+        DEBUG_LOG("s", "type == ping");
         break;
     case MOD_WEBSOCKET_FRAME_TYPE_PONG:
         c = (char)(0x80 | MOD_WEBSOCKET_OPCODE_PONG);
+        DEBUG_LOG("s", "type == pong");
         break;
     case MOD_WEBSOCKET_FRAME_TYPE_CLOSE:
     default:
+        DEBUG_LOG("s", "type == close");
         c = (char)(0x80 | MOD_WEBSOCKET_OPCODE_CLOSE);
         break;
     }
@@ -337,6 +342,7 @@ mod_websocket_frame_send(handler_ctx *hctx,
         return -1;
     }
 
+    DEBUG_LOG("sx", "payload size:", siz);
     memset(len, 0, sizeof(len));
     if (siz < MOD_WEBSOCKET_FRAME_LEN16) {
         len[0] = siz;
@@ -418,6 +424,7 @@ mod_websocket_frame_send(handler_ctx *hctx,
         DEBUG_LOG("s", "no memory");
         buffer_reset(b);
     }
+    DEBUG_LOG("sx", "frame size:", b->used - 1);
     return ret;
 }
 
@@ -471,6 +478,8 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
         }
     }
     chunkqueue_reset(hctx->con->read_queue);
+    DEBUG_LOG("sdsx", "recv from client fd:", hctx->con->fd,
+              ", size:", frame->used);
 
     /* get payload from frame */
     payload = hctx->frame.payload;
@@ -481,19 +490,24 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
             hctx->frame.ctl.opcode = frame->ptr[i] & 0x0f;
             if (hctx->frame.ctl.opcode == MOD_WEBSOCKET_OPCODE_TEXT) {
                 hctx->frame.type = MOD_WEBSOCKET_FRAME_TYPE_TEXT;
+                DEBUG_LOG("s", "type == text");
             }
             if (hctx->frame.ctl.opcode == MOD_WEBSOCKET_OPCODE_BIN) {
                 hctx->frame.type = MOD_WEBSOCKET_FRAME_TYPE_BIN;
+                DEBUG_LOG("s", "type == binary");
             }
             if (hctx->frame.ctl.opcode == MOD_WEBSOCKET_OPCODE_PING) {
                 hctx->frame.type = MOD_WEBSOCKET_FRAME_TYPE_PING;
+                DEBUG_LOG("s", "type == ping");
             }
             if (hctx->frame.ctl.opcode == MOD_WEBSOCKET_OPCODE_PONG) {
                 hctx->frame.type = MOD_WEBSOCKET_FRAME_TYPE_PONG;
+                DEBUG_LOG("s", "type == pong");
             }
             if (hctx->frame.ctl.opcode == MOD_WEBSOCKET_OPCODE_CLOSE) {
                 buffer_free(frame);
                 buffer_reset(payload);
+                DEBUG_LOG("s", "type == close");
                 return -1;
             }
             hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_LENGTH;
@@ -502,6 +516,7 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
             hctx->frame.ctl.mask_flag = ((frame->ptr[i] & 0x80) == 0x80);
             hctx->frame.ctl.siz = frame->ptr[i] & 0x7f;
             if (hctx->frame.ctl.siz == 0) {
+                DEBUG_LOG("s", "no payload");
                 switch (hctx->frame.type) {
                 case MOD_WEBSOCKET_FRAME_TYPE_TEXT:
                 case MOD_WEBSOCKET_FRAME_TYPE_BIN:
@@ -535,7 +550,7 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
 #if (SIZEOF_SIZE_T == 4)
             } else if (hctx->frame.ctl.siz == MOD_WEBSOCKET_FRAME_LEN63) {
                 /* too large */
-                DEBUG_LOG("s", "cant handle 63bits length frame");
+                DEBUG_LOG("s", "can't handle 63bits length frame");
                 buffer_free(frame);
                 buffer_reset(payload);
                 return -1;
@@ -546,10 +561,12 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                 hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_EX_LENGTH;
 #endif
             }else {
+                DEBUG_LOG("sx", "specified payload size:", hctx->frame.ctl.siz);
                 if (hctx->frame.ctl.mask_flag) {
                     hctx->frame.ctl.mask_cnt = 0;
                     hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_MASK;
                 } else { // TODO: disc, client must mask payload
+                    DEBUG_LOG("s", "payload was not masked");
                     hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_PAYLOAD;
                 }
             }
@@ -562,6 +579,7 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                  hctx->frame.ctl.ex_siz_cnt == MOD_WEBSOCKET_FRAME_LEN16_CNT) ||
                 (hctx->frame.ctl.siz == MOD_WEBSOCKET_FRAME_LEN63 &&
                  hctx->frame.ctl.ex_siz_cnt == MOD_WEBSOCKET_FRAME_LEN63_CNT)) {
+                DEBUG_LOG("sx", "specified payload size:", hctx->frame.ctl.ex_siz);
                 hctx->frame.ctl.mask_cnt = 0;
                 hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_MASK;
             }
