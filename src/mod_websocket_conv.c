@@ -24,13 +24,13 @@ mod_websocket_conv(UConverter *to, UConverter *from,
     if (srcsiz == 0) {
         return -1;
     }
-    if (to == NULL) {
+    if (!to) {
         *dst = (char *)malloc(srcsiz + 1);
         if (*dst == NULL) {
             return -1;
         }
-        memset(*dst, 0, srcsiz + 1);
         memcpy(*dst, src, srcsiz);
+        (*dst)[srcsiz] = '\0';
         *dstsiz = srcsiz;
         return 0;
     }
@@ -42,7 +42,6 @@ mod_websocket_conv(UConverter *to, UConverter *from,
     if (!unibuf) {
         return -1;
     }
-    memset(unibuf, 0, sizeof(UChar) * unisiz + 1);
     punibuf = unibuf;
     ucnv_toUnicode(from, &punibuf, punibuf + unisiz,
                    &src, src + srcsiz, 0, 0, &err);
@@ -50,15 +49,15 @@ mod_websocket_conv(UConverter *to, UConverter *from,
         free(unibuf);
         return -1;
     }
+    *punibuf = '\0';
     *dstsiz = (punibuf - unibuf) * ucnv_getMaxCharSize(to);
     *dst = (char *)malloc(*dstsiz + 1);
     if (!*dst) {
         free(unibuf);
         return -1;
     }
-    memset(*dst, 0, *dstsiz + 1);
-    ppunibuf = unibuf;
     pdst = *dst;
+    ppunibuf = unibuf;
     ucnv_fromUnicode(to, &pdst, pdst + *dstsiz,
                      (const UChar **)&ppunibuf, punibuf, 0, 0, &err);
     free(unibuf);
