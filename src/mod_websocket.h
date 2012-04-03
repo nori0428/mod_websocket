@@ -182,9 +182,6 @@ typedef enum {
 #if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
     defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
 typedef struct {
-    unsigned char rsv;
-    unsigned char opcode;
-    mod_websocket_bool_t mask_flag;
     unsigned char mask[MOD_WEBSOCKET_MASK_CNT];
     int mask_cnt;
     size_t siz;

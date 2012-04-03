@@ -493,14 +493,13 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
             hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_LENGTH;
             break;
         case MOD_WEBSOCKET_FRAME_STATE_READ_LENGTH:
-            hctx->frame.ctl.mask_flag = ((frame->ptr[i] & 0x80) == 0x80);
-            hctx->frame.ctl.mask_cnt = 0;
-            if (!hctx->frame.ctl.mask_flag) {
+            if ((frame->ptr[i] & 0x80) != 0x80) {
                 DEBUG_LOG("s", "payload was not masked");
                 buffer_free(frame);
                 buffer_reset(payload);
                 return -1;
             }
+            hctx->frame.ctl.mask_cnt = 0;
             hctx->frame.ctl.siz = frame->ptr[i] & 0x7f;
             hctx->frame.ctl.ex_siz = 0;
             if (hctx->frame.ctl.siz == 0) {
