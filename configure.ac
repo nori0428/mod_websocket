@@ -16,7 +16,7 @@ AC_PROG_CC
 AC_CHECK_HEADERS([stdlib.h string.h unicode/ucnv.h unicode/ucsdet.h CUnit/CUnit.h CUnit/Basic.h])
 
 # Checks for libraries.
-CFLAGS="$CFLAGS -I/usr/local/include/ -I/opt/local/include/"
+CFLAGS="-g -I/usr/local/include/ -I/opt/local/include/"
 LDFLAGS="$LDFLAGS -L/usr/local/lib/ -L/opt/local/lib/"
 LIBS="-licui18n -licuuc"
 AC_CHECK_LIB(ev, ev_io_start, has_libev=yes, AC_MSG_ERROR([cant test mod_websocket]))

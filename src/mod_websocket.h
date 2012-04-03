@@ -188,7 +188,7 @@ typedef struct {
     unsigned char mask[MOD_WEBSOCKET_MASK_CNT];
     int mask_cnt;
     size_t siz;
-    size_t ex_siz;
+    uint64_t ex_siz;
     int ex_siz_cnt;
 } mod_websocket_frame_control_t;
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_SPEC_RFC_6455_ */

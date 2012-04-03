@@ -4,6 +4,7 @@
  */
 
 #include <string.h>
+#include <stdint.h>
 
 #include "mod_websocket.h"
 
@@ -463,101 +464,75 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
     for (i = 0; i < frame->used; i++) {
         switch (hctx->frame.state) {
         case MOD_WEBSOCKET_FRAME_STATE_INIT:
-            hctx->frame.ctl.rsv = frame->ptr[i] & 0x70;
-            hctx->frame.ctl.opcode = frame->ptr[i] & 0x0f;
-            if (hctx->frame.ctl.opcode == MOD_WEBSOCKET_OPCODE_TEXT) {
+            switch (frame->ptr[i] & 0x0f) {
+            case MOD_WEBSOCKET_OPCODE_TEXT:
                 hctx->frame.type = MOD_WEBSOCKET_FRAME_TYPE_TEXT;
                 DEBUG_LOG("s", "type == text");
-            }
-            if (hctx->frame.ctl.opcode == MOD_WEBSOCKET_OPCODE_BIN) {
+                break;
+            case MOD_WEBSOCKET_OPCODE_BIN:
                 hctx->frame.type = MOD_WEBSOCKET_FRAME_TYPE_BIN;
                 DEBUG_LOG("s", "type == binary");
-            }
-            if (hctx->frame.ctl.opcode == MOD_WEBSOCKET_OPCODE_PING) {
+                break;
+            case MOD_WEBSOCKET_OPCODE_PING:
                 hctx->frame.type = MOD_WEBSOCKET_FRAME_TYPE_PING;
                 DEBUG_LOG("s", "type == ping");
-            }
-            if (hctx->frame.ctl.opcode == MOD_WEBSOCKET_OPCODE_PONG) {
+                break;
+            case MOD_WEBSOCKET_OPCODE_PONG:
                 hctx->frame.type = MOD_WEBSOCKET_FRAME_TYPE_PONG;
                 DEBUG_LOG("s", "type == pong");
-            }
-            if (hctx->frame.ctl.opcode == MOD_WEBSOCKET_OPCODE_CLOSE) {
+                break;
+            case MOD_WEBSOCKET_OPCODE_CLOSE:
+            default:
+                hctx->frame.type = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
                 buffer_free(frame);
                 buffer_reset(payload);
                 DEBUG_LOG("s", "type == close");
                 return -1;
+                break;
             }
             hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_LENGTH;
             break;
         case MOD_WEBSOCKET_FRAME_STATE_READ_LENGTH:
             hctx->frame.ctl.mask_flag = ((frame->ptr[i] & 0x80) == 0x80);
-            hctx->frame.ctl.siz = frame->ptr[i] & 0x7f;
-            if (hctx->frame.ctl.siz == 0) {
-                DEBUG_LOG("s", "no payload");
-                switch (hctx->frame.type) {
-                case MOD_WEBSOCKET_FRAME_TYPE_TEXT:
-                case MOD_WEBSOCKET_FRAME_TYPE_BIN:
-                    hctx->frame.ctl.mask_cnt = 0;
-                    hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_MASK;
-                    break;
-                case MOD_WEBSOCKET_FRAME_TYPE_PING:
-                    mod_websocket_frame_send(hctx,
-                                             MOD_WEBSOCKET_FRAME_TYPE_PONG,
-                                             NULL, 0);
-                    hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
-                    buffer_free(frame);
-                    buffer_reset(payload);
-                    return 0;
-                case MOD_WEBSOCKET_FRAME_TYPE_PONG:
-                    hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
-                    buffer_free(frame);
-                    buffer_reset(payload);
-                    return 0;
-                default:
-                    DEBUG_LOG("s", "BUG: unknown state");
-                    buffer_free(frame);
-                    buffer_reset(payload);
-                    return -1;
-                }
-
-            } else if (hctx->frame.ctl.siz == MOD_WEBSOCKET_FRAME_LEN16) {
-                hctx->frame.ctl.ex_siz = 0;
-                hctx->frame.ctl.ex_siz_cnt = 0;
-                hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_EX_LENGTH;
-#if (SIZEOF_SIZE_T == 4)
-            } else if (hctx->frame.ctl.siz == MOD_WEBSOCKET_FRAME_LEN63) {
-                /* too large */
-                DEBUG_LOG("s", "can't handle 63bits length frame");
+            hctx->frame.ctl.mask_cnt = 0;
+            if (!hctx->frame.ctl.mask_flag) {
+                DEBUG_LOG("s", "payload was not masked");
                 buffer_free(frame);
                 buffer_reset(payload);
                 return -1;
-#elif (SIZEOF_SIZE_T == 8)
-            } else if (hctx->frame.ctl.siz == MOD_WEBSOCKET_FRAME_LEN63) {
-                hctx->frame.ctl.ex_siz = 0;
-                hctx->frame.ctl.ex_siz_cnt = 0;
+            }
+            hctx->frame.ctl.siz = frame->ptr[i] & 0x7f;
+            hctx->frame.ctl.ex_siz = 0;
+            if (hctx->frame.ctl.siz == 0) {
+                DEBUG_LOG("sx",
+                          "specified payload size:", hctx->frame.ctl.siz);
+                hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_MASK;
+            } else if (hctx->frame.ctl.siz == MOD_WEBSOCKET_FRAME_LEN16) {
+                hctx->frame.ctl.ex_siz_cnt = MOD_WEBSOCKET_FRAME_LEN16_CNT;
                 hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_EX_LENGTH;
-#endif
-            }else {
-                DEBUG_LOG("sx", "specified payload size:", hctx->frame.ctl.siz);
-                if (hctx->frame.ctl.mask_flag) {
-                    hctx->frame.ctl.mask_cnt = 0;
-                    hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_MASK;
-                } else { // TODO: disc, client must mask payload
-                    DEBUG_LOG("s", "payload was not masked");
-                    hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_PAYLOAD;
-                }
+            } else if (hctx->frame.ctl.siz == MOD_WEBSOCKET_FRAME_LEN63) {
+                hctx->frame.ctl.ex_siz_cnt = MOD_WEBSOCKET_FRAME_LEN63_CNT;
+                hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_EX_LENGTH;
+            } else {
+                DEBUG_LOG("sx",
+                          "specified payload size:", hctx->frame.ctl.siz);
+                hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_MASK;
             }
             break;
         case MOD_WEBSOCKET_FRAME_STATE_READ_EX_LENGTH:
             hctx->frame.ctl.ex_siz =
                 (hctx->frame.ctl.ex_siz << 8) + (frame->ptr[i] & 0xff);
-            hctx->frame.ctl.ex_siz_cnt++;
-            if ((hctx->frame.ctl.siz == MOD_WEBSOCKET_FRAME_LEN16 &&
-                 hctx->frame.ctl.ex_siz_cnt == MOD_WEBSOCKET_FRAME_LEN16_CNT) ||
-                (hctx->frame.ctl.siz == MOD_WEBSOCKET_FRAME_LEN63 &&
-                 hctx->frame.ctl.ex_siz_cnt == MOD_WEBSOCKET_FRAME_LEN63_CNT)) {
-                DEBUG_LOG("sx", "specified payload size:", hctx->frame.ctl.ex_siz);
-                hctx->frame.ctl.mask_cnt = 0;
+            hctx->frame.ctl.ex_siz_cnt--;
+            if (hctx->frame.ctl.ex_siz_cnt <= 0) {
+                if (hctx->frame.ctl.ex_siz > SIZE_MAX) {
+                    DEBUG_LOG("sxs",
+                              "can't handle over", SIZE_MAX, "length");
+                    buffer_free(frame);
+                    buffer_reset(payload);
+                    return -1;
+                }
+                DEBUG_LOG("sllx",
+                          "specified payload size:", hctx->frame.ctl.ex_siz);
                 hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_MASK;
             }
             break;
@@ -565,7 +540,11 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
             hctx->frame.ctl.mask[hctx->frame.ctl.mask_cnt] = frame->ptr[i];
             hctx->frame.ctl.mask_cnt++;
             if (hctx->frame.ctl.mask_cnt >= MOD_WEBSOCKET_MASK_CNT) {
-                hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_PAYLOAD;
+                if (hctx->frame.ctl.siz == 0) {
+                    hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
+                } else {
+                    hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_PAYLOAD;
+                }
             }
             break;
         case MOD_WEBSOCKET_FRAME_STATE_READ_PAYLOAD:
@@ -585,9 +564,7 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                 (hctx->frame.ctl.siz == MOD_WEBSOCKET_FRAME_LEN63 &&
                  hctx->frame.ctl.ex_siz == payload->used)) {
                 hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
-                if (hctx->frame.ctl.mask_flag) { // XXX
-                    unmask_payload(hctx);
-                }
+                unmask_payload(hctx);
                 switch (hctx->frame.type) {
                 case MOD_WEBSOCKET_FRAME_TYPE_TEXT:
 
@@ -684,10 +661,14 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                     buffer_reset(payload);
                     break;
                 case MOD_WEBSOCKET_FRAME_TYPE_PONG:
-                case MOD_WEBSOCKET_FRAME_TYPE_CLOSE:
-                default:
                     buffer_reset(payload);
                     break;
+                case MOD_WEBSOCKET_FRAME_TYPE_CLOSE:
+                default:
+                    DEBUG_LOG("s", "BUG: invalid state");
+                    buffer_free(frame);
+                    buffer_reset(payload);
+                    return -1;
                 }
             }
             break;
