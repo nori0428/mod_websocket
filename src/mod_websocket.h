@@ -72,6 +72,7 @@
 # define	MOD_WEBSOCKET_FRAME_LEN16_CNT	(2)
 # define	MOD_WEBSOCKET_FRAME_LEN63_CNT	(8)
 # define	MOD_WEBSOCKET_MASK_CNT		(4)
+# define	MOD_WEBSOCKET_BUFMAX		(0xfffff)
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
 #define	MOD_WEBSOCKET_UTF8_STR			"UTF-8"
@@ -184,9 +185,8 @@ typedef enum {
 typedef struct {
     unsigned char mask[MOD_WEBSOCKET_MASK_CNT];
     int mask_cnt;
-    size_t siz;
-    uint64_t ex_siz;
-    int ex_siz_cnt;
+    uint64_t siz;
+    int siz_cnt;
 } mod_websocket_frame_control_t;
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
@@ -227,14 +227,17 @@ typedef struct {
     /* fd and fd_idx to backend */
     int fd, fd_idx;
 
-    /* ref */
-    server      *srv;	/* server */
-    connection  *con;	/* connection */
-    data_array  *ext;	/* extention */
-    plugin_data *pd;	/* config */
+    /* mbuf for server */
+    chunkqueue  *tosrv;		/* chunkqueue to server */
 
-    chunkqueue  *tosrv;	/* chunkqueue to server */
-    chunkqueue  *tocli;	/* chunkqueue to client */
+    /* ref */
+    server      *srv;		/* server */
+    connection  *con;		/* connection */
+    data_array  *ext;		/* extention */
+    plugin_data *pd;		/* config */
+
+    chunkqueue  *fromcli;	/* chunkqueue from client */
+    chunkqueue  *tocli;		/* chunkqueue to client */
 } handler_ctx;
 
 /* prototypes */

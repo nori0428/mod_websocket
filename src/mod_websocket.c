@@ -80,6 +80,7 @@ handler_ctx *_handler_ctx_init(void) {
 
     hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
     hctx->frame.payload = buffer_init();
+    hctx->tosrv = chunkqueue_init();
 
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
     hctx->cnv = NULL;
@@ -93,7 +94,7 @@ handler_ctx *_handler_ctx_init(void) {
     hctx->ext = NULL;
     hctx->pd = NULL;
 
-    hctx->tosrv = NULL;
+    hctx->fromcli = NULL;
     hctx->tocli = NULL;
 
     return hctx;
@@ -109,6 +110,7 @@ void _handler_ctx_free(handler_ctx *hctx) {
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
     buffer_free(hctx->frame.payload);
+    chunkqueue_free(hctx->tosrv);
 
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
     mod_websocket_conv_final(hctx->cnv);
@@ -443,7 +445,6 @@ int _dispatch_request(server *srv, connection *con, plugin_data *p) {
             }
         }
     }
-
 #undef PATCH
     if (!p->conf.exts) {
         return -1;
@@ -491,7 +492,7 @@ handler_t _check_request(server *srv, connection *con, void *p_d) {
     hctx->con = con;
     hctx->ext = ext;
     hctx->pd = p;
-    hctx->tosrv = con->read_queue;
+    hctx->fromcli = con->read_queue;
     hctx->tocli = con->write_queue;
     return HANDLER_GO_ON;
 }
@@ -680,13 +681,15 @@ SUBREQUEST_FUNC(_handle_subrequest) {
         if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
 
 #ifdef	USE_OPENSSL
-            ret = srv->NETWORK_SSL_BACKEND_WRITE(srv, con, hctx->con->ssl, hctx->tocli);
+            ret = srv->NETWORK_SSL_BACKEND_WRITE(srv, con,
+                                                 hctx->con->ssl, hctx->tocli);
 #else	/* SSL is not available */
             ret = -1;
 #endif	/* USE_OPENSSL */
 
         } else {
-            ret = srv->NETWORK_BACKEND_WRITE(srv, con, hctx->con->fd, hctx->tocli);
+            ret = srv->NETWORK_BACKEND_WRITE(srv, con,
+                                             hctx->con->fd, hctx->tocli);
         }
         if (0 <= ret) {
             chunkqueue_remove_finished_chunks(hctx->tocli);
@@ -700,7 +703,7 @@ SUBREQUEST_FUNC(_handle_subrequest) {
             return HANDLER_FINISHED;
         }
         if (chunkqueue_is_empty(hctx->tocli)) {
-            chunkqueue_reset(hctx->tosrv);
+            chunkqueue_reset(hctx->fromcli);
             hctx->state = MOD_WEBSOCKET_STATE_CONNECTED;
         }
         connection_set_state(srv, hctx->con, CON_STATE_READ_CONTINUOUS);
@@ -724,11 +727,12 @@ SUBREQUEST_FUNC(_handle_subrequest) {
             if (!chunkqueue_is_empty(hctx->tosrv)) {
                 DEBUG_LOG("sdsx", "send to server fd:", hctx->fd,
                           ", size:", chunkqueue_length(hctx->tosrv));
-                ret = srv->NETWORK_BACKEND_WRITE(srv, con, hctx->fd, hctx->tosrv);
+                ret = srv->NETWORK_BACKEND_WRITE(srv, con,
+                                                 hctx->fd, hctx->tosrv);
                 if (0 <= ret) {
                     chunkqueue_remove_finished_chunks(hctx->tosrv);
                 } else {
-                    DEBUG_LOG("ss", "can't send data to backend:",
+                    DEBUG_LOG("ss", "can't send data to server:",
                               strerror(errno));
                     break;
                 }
@@ -742,12 +746,12 @@ SUBREQUEST_FUNC(_handle_subrequest) {
 
 #ifdef	USE_OPENSSL
                 srv->NETWORK_SSL_BACKEND_WRITE(srv, con,
-                                               hctx->con->ssl,
-                                               hctx->tocli);
+                                               hctx->con->ssl, hctx->tocli);
 #endif	/* USE_OPENSSL */
 
             } else {
-                srv->NETWORK_BACKEND_WRITE(srv, con, hctx->con->fd, hctx->tocli);
+                srv->NETWORK_BACKEND_WRITE(srv, con,
+                                           hctx->con->fd, hctx->tocli);
             }
             chunkqueue_remove_finished_chunks(hctx->tocli);
             break;
@@ -769,7 +773,8 @@ SUBREQUEST_FUNC(_handle_subrequest) {
                 } else {
                     DEBUG_LOG("sdsx", "send to client fd:", hctx->con->fd,
                               ", size:", chunkqueue_length(hctx->tocli));
-                    ret = srv->NETWORK_BACKEND_WRITE(srv, con, hctx->con->fd,
+                    ret = srv->NETWORK_BACKEND_WRITE(srv, con,
+                                                     hctx->con->fd,
                                                      hctx->tocli);
                 }
                 if (0 <= ret) {
@@ -798,8 +803,9 @@ SUBREQUEST_FUNC(_handle_subrequest) {
         return HANDLER_WAIT_FOR_EVENT;
         break;
     }
-    chunkqueue_reset(hctx->tocli);
     chunkqueue_reset(hctx->tosrv);
+    chunkqueue_reset(hctx->fromcli);
+    chunkqueue_reset(hctx->tocli);
     connection_set_state(srv, con, CON_STATE_CLOSE);
     _handler_ctx_free(hctx);
     con->plugin_ctx[p->id] = NULL;
