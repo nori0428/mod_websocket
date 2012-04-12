@@ -383,7 +383,7 @@ mod_websocket_frame_send_test() {
     siz = ((b->ptr[2] & 0xff) << 8) + (b->ptr[3] & 0xff);
     if (siz != sizeof(buf)) {
         CU_FAIL("extend payload length invalid");
-        fprintf(stderr, "%u\n", siz);
+        fprintf(stderr, "%lu\n", (long unsigned int)siz);
     }
     CU_ASSERT_EQUAL(memcmp(b->ptr + 4, buf, sizeof(buf)), 0);
     buffer_free(b);
@@ -419,7 +419,7 @@ mod_websocket_frame_send_test() {
     siz = ((b->ptr[2] & 0xff) << 8) + (b->ptr[3] & 0xff);
     if (siz != sizeof(buf)) {
         CU_FAIL("extend payload length invalid");
-        fprintf(stderr, "%u\n", siz);
+        fprintf(stderr, "%u\n", (long unsigned int)siz);
     }
     CU_ASSERT_EQUAL(memcmp(b->ptr + 4, buf, sizeof(buf)), 0);
     buffer_free(b);
@@ -752,7 +752,8 @@ _recv_short_chunk_test(char type, uint64_t ex_len) {
     int exp_type;
     uint64_t bex_len = ex_len;
 
-    fprintf(stderr, "check: payload size: 0x%llx\n", ex_len);
+    fprintf(stderr, "check: payload size: 0x%llx\n",
+            (long long unsigned int)ex_len);
     if (type == MOD_WEBSOCKET_OPCODE_TEXT ||
         type == MOD_WEBSOCKET_OPCODE_CLOSE) {
         for (i = 0; i < MAX_READ_LIMIT; i++) {
@@ -1292,7 +1293,8 @@ _recv_short_chunk_test_2(char type, uint64_t ex_len) {
     int exp_type;
     uint64_t bex_len = ex_len;
 
-    fprintf(stderr, "check: payload size: 0x%llx\n", ex_len);
+    fprintf(stderr, "check: payload size: 0x%llx\n",
+            (long long unsigned int)ex_len);
     if (type == MOD_WEBSOCKET_OPCODE_TEXT ||
         type == MOD_WEBSOCKET_OPCODE_CLOSE) {
         for (i = 0; i < MAX_READ_LIMIT; i++) {
@@ -1682,7 +1684,8 @@ _recv_long_chunk_test(char type, uint64_t ex_len) {
     int exp_type;
     uint64_t bex_len = ex_len;
 
-    fprintf(stderr, "check: payload size: 0x%llx\n", ex_len);
+    fprintf(stderr, "check: payload size: 0x%llx\n",
+            (long long unsigned int)ex_len);
     if (type == MOD_WEBSOCKET_OPCODE_TEXT ||
         type == MOD_WEBSOCKET_OPCODE_CLOSE) {
         for (i = 0; i < MAX_READ_LIMIT; i++) {
@@ -2019,7 +2022,8 @@ _recv_long_chunk_test_2(char type, uint64_t ex_len) {
     int exp_type;
     uint64_t bex_len = ex_len;
 
-    fprintf(stderr, "check: payload size: 0x%llx\n", ex_len);
+    fprintf(stderr, "check: payload size: 0x%llx\n",
+            (long long unsigned int)ex_len);
     if (type == MOD_WEBSOCKET_OPCODE_TEXT ||
         type == MOD_WEBSOCKET_OPCODE_CLOSE) {
         for (i = 0; i < MAX_READ_LIMIT; i++) {

@@ -518,7 +518,8 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                         memset(u64str, 0, sizeof(u64str));
                         snprintf(u64str, sizeof(u64str) - 1,
                                  "specified payload size: 0x%llx",
-                                 hctx->frame.ctl.siz);
+                                 (long long unsigned int)hctx->frame.ctl.siz &
+                                 UINT64_MAX);
                         DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "s", u64str);
                     }
                     hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_MASK;
@@ -546,27 +547,35 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                 i++;
                 break;
             case MOD_WEBSOCKET_FRAME_STATE_READ_PAYLOAD:
-                if (hctx->frame.ctl.siz <= (frame->used - i - 1)) {
+                /* hctx->frame.ctl.siz <= SIZE_MAX */
+                if (hctx->frame.ctl.siz <= (uint64_t)(frame->used - i - 1)) {
                     DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
-                              "sx", "got payload:", hctx->frame.ctl.siz);
+                              "sx", "got payload size:", hctx->frame.ctl.siz);
                     ret = buffer_append_memory(payload, &frame->ptr[i],
-                                               hctx->frame.ctl.siz);
-                    i += hctx->frame.ctl.siz;
+                                               (size_t)(hctx->frame.ctl.siz &
+                                                        SIZE_MAX));
+                    i += (size_t)(hctx->frame.ctl.siz & SIZE_MAX);
                     hctx->frame.ctl.siz = 0;
                     hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
                     DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
-                              "sx", "rest of frame:", frame->used - i - 1);
+                              "sx", "rest of frame size:", frame->used - i - 1);
+                /* SIZE_MAX < hctx->frame.ctl.siz */
                 } else {
                     DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
-                              "sx", "got short payload:",
+                              "sx", "got short payload size:",
                               frame->used - i - 1);
                     ret = buffer_append_memory(payload, &frame->ptr[i],
                                                frame->used - i - 1);
-                    hctx->frame.ctl.siz -= (frame->used - i - 1);
+                    hctx->frame.ctl.siz -= (uint64_t)(frame->used - i - 1);
                     i += (frame->used - i - 1);
-                    DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
-                              "sx", "rest of payload:",
-                              hctx->frame.ctl.siz);
+                    if (hctx->pd->conf.debug > MOD_WEBSOCKET_LOG_DEBUG) {
+                        memset(u64str, 0, sizeof(u64str));
+                        snprintf(u64str, sizeof(u64str) - 1,
+                                 "rest of payload size: 0x%llx",
+                                 (long long unsigned int)hctx->frame.ctl.siz &
+                                 UINT64_MAX);
+                        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "s", u64str);
+                    }
                 }
                 if (ret != 0) {
                     DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
