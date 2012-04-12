@@ -358,7 +358,7 @@ handler_t _handle_fdevent(server *srv, void *ctx, int revents) {
 
     if (revents & FDEVENT_NVAL) {
         DEBUG_LOG("sdsd",
-                  "fd is not open(NVAL): fd(srv) =", hctx->fd,
+                  "recv NVAL event: fd(srv) =", hctx->fd,
                   "fd(cli) =", hctx->con->fd);
         _tcp_server_disconnect(hctx);
     } else if (revents & FDEVENT_IN) {
@@ -373,7 +373,8 @@ handler_t _handle_fdevent(server *srv, void *ctx, int revents) {
         errno = 0;
         memset(readbuf, 0, sizeof(readbuf));
         siz = read(hctx->fd, readbuf, b);
-        DEBUG_LOG("sdsx", "recv from server fd:", hctx->fd,
+        DEBUG_LOG("sdsx",
+                  "recv from server fd:", hctx->fd,
                   ", size:", siz);
         if (siz > 0) {
             if (hctx->state == MOD_WEBSOCKET_STATE_CONNECTED) {
@@ -403,10 +404,14 @@ handler_t _handle_fdevent(server *srv, void *ctx, int revents) {
                     _tcp_server_disconnect(hctx);
                 }
             }
-        } else if (errno != EAGAIN) {
+        } else if (errno != EAGAIN && errno != EINTR) {
+            DEBUG_LOG("ss", "can't read from server:", strerror(errno));
             _tcp_server_disconnect(hctx);
         }
     } else if (revents & FDEVENT_HUP || revents & FDEVENT_ERR) {
+        DEBUG_LOG("sdsd",
+                  "recv HUP or ERR event: fd(srv) =", hctx->fd,
+                  "fd(cli) =", hctx->con->fd);
         _tcp_server_disconnect(hctx);
     }
     return _handle_subrequest(srv, hctx->con, hctx->pd);

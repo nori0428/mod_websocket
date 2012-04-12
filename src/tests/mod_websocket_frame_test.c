@@ -2650,6 +2650,7 @@ main() {
 
     suite = CU_add_suite("mod_websocket_frame_suite", NULL, NULL);
     CU_ADD_TEST(suite, mod_websocket_frame_send_test);
+
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
     CU_ADD_TEST(suite, mod_websocket_frame_recv_test);
 #endif
@@ -2662,6 +2663,7 @@ main() {
     CU_ADD_TEST(suite, mod_websocket_frame_recv_long_chunk_test_2);
     CU_ADD_TEST(suite, mod_websocket_frame_recv_continue_test);
 #endif
+
     CU_basic_run_tests();
     ret = CU_get_number_of_failures();
     if (ret != 0) {
