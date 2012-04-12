@@ -33,21 +33,22 @@ mod_websocket_frame_send(handler_ctx *hctx,
     }
     b = chunkqueue_get_append_buffer(hctx->tocli);
     if (!b) {
-        DEBUG_LOG("s", "no memory");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
         return -1;
     }
     switch (type) {
     case MOD_WEBSOCKET_FRAME_TYPE_TEXT:
         ret = buffer_append_memory(b, (const char *)&head, 1);
         if (ret != 0) {
-            DEBUG_LOG("s", "no memory");
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
             break;
         }
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
         ret = mod_websocket_conv_to_client(hctx->cnv,
                                            &enc, &encsiz, payload, siz);
         if (ret != 0) {
-            DEBUG_LOG("s", "failed to convert char encodings");
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+                      "s", "failed to convert char encodings");
             break;
         }
         ret = buffer_append_memory(b, enc, encsiz);
@@ -57,24 +58,24 @@ mod_websocket_frame_send(handler_ctx *hctx,
         ret = buffer_append_memory(b, payload, siz);
 #endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
         if (ret != 0) {
-            DEBUG_LOG("s", "no memory");
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
             break;
         }
 
         ret = buffer_append_memory(b, (const char *)&tail, 1);
         if (ret != 0) {
-            DEBUG_LOG("s", "no memory");
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
         }
         break;
     case MOD_WEBSOCKET_FRAME_TYPE_CLOSE:
         ret = buffer_append_memory(b, (const char *)cfrm, sizeof(cfrm));
         if (ret != 0) {
-            DEBUG_LOG("s", "no memory");
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
         }
         break;
     default:
         ret = -1;
-        DEBUG_LOG("s", "not support type");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "not support type");
         break;
     }
     if (ret != 0) {
@@ -84,7 +85,7 @@ mod_websocket_frame_send(handler_ctx *hctx,
     /* lighty needs additional char to send */
     ret = buffer_append_memory(b, &additional, 1);
     if (ret != 0) {
-        DEBUG_LOG("s", "no memory");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
         chunkqueue_reset(hctx->tocli);
     }
     return ret;
@@ -115,14 +116,14 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
         if (NULL == frame) {
             frame = buffer_init();
             if (!frame) {
-                DEBUG_LOG("s", "no memory");
+                DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
                 chunkqueue_reset(hctx->con->read_queue);
                 return -1;
             }
         }
         ret = buffer_append_memory(frame, c->mem->ptr, c->mem->used - 1);
         if (ret != 0) {
-            DEBUG_LOG("s", "no memory");
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
             buffer_free(frame);
             chunkqueue_reset(hctx->con->read_queue);
             return -1;
@@ -137,7 +138,8 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
             if (0x00 == frame->ptr[i]) {
                 hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_PAYLOAD;
             } else {
-                DEBUG_LOG("s", "recv closing or invalid frame");
+                DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO,
+                          "s", "recv closing or invalid frame");
                 buffer_free(frame);
                 buffer_reset(payload);
                 return -1;
@@ -151,7 +153,7 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                 if (mod_websocket_conv_isUTF8(payload->ptr,
                                               payload->used) !=
                     MOD_WEBSOCKET_TRUE) {
-                    DEBUG_LOG("s", "recv not UTF-8");
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "recv not UTF-8");
                     buffer_free(frame);
                     buffer_reset(payload);
                     return -1;
@@ -162,21 +164,22 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                                                    payload->used);
                 buffer_reset(payload);
                 if (ret != 0) {
-                    DEBUG_LOG("s", "fail to convert chars");
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+                              "s", "fail to convert chars");
                     buffer_free(frame);
                     free(enc);
                     return -1;
                 }
                 b = chunkqueue_get_append_buffer(hctx->tosrv);
                 if (!b) {
-                    DEBUG_LOG("s", "no memory");
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
                     buffer_free(frame);
                     free(enc);
                     return -1;
                 }
                 ret = buffer_append_memory(b, enc, encsiz);
                 if (ret != 0) {
-                    DEBUG_LOG("s", "no memory");
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
                     buffer_free(frame);
                     free(enc);
                     return -1;
@@ -185,14 +188,14 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
 #else
                 b = chunkqueue_get_append_buffer(hctx->tosrv);
                 if (!b) {
-                    DEBUG_LOG("s", "no memory");
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,"s", "no memory");
                     buffer_free(frame);
                     buffer_reset(payload);
                     return -1;
                 }
                 ret = buffer_append_memory(b, payload->ptr, payload->used);
                 if (ret != 0) {
-                    DEBUG_LOG("s", "no memory");
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
                     buffer_free(frame);
                     buffer_reset(payload);
                     return -1;
@@ -203,7 +206,7 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                 /* lighty needs additional char to send */
                 ret = buffer_append_memory(b, &additional, 1);
                 if (ret != 0) {
-                    DEBUG_LOG("s", "no memory");
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
                     buffer_free(frame);
                     chunkqueue_reset(hctx->tosrv);
                     return -1;
@@ -211,7 +214,7 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
             } else {
                 ret = buffer_append_memory(payload, &frame->ptr[i], 1);
                 if (ret != 0) {
-                    DEBUG_LOG("s", "no memory");
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
                     hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
                     buffer_free(frame);
                     buffer_reset(payload);
@@ -219,7 +222,7 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                 }
             }
         } else { /* never reach */
-            DEBUG_LOG("s", "BUG: unknown state");
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,"s", "BUG: unknown state");
             buffer_free(frame);
             buffer_reset(payload);
             return -1;
@@ -253,46 +256,47 @@ mod_websocket_frame_send(handler_ctx *hctx,
     }
     b = chunkqueue_get_append_buffer(hctx->tocli);
     if (!b) {
-        DEBUG_LOG("s", "no memory");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
         return -1;
     }
     switch (type) {
     case MOD_WEBSOCKET_FRAME_TYPE_TEXT:
         c = (char)(0x80 | MOD_WEBSOCKET_OPCODE_TEXT);
-        DEBUG_LOG("s", "type: text");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "s", "type: text");
         break;
     case MOD_WEBSOCKET_FRAME_TYPE_BIN:
         c = (char)(0x80 | MOD_WEBSOCKET_OPCODE_BIN);
-        DEBUG_LOG("s", "type: binary");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "s", "type: binary");
         break;
     case MOD_WEBSOCKET_FRAME_TYPE_PING:
         c = (char) (0x80 | MOD_WEBSOCKET_OPCODE_PING);
-        DEBUG_LOG("s", "type: ping");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "s", "type: ping");
         break;
     case MOD_WEBSOCKET_FRAME_TYPE_PONG:
         c = (char)(0x80 | MOD_WEBSOCKET_OPCODE_PONG);
-        DEBUG_LOG("s", "type: pong");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "s", "type: pong");
         break;
     case MOD_WEBSOCKET_FRAME_TYPE_CLOSE:
     default:
-        DEBUG_LOG("s", "type: close");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "s", "type: close");
         c = (char)(0x80 | MOD_WEBSOCKET_OPCODE_CLOSE);
         break;
     }
     ret = buffer_append_memory(b, &c, 1);
     if (ret != 0) {
-        DEBUG_LOG("s", "no memory");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
         buffer_reset(b);
         return -1;
     }
 
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
     if (type == MOD_WEBSOCKET_FRAME_TYPE_TEXT && siz > 0) {
-        DEBUG_LOG("sx", "payload size (before convert):", siz);
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
+                  "sx", "payload size (before convert):", siz);
         ret = mod_websocket_conv_to_client(hctx->cnv,
                                            &enc, &encsiz, payload, siz);
         if (ret != 0) {
-            DEBUG_LOG("s", "fail to convert encoding");
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "fail to convert encoding");
             buffer_reset(b);
             return -1;
         }
@@ -300,7 +304,7 @@ mod_websocket_frame_send(handler_ctx *hctx,
     }
 #endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
 
-    DEBUG_LOG("sx", "payload size:", siz);
+    DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "sx", "payload size:", siz);
     memset(len, 0, sizeof(len));
     if (siz < MOD_WEBSOCKET_FRAME_LEN16) {
         len[0] = siz;
@@ -319,7 +323,7 @@ mod_websocket_frame_send(handler_ctx *hctx,
         ret = buffer_append_memory(b, len, MOD_WEBSOCKET_FRAME_LEN63 + 1);
     }
     if (ret != 0) {
-        DEBUG_LOG("s", "no memory");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
 
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
         if (enc) {
@@ -335,11 +339,11 @@ mod_websocket_frame_send(handler_ctx *hctx,
         /* lighty needs additional char to send */
         ret = buffer_append_memory(b, &additional, 1);
         if (ret != 0) {
-            DEBUG_LOG("s", "no memory");
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
             buffer_reset(b);
             return -1;
         }
-        DEBUG_LOG("sx", "frame size:", b->used - 1);
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "sx", "frame size:", b->used - 1);
         return 0;
     }
 
@@ -348,7 +352,7 @@ mod_websocket_frame_send(handler_ctx *hctx,
         ret = buffer_append_memory(b, enc, siz);
         free(enc);
         if (ret != 0) {
-            DEBUG_LOG("s", "no memory");
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
             buffer_reset(b);
             return -1;
         }
@@ -358,7 +362,7 @@ mod_websocket_frame_send(handler_ctx *hctx,
     {
         ret = buffer_append_memory(b, payload, siz);
         if (ret != 0) {
-            DEBUG_LOG("s", "no memory");
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
             buffer_reset(b);
             return -1;
         }
@@ -367,10 +371,10 @@ mod_websocket_frame_send(handler_ctx *hctx,
     /* lighty needs additional char to send */
     ret = buffer_append_memory(b, &additional, 1);
     if (ret != 0) {
-        DEBUG_LOG("s", "no memory");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
         buffer_reset(b);
     }
-    DEBUG_LOG("sx", "frame size:", b->used - 1);
+    DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "sx", "frame size:", b->used - 1);
     return ret;
 }
 
@@ -422,7 +426,7 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
             case MOD_WEBSOCKET_FRAME_STATE_INIT:
                 switch (frame->ptr[i] & 0x0f) {
                 case MOD_WEBSOCKET_OPCODE_CONT:
-                    DEBUG_LOG("s", "type: continue");
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO, "s", "type: continue");
                     hctx->frame.type = hctx->frame.type_before;
                     break;
                 case MOD_WEBSOCKET_OPCODE_TEXT:
@@ -442,29 +446,33 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                 case MOD_WEBSOCKET_OPCODE_CLOSE:
                     hctx->frame.type = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
                     chunkqueue_reset(hctx->fromcli);
-                    DEBUG_LOG("ss", "type:", typestr[hctx->frame.type]);
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO,
+                              "ss", "type:", typestr[hctx->frame.type]);
                     return -1;
                     break;
                 default:
                     chunkqueue_reset(hctx->fromcli);
-                    DEBUG_LOG("s", "type: invalid");
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "type: invalid");
                     return -1;
                     break;
                 }
-                DEBUG_LOG("ss", "type:", typestr[hctx->frame.type]);
+                DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO,
+                          "ss", "type:", typestr[hctx->frame.type]);
                 i++;
                 hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_LENGTH;
                 break;
             case MOD_WEBSOCKET_FRAME_STATE_READ_LENGTH:
                 if ((frame->ptr[i] & 0x80) != 0x80) {
-                    DEBUG_LOG("s", "payload was not masked");
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+                              "s", "payload was not masked");
                     chunkqueue_reset(hctx->fromcli);
                     return -1;
                 }
                 hctx->frame.ctl.mask_cnt = 0;
                 hctx->frame.ctl.siz = (uint64_t)(frame->ptr[i] & 0x7f);
                 if (hctx->frame.ctl.siz == 0) {
-                    DEBUG_LOG("sx", "specified payload size:",
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
+                              "sx", "specified payload size:",
                               hctx->frame.ctl.siz);
                     hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_MASK;
                 } else if (hctx->frame.ctl.siz == MOD_WEBSOCKET_FRAME_LEN16) {
@@ -478,7 +486,8 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                     hctx->frame.state =
                         MOD_WEBSOCKET_FRAME_STATE_READ_EX_LENGTH;
                 } else {
-                    DEBUG_LOG("sx", "specified payload size:",
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
+                              "sx", "specified payload size:",
                               hctx->frame.ctl.siz);
                     hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_MASK;
                 }
@@ -499,17 +508,18 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                         hctx->frame.ctl.siz > MOD_WEBSOCKET_BUFMAX) {
 #endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
 
-                        DEBUG_LOG("sx", "can't handle over",
+                        DEBUG_LOG(MOD_WEBSOCKET_LOG_WARNING,
+                                  "sx", "can't handle over",
                                   MOD_WEBSOCKET_BUFMAX);
                         chunkqueue_reset(hctx->fromcli);
                         return -1;
                     }
-                    if (hctx->pd->conf.debug) {
+                    if (hctx->pd->conf.debug > MOD_WEBSOCKET_LOG_DEBUG) {
                         memset(u64str, 0, sizeof(u64str));
                         snprintf(u64str, sizeof(u64str) - 1,
                                  "specified payload size: 0x%llx",
                                  hctx->frame.ctl.siz);
-                        DEBUG_LOG("s", u64str);
+                        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "s", u64str);
                     }
                     hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_MASK;
                 }
@@ -537,25 +547,29 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                 break;
             case MOD_WEBSOCKET_FRAME_STATE_READ_PAYLOAD:
                 if (hctx->frame.ctl.siz <= (frame->used - i - 1)) {
-                    DEBUG_LOG("sx", "got payload:", hctx->frame.ctl.siz);
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
+                              "sx", "got payload:", hctx->frame.ctl.siz);
                     ret = buffer_append_memory(payload, &frame->ptr[i],
                                                hctx->frame.ctl.siz);
                     i += hctx->frame.ctl.siz;
                     hctx->frame.ctl.siz = 0;
                     hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
-                    DEBUG_LOG("sx", "rest of frame:", frame->used - i - 1);
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
+                              "sx", "rest of frame:", frame->used - i - 1);
                 } else {
-                    DEBUG_LOG("sx", "got short payload:",
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
+                              "sx", "got short payload:",
                               frame->used - i - 1);
                     ret = buffer_append_memory(payload, &frame->ptr[i],
                                                frame->used - i - 1);
                     hctx->frame.ctl.siz -= (frame->used - i - 1);
                     i += (frame->used - i - 1);
-                    DEBUG_LOG("sx", "rest of payload:",
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
+                              "sx", "rest of payload:",
                               hctx->frame.ctl.siz);
                 }
                 if (ret != 0) {
-                    DEBUG_LOG("s", "no memory");
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
                     hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
                     chunkqueue_reset(hctx->fromcli);
                     buffer_reset(payload);
@@ -570,7 +584,8 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                         if (mod_websocket_conv_isUTF8(payload->ptr,
                                                       payload->used) !=
                             MOD_WEBSOCKET_TRUE) {
-                            DEBUG_LOG("s", "recv non UTF-8");
+                            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+                                      "s", "recv non UTF-8");
                             buffer_reset(payload);
                             return -1;
                         }
@@ -579,28 +594,29 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                                                            payload->ptr,
                                                            payload->used);
                         if (ret != 0) {
-                            DEBUG_LOG("s", "fail to convert chars");
+                            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+                                      "s", "fail to convert chars");
                             buffer_reset(payload);
                             return -1;
                         }
                         buffer_reset(payload);
                         b = chunkqueue_get_append_buffer(hctx->tosrv);
                         if (!b) {
-                            DEBUG_LOG("s", "no memory");
+                            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
                             free(enc);
                             return -1;
                         }
                         ret = buffer_append_memory(b, enc, encsiz);
                         free(enc);
                         if (ret != 0) {
-                            DEBUG_LOG("s", "no memory");
+                            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
                             buffer_reset(payload);
                             return -1;
                         }
                         /* lighty needs additional char to send */
                         ret = buffer_append_memory(b, &additional, 1);
                         if (ret != 0) {
-                            DEBUG_LOG("s", "no memory");
+                            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
                             chunkqueue_reset(hctx->tosrv);
                             return -1;
                         }
@@ -614,7 +630,7 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                     unmask_payload(hctx);
                     b = chunkqueue_get_append_buffer(hctx->tosrv);
                     if (!b) {
-                        DEBUG_LOG("s", "no memory");
+                        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
                         chunkqueue_reset(hctx->fromcli);
                         buffer_reset(payload);
                         return -1;
@@ -622,14 +638,14 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                     ret = buffer_append_memory(b, payload->ptr, payload->used);
                     buffer_reset(payload);
                     if (ret != 0) {
-                        DEBUG_LOG("s", "no memory");
+                        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
                         chunkqueue_reset(hctx->fromcli);
                         return -1;
                     }
                     /* lighty needs additional char to send */
                     ret = buffer_append_memory(b, &additional, 1);
                     if (ret != 0) {
-                        DEBUG_LOG("s", "no memory");
+                        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
                         chunkqueue_reset(hctx->tosrv);
                         return -1;
                     }
@@ -648,14 +664,14 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                     break;
                 case MOD_WEBSOCKET_FRAME_TYPE_CLOSE:
                 default:
-                    DEBUG_LOG("s", "BUG: invalid state");
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "BUG: invalid state");
                     chunkqueue_reset(hctx->fromcli);
                     buffer_reset(payload);
                     return -1;
                 }
                 break;
             default:
-                DEBUG_LOG("s", "BUG: unknown state");
+                DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "BUG: unknown state");
                 chunkqueue_reset(hctx->fromcli);
                 buffer_reset(payload);
                 return -1;

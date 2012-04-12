@@ -49,7 +49,7 @@ mod_websocket_frame_send_test() {
 
     fprintf(stderr, "check send\n");
     memset(&hctx, 0, sizeof(hctx));
-    pd.conf.debug = 1;
+    pd.conf.debug =  MOD_WEBSOCKET_LOG_DEBUG + 1;
     hctx.pd = &pd;
 
     hctx.tocli = chunkqueue_init();
@@ -492,7 +492,7 @@ mod_websocket_frame_recv_test() {
     hctx.con = &con;
     hctx.frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
     hctx.frame.payload = buffer_init();
-    pd.conf.debug = 1;
+    pd.conf.debug =  MOD_WEBSOCKET_LOG_DEBUG + 1;
     hctx.pd = &pd;
 
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
@@ -805,7 +805,7 @@ _recv_short_chunk_test(char type, uint64_t ex_len) {
     hctx.frame.type = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
     hctx.frame.type_before = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
     hctx.frame.payload = buffer_init();
-    pd.conf.debug = 1;
+    pd.conf.debug =  MOD_WEBSOCKET_LOG_DEBUG + 1;
     hctx.pd = &pd;
 
     b = chunkqueue_get_append_buffer(con.read_queue);
@@ -1345,7 +1345,7 @@ _recv_short_chunk_test_2(char type, uint64_t ex_len) {
     hctx.frame.type = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
     hctx.frame.type_before = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
     hctx.frame.payload = buffer_init();
-    pd.conf.debug = 1;
+    pd.conf.debug =  MOD_WEBSOCKET_LOG_DEBUG + 1;
     hctx.pd = &pd;
 
     b = chunkqueue_get_append_buffer(con.read_queue);
@@ -1517,7 +1517,7 @@ _recv_short_chunk_test_2(char type, uint64_t ex_len) {
     while (ex_len > 0) {
         b = chunkqueue_get_append_buffer(con.read_queue);
         if (ex_len < MAX_READ_LIMIT) { // lighty's MAX_READ_LIMIT
-            pd.conf.debug = 1;
+            pd.conf.debug =  MOD_WEBSOCKET_LOG_DEBUG + 1;
             /* gets 1 byte short payload */
             buffer_append_memory(b, pmask_data, ex_len - 1);
             buffer_append_memory(b, &additional, 1);
@@ -1735,7 +1735,7 @@ _recv_long_chunk_test(char type, uint64_t ex_len) {
     hctx.frame.type = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
     hctx.frame.type_before = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
     hctx.frame.payload = buffer_init();
-    pd.conf.debug = 1;
+    pd.conf.debug =  MOD_WEBSOCKET_LOG_DEBUG + 1;
     hctx.pd = &pd;
 
     b = chunkqueue_get_append_buffer(con.read_queue);
@@ -1895,7 +1895,7 @@ _recv_long_chunk_test(char type, uint64_t ex_len) {
 
     while (ex_len > 0) {
         if (ex_len < MAX_READ_LIMIT) { // lighty's MAX_READ_LIMIT
-            pd.conf.debug = 1;
+            pd.conf.debug =  MOD_WEBSOCKET_LOG_DEBUG + 1;
             /* gets 1 byte short payload */
             buffer_append_memory(b, pmask_data, ex_len);
             /* append next frame header */
@@ -2072,7 +2072,7 @@ _recv_long_chunk_test_2(char type, uint64_t ex_len) {
     hctx.frame.type = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
     hctx.frame.type_before = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
     hctx.frame.payload = buffer_init();
-    pd.conf.debug = 1;
+    pd.conf.debug =  MOD_WEBSOCKET_LOG_DEBUG + 1;
     hctx.pd = &pd;
 
     b = chunkqueue_get_append_buffer(con.read_queue);
@@ -2235,7 +2235,7 @@ _recv_long_chunk_test_2(char type, uint64_t ex_len) {
 
     while (ex_len > 0) {
         if (ex_len < MAX_READ_LIMIT) { // lighty's MAX_READ_LIMIT
-            pd.conf.debug = 1;
+            pd.conf.debug =  MOD_WEBSOCKET_LOG_DEBUG + 1;
             /* gets 1 byte short payload */
             buffer_append_memory(b, pmask_data, ex_len);
             buffer_append_memory(b, &additional, 1);
@@ -2351,7 +2351,6 @@ mod_websocket_frame_recv_continue_test() {
     connection con;
     plugin_data pd;
     int ret;
-    chunk *c = NULL;
     buffer *b = NULL;
     const char additional = 0x00;
     unsigned char ctl;
@@ -2387,7 +2386,7 @@ mod_websocket_frame_recv_continue_test() {
     hctx.frame.type = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
     hctx.frame.type_before = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
     hctx.frame.payload = buffer_init();
-    pd.conf.debug = 1;
+    pd.conf.debug =  MOD_WEBSOCKET_LOG_DEBUG + 1;
     hctx.pd = &pd;
 
     b = chunkqueue_get_append_buffer(con.read_queue);

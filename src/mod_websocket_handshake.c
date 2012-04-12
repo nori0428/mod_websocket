@@ -15,7 +15,8 @@
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
 # include "md5.h"
 
-# if defined (LIGHTTPD_VERSION_ID) && (LIGHTTPD_VERSION_ID >= (1 << 16 | 4 << 8 | 29))
+# if defined (LIGHTTPD_VERSION_ID) && \
+    (LIGHTTPD_VERSION_ID >= (1 << 16 | 4 << 8 | 29))
 typedef li_MD5_CTX MD5_CTX;
 
 #  define	MD5_Init	li_MD5_Init
@@ -106,7 +107,8 @@ get_key3(handler_ctx *hctx) {
         if (ret > 0 && pfd.revents & POLLIN) {
             siz = read(hctx->con->fd, key3, SEC_WEBSOCKET_KEY3_STRLEN);
             if (siz != SEC_WEBSOCKET_KEY3_STRLEN) {
-                DEBUG_LOG("ss", "read error:", strerror(errno));
+                DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+                          "ss", "read error:", strerror(errno));
                 return -1;
             }
             ret = buffer_copy_string_len(hctx->handshake.key3, key3,
@@ -259,23 +261,27 @@ is_allowed_origin(handler_ctx *hctx) {
                                                   MOD_WEBSOCKET_CONFIG_ORIGINS);
     if (!cfg_origins ||
         !cfg_origins->value || !cfg_origins->value->used) {
-        DEBUG_LOG("s", "allowed origins are not specified");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO,
+                  "s", "allowed origins are not specified");
         return MOD_WEBSOCKET_TRUE;
     }
     allowed_origins = cfg_origins->value;
     if (!hctx->handshake.origin) {
-        DEBUG_LOG("s", "request has no origin");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+                  "s", "request has no origin");
         return MOD_WEBSOCKET_FALSE;
     }
     for (i = allowed_origins->used; i > 0; i--) {
         allowed_origin = (data_string *)allowed_origins->data[i - 1];
         if (NULL != strstr(hctx->handshake.origin->ptr,
                            allowed_origin->value->ptr)) {
-            DEBUG_LOG("ss", "allowed origin:", hctx->handshake.origin->ptr);
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO,
+                      "ss", "allowed origin:", hctx->handshake.origin->ptr);
             return MOD_WEBSOCKET_TRUE;
         }
     }
-    DEBUG_LOG("ss", "not allowed origin:", hctx->handshake.origin->ptr);
+    DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+              "ss", "not allowed origin:", hctx->handshake.origin->ptr);
     return MOD_WEBSOCKET_FALSE;
 }
 
@@ -296,23 +302,27 @@ replace_extension(handler_ctx *hctx) {
         if (buffer_is_empty(subproto)) {
             if (da_subproto->is_index_key) {
                 hctx->ext = (data_array *)da_subproto;
-                DEBUG_LOG("s", "found extension w/o subproto");
+                DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO,
+                          "s", "found extension w/o subproto");
                 return 0;
             }
         } else {
             if (!buffer_is_empty(da_subproto->key) &&
                 strstr(subproto->ptr, da_subproto->key->ptr) != NULL) {
                 hctx->ext = (data_array *)da_subproto;
-                DEBUG_LOG("ss", "found subproto extension:",
+                DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO,
+                          "ss", "found subproto extension:",
                           hctx->handshake.subproto->ptr);
                 return 0;
             }
         }
     }
     if (buffer_is_empty(subproto)) {
-        DEBUG_LOG("s", "not found extension w/o subproto");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+                  "s", "not found extension w/o subproto");
     } else {
-        DEBUG_LOG("ss", "not found subproto extension:",
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+                  "ss", "not found subproto extension:",
                   hctx->handshake.subproto->ptr);
     }
     return -1;
@@ -396,18 +406,21 @@ mod_websocket_handshake_check_request(handler_ctx *hctx) {
         strstr(con->ptr, UPGRADE_STR) == NULL ||
         buffer_is_empty(upgrade) ||
         !buffer_is_equal_string(upgrade, CONST_STR_LEN(WEBSOCKET_STR))) {
-        DEBUG_LOG("s", "not found WebSocket specific headers");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+                  "s", "not found WebSocket specific headers");
         return MOD_WEBSOCKET_NOT_WEBSOCKET;
     }
     if (buffer_is_empty(handshake->host)) {
-        DEBUG_LOG("s", "not found HOST header");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+                  "s", "not found HOST header");
         return MOD_WEBSOCKET_BAD_REQUEST;
     }
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
     if (buffer_is_empty(handshake->key1) || buffer_is_empty(handshake->key2) ||
         get_key3(hctx) < 0) {
-        DEBUG_LOG("s", "not found Sec-WebSocket-Key{1,2,3} header");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+                  "s", "not found Sec-WebSocket-Key{1,2,3} header");
         return MOD_WEBSOCKET_BAD_REQUEST;
     }
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
@@ -415,13 +428,15 @@ mod_websocket_handshake_check_request(handler_ctx *hctx) {
 #if defined _MOD_WEBSOCKET_SPEC_IETF_08_ || \
     defined _MOD_WEBSOCKET_SPEC_RFC_6455_
     if (buffer_is_empty(handshake->key)) {
-        DEBUG_LOG("s", "not found Sec-WebSocket-Key header");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+                  "s", "not found Sec-WebSocket-Key header");
         return MOD_WEBSOCKET_BAD_REQUEST;
     }
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
 
     if (buffer_is_empty(handshake->origin)) {
-        DEBUG_LOG("s", "not found Origin header");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+                  "s", "not found Origin header");
         return MOD_WEBSOCKET_BAD_REQUEST;
     }
 
@@ -498,6 +513,8 @@ mod_websocket_handshake_create_response(handler_ctx *hctx) {
 # ifdef	USE_OPENSSL
         buffer_append_string(resp, WSS_SCHEME_STR);
 # else	/* SSL is not available */
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+                  "s", "wss scheme is not available");
         return MOD_WEBSOCKET_BAD_REQUEST;
 # endif	/* USE_OPENSSL */
 
@@ -514,6 +531,8 @@ mod_websocket_handshake_create_response(handler_ctx *hctx) {
     /* Sec-WebSocket-Accept header */
     memset(accept_body, 0, sizeof(accept_body));
     if (create_accept_body(accept_body, hctx) < 0) {
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+                  "s", "invalid Sec-WebSocket-Key");
         return MOD_WEBSOCKET_BAD_REQUEST;
     }
     buffer_append_string(resp, SEC_WEBSOCKET_ACCEPT_STR ": ");
@@ -527,6 +546,8 @@ mod_websocket_handshake_create_response(handler_ctx *hctx) {
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
     /* MD5 sum in body */
     if (create_MD5_sum(md5sum, hctx) < 0) {
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+                  "s", "invalid Sec-WebSocket-Key");
         return MOD_WEBSOCKET_BAD_REQUEST;
     }
     buffer_append_string_len(resp, (char *)md5sum, MD5_STRLEN);

@@ -247,42 +247,43 @@ int _tcp_server_connect(handler_ctx *hctx) {
 
     du = array_get_element(hctx->ext->value, MOD_WEBSOCKET_CONFIG_HOST);
     if (!du) {
-        DEBUG_LOG("s", "BUG: invalid config");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "BUG: invalid config");
         hctx->con->http_status = MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
         hctx->con->mode = DIRECT;
         return -1;
     }
     host = ((data_string *)du)->value;
     if (!host) {
-        DEBUG_LOG("s", "BUG: invalid config");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "BUG: invalid config");
         hctx->con->http_status = MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
         hctx->con->mode = DIRECT;
         return -1;
     }
     du = array_get_element(hctx->ext->value, MOD_WEBSOCKET_CONFIG_PORT);
     if (!du) {
-        DEBUG_LOG("s", "BUG: invalid config");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "BUG: invalid config");
         hctx->con->http_status = MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
         hctx->con->mode = DIRECT;
         return -1;
     }
     port = ((data_string *)du)->value;
     if (!port) {
-        DEBUG_LOG("s", "BUG: invalid config");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "BUG: invalid config");
         hctx->con->http_status = MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
         hctx->con->mode = DIRECT;
         return -1;
     }
     hctx->fd = mod_websocket_tcp_server_connect(host->ptr, port->ptr);
     if (hctx->fd < 0) {
-        DEBUG_LOG("s", "fail to connect backend server");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_WARNING,
+                  "s", "fail to connect backend server");
         hctx->con->http_status = MOD_WEBSOCKET_SERVICE_UNAVAILABLE;
         hctx->con->mode = DIRECT;
         return -1;
     }
     if (setsockopt(hctx->fd, IPPROTO_TCP, TCP_NODELAY,
                    &flag, sizeof(flag)) == -1) {
-        DEBUG_LOG("s", "fail to set TCP_NODELAY");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "fail to set TCP_NODELAY");
         _tcp_server_disconnect(hctx);
         hctx->con->http_status = MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
         hctx->con->mode = DIRECT;
@@ -290,7 +291,7 @@ int _tcp_server_connect(handler_ctx *hctx) {
     }
     if (setsockopt(hctx->con->fd, IPPROTO_TCP, TCP_NODELAY,
                    &flag, sizeof(flag)) == -1) {
-        DEBUG_LOG("s", "fail to set TCP_NODELAY");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "fail to set TCP_NODELAY");
         _tcp_server_disconnect(hctx);
         hctx->con->http_status = MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
         hctx->con->mode = DIRECT;
@@ -307,7 +308,7 @@ int _tcp_server_connect(handler_ctx *hctx) {
     }
     hctx->cnv = mod_websocket_conv_init(locale);
     if (!hctx->cnv) {
-        DEBUG_LOG("s", "no memory");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
         _tcp_server_disconnect(hctx);
         hctx->con->http_status = MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
         hctx->con->mode = DIRECT;
@@ -321,11 +322,13 @@ int _tcp_server_connect(handler_ctx *hctx) {
     fdevent_event_set(hctx->srv->ev, &(hctx->fd_idx), hctx->fd, FDEVENT_IN);
 
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
-    DEBUG_LOG("sdsdssssss", "connected client fd:", hctx->con->fd,
+    DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO,
+              "sdsdssssss", "connected client fd:", hctx->con->fd,
               " -> server fd:", hctx->fd,
               "(", host->ptr, ":", port->ptr, "), locale:", locale);
 #else
-    DEBUG_LOG("sdsdsssss", "connected client fd:", hctx->con->fd,
+    DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO,
+              "sdsdsssss", "connected client fd:", hctx->con->fd,
               " -> server fd:", hctx->fd,
               "(", host->ptr, ":", port->ptr, "), not used locale");
 #endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
@@ -335,7 +338,8 @@ int _tcp_server_connect(handler_ctx *hctx) {
 
 void _tcp_server_disconnect(handler_ctx *hctx) {
     if (hctx->fd > 0) {
-        DEBUG_LOG("sd", "disconnect server:", hctx->fd);
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO,
+                  "sd", "disconnect server:", hctx->fd);
         fdevent_event_del(hctx->srv->ev, &(hctx->fd_idx), hctx->fd);
         fdevent_unregister(hctx->srv->ev, hctx->fd);
         mod_websocket_tcp_server_disconnect(hctx->fd);
@@ -357,13 +361,14 @@ handler_t _handle_fdevent(server *srv, void *ctx, int revents) {
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_RFC_6455_ */
 
     if (revents & FDEVENT_NVAL) {
-        DEBUG_LOG("sdsd",
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+                  "sdsd",
                   "recv NVAL event: fd(srv) =", hctx->fd,
                   "fd(cli) =", hctx->con->fd);
         _tcp_server_disconnect(hctx);
     } else if (revents & FDEVENT_IN) {
         if (ioctl(hctx->fd, FIONREAD, &b)) {
-            DEBUG_LOG("sd", "ioctl failed:", hctx->fd);
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "sd", "ioctl failed:", hctx->fd);
             _tcp_server_disconnect(hctx);
             return _handle_subrequest(srv, hctx->con, hctx->pd);
         }
@@ -373,7 +378,8 @@ handler_t _handle_fdevent(server *srv, void *ctx, int revents) {
         errno = 0;
         memset(readbuf, 0, sizeof(readbuf));
         siz = read(hctx->fd, readbuf, b);
-        DEBUG_LOG("sdsx",
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
+                  "sdsx",
                   "recv from server fd:", hctx->fd,
                   ", size:", siz);
         if (siz > 0) {
@@ -400,16 +406,19 @@ handler_t _handle_fdevent(server *srv, void *ctx, int revents) {
 
                 if (mod_websocket_frame_send(hctx, frame_type,
                                              readbuf, (size_t)siz) < 0) {
-                    DEBUG_LOG("sd", "failed to send frame:", hctx->fd);
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+                              "sd", "failed to send frame:", hctx->fd);
                     _tcp_server_disconnect(hctx);
                 }
             }
         } else if (errno != EAGAIN && errno != EINTR) {
-            DEBUG_LOG("ss", "can't read from server:", strerror(errno));
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+                      "ss", "can't read from server:", strerror(errno));
             _tcp_server_disconnect(hctx);
         }
     } else if (revents & FDEVENT_HUP || revents & FDEVENT_ERR) {
-        DEBUG_LOG("sdsd",
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+                  "sdsd",
                   "recv HUP or ERR event: fd(srv) =", hctx->fd,
                   "fd(cli) =", hctx->con->fd);
         _tcp_server_disconnect(hctx);
@@ -481,7 +490,7 @@ handler_t _check_request(server *srv, connection *con, void *p_d) {
     if (!ext) {
         return HANDLER_GO_ON;
     }
-    if (p->conf.debug) {
+    if (p->conf.debug > MOD_WEBSOCKET_LOG_INFO) {
         log_error_write(srv, __FILE__, __LINE__, "ss",
                         "found extension:", ext->key->ptr);
     }
@@ -510,7 +519,8 @@ handler_t _disconnect(server *srv, connection *con, void *pd) {
 
     srv = srv; // suppress warning
     if (con->plugin_ctx[p->id]) {
-        DEBUG_LOG("sd", "disconnect client:", hctx->con->fd);
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO,
+                  "sd", "disconnect client:", hctx->con->fd);
         if (hctx->fd > 0) {
             _tcp_server_disconnect(hctx);
         }
@@ -701,7 +711,8 @@ SUBREQUEST_FUNC(_handle_subrequest) {
         if (0 <= ret) {
             chunkqueue_remove_finished_chunks(hctx->tocli);
         } else {
-            DEBUG_LOG("ss", "send handshake response error:",
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+                      "ss", "send handshake response error:",
                       strerror(errno));
             _tcp_server_disconnect(hctx);
             chunkqueue_reset(hctx->tocli);
@@ -732,14 +743,16 @@ SUBREQUEST_FUNC(_handle_subrequest) {
                 break;
             }
             if (!chunkqueue_is_empty(hctx->tosrv)) {
-                DEBUG_LOG("sdsx", "send to server fd:", hctx->fd,
+                DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
+                          "sdsx", "send to server fd:", hctx->fd,
                           ", size:", chunkqueue_length(hctx->tosrv));
                 ret = srv->NETWORK_BACKEND_WRITE(srv, con,
                                                  hctx->fd, hctx->tosrv);
                 if (0 <= ret) {
                     chunkqueue_remove_finished_chunks(hctx->tosrv);
                 } else {
-                    DEBUG_LOG("ss", "can't send data to server:",
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+                              "ss", "can't send data to server:",
                               strerror(errno));
                     break;
                 }
@@ -767,7 +780,8 @@ SUBREQUEST_FUNC(_handle_subrequest) {
                 if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
 
 #ifdef	USE_OPENSSL
-                    DEBUG_LOG("sdsx",
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
+                              "sdsx",
                               "[SSL]send to client fd:", hctx->con->ssl,
                               ", size:", chunkqueue_length(hctx->tocli));
                     ret = srv->NETWORK_SSL_BACKEND_WRITE(srv, con,
@@ -778,7 +792,8 @@ SUBREQUEST_FUNC(_handle_subrequest) {
 #endif	/* USE_OPENSSL */
 
                 } else {
-                    DEBUG_LOG("sdsx", "send to client fd:", hctx->con->fd,
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
+                              "sdsx", "send to client fd:", hctx->con->fd,
                               ", size:", chunkqueue_length(hctx->tocli));
                     ret = srv->NETWORK_BACKEND_WRITE(srv, con,
                                                      hctx->con->fd,
@@ -787,7 +802,8 @@ SUBREQUEST_FUNC(_handle_subrequest) {
                 if (0 <= ret) {
                     chunkqueue_remove_finished_chunks(hctx->tocli);
                 } else {
-                    DEBUG_LOG("ss", "can't send data to client:",
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+                              "ss", "can't send data to client:",
                               strerror(errno));
                     _tcp_server_disconnect(hctx);
                     break;
@@ -845,7 +861,8 @@ TRIGGER_FUNC(_handle_trigger) {
             if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
 
 # ifdef	USE_OPENSSL
-                DEBUG_LOG("sdsx",
+                DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
+                          "sdsx",
                           "[SSL]send to client fd:", hctx->con->ssl,
                           ", size:", chunkqueue_length(hctx->tocli));
                 srv->NETWORK_SSL_BACKEND_WRITE(srv, con,
@@ -854,7 +871,8 @@ TRIGGER_FUNC(_handle_trigger) {
 # endif	/* USE_OPENSSL */
 
             } else {
-                DEBUG_LOG("sdsx", "send to client fd:", hctx->con->fd,
+                DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
+                          "sdsx", "send to client fd:", hctx->con->fd,
                           ", size:", chunkqueue_length(hctx->tocli));
                 srv->NETWORK_BACKEND_WRITE(srv, con, hctx->con->fd,
                                            hctx->tocli);
@@ -866,7 +884,8 @@ TRIGGER_FUNC(_handle_trigger) {
 
         if (p->conf.timeout != 0 &&
             srv->cur_ts - hctx->last_access >= (time_t)p->conf.timeout) {
-            DEBUG_LOG("sd", "timeout client:", con->fd);
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO,
+                      "sd", "timeout client:", con->fd);
             mod_websocket_frame_send(hctx, MOD_WEBSOCKET_FRAME_TYPE_CLOSE,
                                      NULL, 0);
             if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {

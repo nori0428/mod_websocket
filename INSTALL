@@ -132,6 +132,15 @@
 
   websocket.ping_interval = 5
 
+  6-6. write log
+       If something wrong, set websocket.debug to write error.log
+
+  websocket.debug = 0
+  # websocket.debug = 1 # LOG_ERR
+  # websocket.debug = 2 # LOG_WARNING
+  # websocket.debug = 3 # LOG_INFO
+  # websocket.debug = 4 # LOG_DEBUG
+
 7. websocket.server section format
    "host"  = STRING          : FQDN or IPAddr [mandatory]
    "service" = STRING        : port number or service name [mandatory]

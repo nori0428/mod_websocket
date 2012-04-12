@@ -47,6 +47,11 @@
 #define	MOD_WEBSOCKET_CONFIG_TIMEOUT		"websocket.timeout"
 #define	MOD_WEBSOCKET_CONFIG_PING_INTERVAL	"websocket.ping_interval"
 
+#define	MOD_WEBSOCKET_LOG_ERR			(0)
+#define	MOD_WEBSOCKET_LOG_WARNING		(1)
+#define	MOD_WEBSOCKET_LOG_INFO			(2)
+#define	MOD_WEBSOCKET_LOG_DEBUG			(3)
+
 #define	MOD_WEBSOCKET_CONFIG_HOST		"host"
 #define	MOD_WEBSOCKET_CONFIG_PORT		"port"
 #define	MOD_WEBSOCKET_CONFIG_SUBPROTO		"subproto"
@@ -85,8 +90,8 @@ typedef unsigned char mod_websocket_bool_t;
 #define	MOD_WEBSOCKET_FALSE			(0)
 #define	MOD_WEBSOCKET_DEFAULT_TIMEOUT_SEC	(30)
 
-#define DEBUG_LOG(format, args...)\
-    if (hctx->pd->conf.debug) {\
+#define DEBUG_LOG(level, format, args...)        \
+    if (hctx->pd->conf.debug > level) {\
         log_error_write(hctx->srv, __FILE__, __LINE__, format, ## args); \
     }
 

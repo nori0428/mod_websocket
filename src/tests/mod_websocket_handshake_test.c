@@ -103,7 +103,7 @@ mod_websocket_handshake_check_request_test() {
     srv_sock.is_ssl = 0;
     con.srv_socket = &srv_sock;
     con.uri.path = buffer_init_string("/");
-    pd.conf.debug = 1;
+    pd.conf.debug = MOD_WEBSOCKET_LOG_DEBUG + 1;
 
     hctx.handshake.host = NULL;
     hctx.handshake.origin = NULL;
@@ -532,7 +532,7 @@ mod_websocket_handshake_create_response_test() {
     srv_sock.is_ssl = 0;
     con.srv_socket = &srv_sock;
     con.uri.path = buffer_init_string("/chat");
-    pd.conf.debug = 1;
+    pd.conf.debug =  MOD_WEBSOCKET_LOG_DEBUG + 1;
 
     hctx.handshake.host = NULL;
     hctx.handshake.origin = NULL;
