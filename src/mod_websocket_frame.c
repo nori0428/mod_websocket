@@ -449,14 +449,17 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
             switch (hctx->frame.state) {
             case MOD_WEBSOCKET_FRAME_STATE_INIT:
                 switch (frame->ptr[i] & 0x0f) {
-                case MOD_WEBSOCKET_OPCODE_CONT: // XXX?
-                    DEBUG_LOG("s", "continue");
+                case MOD_WEBSOCKET_OPCODE_CONT:
+                    DEBUG_LOG("s", "type: continue");
+                    hctx->frame.type = hctx->frame.type_before;
                     break;
                 case MOD_WEBSOCKET_OPCODE_TEXT:
                     hctx->frame.type = MOD_WEBSOCKET_FRAME_TYPE_TEXT;
+                    hctx->frame.type_before = hctx->frame.type;
                     break;
                 case MOD_WEBSOCKET_OPCODE_BIN:
                     hctx->frame.type = MOD_WEBSOCKET_FRAME_TYPE_BIN;
+                    hctx->frame.type_before = hctx->frame.type;
                     break;
                 case MOD_WEBSOCKET_OPCODE_PING:
                     hctx->frame.type = MOD_WEBSOCKET_FRAME_TYPE_PING;
@@ -465,12 +468,14 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                     hctx->frame.type = MOD_WEBSOCKET_FRAME_TYPE_PONG;
                     break;
                 case MOD_WEBSOCKET_OPCODE_CLOSE:
+                    hctx->frame.type = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
                     chunkqueue_reset(hctx->fromcli);
+                    DEBUG_LOG("ss", "type:", typestr[hctx->frame.type]);
                     return -1;
                     break;
                 default:
                     chunkqueue_reset(hctx->fromcli);
-                    DEBUG_LOG("s", "invalid type");
+                    DEBUG_LOG("s", "type: invalid");
                     return -1;
                     break;
                 }

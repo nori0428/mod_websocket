@@ -90,7 +90,8 @@ typedef unsigned char mod_websocket_bool_t;
         log_error_write(hctx->srv, __FILE__, __LINE__, format, ## args); \
     }
 
-#if defined (LIGHTTPD_VERSION_ID) && (LIGHTTPD_VERSION_ID >= (1 << 16 | 4 << 8 | 30))
+#if defined (LIGHTTPD_VERSION_ID) && \
+    (LIGHTTPD_VERSION_ID >= (1 << 16 | 4 << 8 | 30))
 # define	NETWORK_SSL_BACKEND_WRITE(a,b,c,d)\
     network_ssl_backend_write(a, b, c, d, MAX_WRITE_LIMIT)
 # define	NETWORK_BACKEND_WRITE(a,b,c,d)\
@@ -198,7 +199,7 @@ typedef struct {
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
     mod_websocket_frame_state_t state;
-    mod_websocket_frame_type_t type;
+    mod_websocket_frame_type_t type, type_before;
     buffer *payload;
 } mod_websocket_frame_t;
 

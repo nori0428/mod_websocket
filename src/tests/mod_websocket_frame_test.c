@@ -802,6 +802,8 @@ _recv_short_chunk_test(char type, uint64_t ex_len) {
     hctx.tocli = chunkqueue_init();
     hctx.tosrv = chunkqueue_init();
     hctx.frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
+    hctx.frame.type = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
+    hctx.frame.type_before = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
     hctx.frame.payload = buffer_init();
     pd.conf.debug = 1;
     hctx.pd = &pd;
@@ -1340,6 +1342,8 @@ _recv_short_chunk_test_2(char type, uint64_t ex_len) {
     hctx.tocli = chunkqueue_init();
     hctx.tosrv = chunkqueue_init();
     hctx.frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
+    hctx.frame.type = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
+    hctx.frame.type_before = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
     hctx.frame.payload = buffer_init();
     pd.conf.debug = 1;
     hctx.pd = &pd;
@@ -1728,6 +1732,8 @@ _recv_long_chunk_test(char type, uint64_t ex_len) {
     hctx.tocli = chunkqueue_init();
     hctx.tosrv = chunkqueue_init();
     hctx.frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
+    hctx.frame.type = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
+    hctx.frame.type_before = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
     hctx.frame.payload = buffer_init();
     pd.conf.debug = 1;
     hctx.pd = &pd;
@@ -2063,6 +2069,8 @@ _recv_long_chunk_test_2(char type, uint64_t ex_len) {
     hctx.tocli = chunkqueue_init();
     hctx.tosrv = chunkqueue_init();
     hctx.frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
+    hctx.frame.type = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
+    hctx.frame.type_before = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
     hctx.frame.payload = buffer_init();
     pd.conf.debug = 1;
     hctx.pd = &pd;
@@ -2338,6 +2346,160 @@ _recv_long_chunk_test_2(char type, uint64_t ex_len) {
 }
 
 CU_TestFunc
+mod_websocket_frame_recv_continue_test() {
+    handler_ctx hctx;
+    connection con;
+    plugin_data pd;
+    int ret;
+    chunk *c = NULL;
+    buffer *b = NULL;
+    const char additional = 0x00;
+    unsigned char ctl;
+    unsigned char len;
+    const char mask[4] = { 0x11, 0x22, 0x33, 0x44 };
+    char data[MAX_READ_LIMIT], mask_data[MAX_READ_LIMIT];
+    char rnd;
+    size_t i;
+
+    fprintf(stderr, "check: continue frame\n");
+    for (i = 0; i < MAX_READ_LIMIT; i++) {
+        rnd = 'a' + (random() % 26);
+        data[i] = rnd;
+    }
+    memcpy(mask_data, data, sizeof(mask_data));
+    mask_payload(mask_data, sizeof(mask_data), mask);
+
+    memset(&hctx, 0, sizeof(hctx));
+
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
+    hctx.cnv = mod_websocket_conv_init("UTF-8");
+    CU_ASSERT_NOT_EQUAL(NULL, hctx.cnv);
+#endif
+
+    hctx.fd = 1;
+    con.fd = 2;
+    con.read_queue = chunkqueue_init();
+    hctx.con = &con;
+    hctx.fromcli = con.read_queue;
+    hctx.tocli = chunkqueue_init();
+    hctx.tosrv = chunkqueue_init();
+    hctx.frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
+    hctx.frame.type = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
+    hctx.frame.type_before = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
+    hctx.frame.payload = buffer_init();
+    pd.conf.debug = 1;
+    hctx.pd = &pd;
+
+    b = chunkqueue_get_append_buffer(con.read_queue);
+
+    /* create TEXT frame */
+    ctl = 0x80 | MOD_WEBSOCKET_OPCODE_TEXT;
+    buffer_append_memory(b, (char *)&ctl, 1);
+    len = 0x80 | 0x7d;
+    buffer_append_memory(b, (char *)&len, 1);
+    buffer_append_memory(b, (char *)mask, sizeof(mask));
+    buffer_append_memory(b, mask_data, 0x7d);
+    buffer_append_memory(b, &additional, 1);
+
+    ret = mod_websocket_frame_recv(&hctx);
+    CU_ASSERT_EQUAL(ret, 0);
+    CU_ASSERT_EQUAL(hctx.frame.state, MOD_WEBSOCKET_FRAME_STATE_INIT);
+    CU_ASSERT_EQUAL(MOD_WEBSOCKET_FRAME_TYPE_TEXT, hctx.frame.type);
+    CU_ASSERT_EQUAL(MOD_WEBSOCKET_FRAME_TYPE_TEXT, hctx.frame.type_before);
+
+    b = chunkqueue_get_append_buffer(con.read_queue);
+
+    /* create PING frame */
+    ctl = 0x80 | MOD_WEBSOCKET_OPCODE_PING;
+    buffer_append_memory(b, (char *)&ctl, 1);
+    len = 0x80 | 0x7d;
+    buffer_append_memory(b, (char *)&len, 1);
+    buffer_append_memory(b, (char *)mask, sizeof(mask));
+    buffer_append_memory(b, mask_data, 0x7d);
+    buffer_append_memory(b, &additional, 1);
+
+    ret = mod_websocket_frame_recv(&hctx);
+    CU_ASSERT_EQUAL(ret, 0);
+    CU_ASSERT_EQUAL(hctx.frame.state, MOD_WEBSOCKET_FRAME_STATE_INIT);
+    CU_ASSERT_EQUAL(MOD_WEBSOCKET_FRAME_TYPE_PING, hctx.frame.type);
+    CU_ASSERT_EQUAL(MOD_WEBSOCKET_FRAME_TYPE_TEXT, hctx.frame.type_before);
+
+    b = chunkqueue_get_append_buffer(con.read_queue);
+
+    /* create CONTINUE frame */
+    ctl = 0x80 | MOD_WEBSOCKET_OPCODE_CONT;
+    buffer_append_memory(b, (char *)&ctl, 1);
+    len = 0x80 | 0x7d;
+    buffer_append_memory(b, (char *)&len, 1);
+    buffer_append_memory(b, (char *)mask, sizeof(mask));
+    buffer_append_memory(b, mask_data, 0x7d);
+    buffer_append_memory(b, &additional, 1);
+
+    ret = mod_websocket_frame_recv(&hctx);
+    CU_ASSERT_EQUAL(ret, 0);
+    CU_ASSERT_EQUAL(hctx.frame.state, MOD_WEBSOCKET_FRAME_STATE_INIT);
+    CU_ASSERT_EQUAL(MOD_WEBSOCKET_FRAME_TYPE_TEXT, hctx.frame.type);
+    CU_ASSERT_EQUAL(MOD_WEBSOCKET_FRAME_TYPE_TEXT, hctx.frame.type_before);
+
+    b = chunkqueue_get_append_buffer(con.read_queue);
+
+    /* create BINARY frame */
+    ctl = 0x80 | MOD_WEBSOCKET_OPCODE_BIN;
+    buffer_append_memory(b, (char *)&ctl, 1);
+    len = 0x80 | 0x7d;
+    buffer_append_memory(b, (char *)&len, 1);
+    buffer_append_memory(b, (char *)mask, sizeof(mask));
+    buffer_append_memory(b, mask_data, 0x7d);
+    buffer_append_memory(b, &additional, 1);
+
+    ret = mod_websocket_frame_recv(&hctx);
+    CU_ASSERT_EQUAL(ret, 0);
+    CU_ASSERT_EQUAL(hctx.frame.state, MOD_WEBSOCKET_FRAME_STATE_INIT);
+    CU_ASSERT_EQUAL(MOD_WEBSOCKET_FRAME_TYPE_BIN, hctx.frame.type);
+    CU_ASSERT_EQUAL(MOD_WEBSOCKET_FRAME_TYPE_BIN, hctx.frame.type_before);
+
+    b = chunkqueue_get_append_buffer(con.read_queue);
+
+    /* create PONG frame */
+    ctl = 0x80 | MOD_WEBSOCKET_OPCODE_PONG;
+    buffer_append_memory(b, (char *)&ctl, 1);
+    len = 0x80 | 0x7d;
+    buffer_append_memory(b, (char *)&len, 1);
+    buffer_append_memory(b, (char *)mask, sizeof(mask));
+    buffer_append_memory(b, mask_data, 0x7d);
+    buffer_append_memory(b, &additional, 1);
+
+    ret = mod_websocket_frame_recv(&hctx);
+    CU_ASSERT_EQUAL(ret, 0);
+    CU_ASSERT_EQUAL(hctx.frame.state, MOD_WEBSOCKET_FRAME_STATE_INIT);
+    CU_ASSERT_EQUAL(MOD_WEBSOCKET_FRAME_TYPE_PONG, hctx.frame.type);
+    CU_ASSERT_EQUAL(MOD_WEBSOCKET_FRAME_TYPE_BIN, hctx.frame.type_before);
+
+    b = chunkqueue_get_append_buffer(con.read_queue);
+
+    /* create CONTINUE frame */
+    ctl = 0x80 | MOD_WEBSOCKET_OPCODE_CONT;
+    buffer_append_memory(b, (char *)&ctl, 1);
+    len = 0x80 | 0x7d;
+    buffer_append_memory(b, (char *)&len, 1);
+    buffer_append_memory(b, (char *)mask, sizeof(mask));
+    buffer_append_memory(b, mask_data, 0x7d);
+    buffer_append_memory(b, &additional, 1);
+
+    ret = mod_websocket_frame_recv(&hctx);
+    CU_ASSERT_EQUAL(ret, 0);
+    CU_ASSERT_EQUAL(hctx.frame.state, MOD_WEBSOCKET_FRAME_STATE_INIT);
+    CU_ASSERT_EQUAL(MOD_WEBSOCKET_FRAME_TYPE_BIN, hctx.frame.type);
+    CU_ASSERT_EQUAL(MOD_WEBSOCKET_FRAME_TYPE_BIN, hctx.frame.type_before);
+
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
+    mod_websocket_conv_final(hctx.cnv);
+#endif
+
+    return 0;
+}
+
+CU_TestFunc
 mod_websocket_frame_recv_short_chunk_test() {
     int i;
     uint64_t len[] = {
@@ -2498,6 +2660,7 @@ main() {
     CU_ADD_TEST(suite, mod_websocket_frame_recv_short_chunk_test_2);
     CU_ADD_TEST(suite, mod_websocket_frame_recv_long_chunk_test);
     CU_ADD_TEST(suite, mod_websocket_frame_recv_long_chunk_test_2);
+    CU_ADD_TEST(suite, mod_websocket_frame_recv_continue_test);
 #endif
     CU_basic_run_tests();
     ret = CU_get_number_of_failures();

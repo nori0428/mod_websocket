@@ -79,6 +79,8 @@ handler_ctx *_handler_ctx_init(void) {
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_RFC_6455_ */
 
     hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
+    hctx->frame.type = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
+    hctx->frame.type_before = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
     hctx->frame.payload = buffer_init();
     hctx->tosrv = chunkqueue_init();
 
