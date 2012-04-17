@@ -16,7 +16,6 @@ mod_websocket_frame_send(handler_ctx *hctx,
     const char additional = 0x00;
     const unsigned char head = 0x00;
     const unsigned char tail = 0xff;
-    const unsigned char cfrm[2] = { 0xff, 0x00 };
     int ret = -1;
     buffer *b = NULL;
 
@@ -25,10 +24,10 @@ mod_websocket_frame_send(handler_ctx *hctx,
     size_t encsiz = 0;
 #endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
 
-    if (!hctx || (!payload && type != MOD_WEBSOCKET_FRAME_TYPE_CLOSE)) {
+    if (!hctx || (!payload && type == MOD_WEBSOCKET_FRAME_TYPE_TEXT)) {
         return -1;
     }
-    if (!siz && type != MOD_WEBSOCKET_FRAME_TYPE_CLOSE) {
+    if (type == MOD_WEBSOCKET_FRAME_TYPE_TEXT && siz == 0) {
         return 0;
     }
     b = chunkqueue_get_append_buffer(hctx->tocli);
@@ -43,6 +42,7 @@ mod_websocket_frame_send(handler_ctx *hctx,
             DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
             break;
         }
+
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
         ret = mod_websocket_conv_to_client(hctx->cnv,
                                            &enc, &encsiz, payload, siz);
@@ -57,38 +57,46 @@ mod_websocket_frame_send(handler_ctx *hctx,
 #else
         ret = buffer_append_memory(b, payload, siz);
 #endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
+
         if (ret != 0) {
             DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
             break;
         }
-
         ret = buffer_append_memory(b, (const char *)&tail, 1);
         if (ret != 0) {
             DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
+            break;
         }
         break;
     case MOD_WEBSOCKET_FRAME_TYPE_CLOSE:
-        ret = buffer_append_memory(b, (const char *)cfrm, sizeof(cfrm));
+        ret = buffer_append_memory(b, (const char *)&tail, 1);
         if (ret != 0) {
             DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
+            break;
+        }
+        ret = buffer_append_memory(b, (const char *)&head, 1);
+        if (ret != 0) {
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
+            break;
         }
         break;
     default:
-        ret = -1;
         DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "not support type");
+        ret = -1;
         break;
     }
     if (ret != 0) {
         chunkqueue_reset(hctx->tocli);
-        return ret;
+        return -1;
     }
     /* lighty needs additional char to send */
     ret = buffer_append_memory(b, &additional, 1);
     if (ret != 0) {
         DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
         chunkqueue_reset(hctx->tocli);
+        return -1;
     }
-    return ret;
+    return 0;
 }
 
 int
