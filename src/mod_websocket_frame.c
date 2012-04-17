@@ -150,7 +150,7 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                     hctx->frame.ctl.siz += frame->used - i - 1;
                     if (hctx->frame.ctl.siz > MOD_WEBSOCKET_BUFMAX) {
                         DEBUG_LOG(MOD_WEBSOCKET_LOG_WARNING,
-                                  "sx", "frame size has beed exceeded: ",
+                                  "sx", "frame size has beed exceeded:",
                                   MOD_WEBSOCKET_BUFMAX);
                         chunkqueue_reset(hctx->tosrv);
                         chunkqueue_reset(hctx->fromcli);
