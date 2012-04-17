@@ -77,9 +77,9 @@
 # define	MOD_WEBSOCKET_FRAME_LEN16_CNT	(2)
 # define	MOD_WEBSOCKET_FRAME_LEN63_CNT	(8)
 # define	MOD_WEBSOCKET_MASK_CNT		(4)
-# define	MOD_WEBSOCKET_BUFMAX		(0xfffff)
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
+#define	MOD_WEBSOCKET_BUFMAX			(0xfffff)
 #define	MOD_WEBSOCKET_UTF8_STR			"UTF-8"
 #define	MOD_WEBSOCKET_BIN_STR			"bin"
 #define	MOD_WEBSOCKET_PING_STR			"ping"
@@ -186,23 +186,25 @@ typedef enum {
 
 } mod_websocket_frame_type_t;
 
+typedef struct {
+
 #if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
     defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
-typedef struct {
     unsigned char mask[MOD_WEBSOCKET_MASK_CNT];
     int mask_cnt;
-    uint64_t siz;
-    int siz_cnt;
-} mod_websocket_frame_control_t;
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
-typedef struct {
+    uint64_t siz;
 
 #if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
     defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
-    mod_websocket_frame_control_t ctl;
+    int siz_cnt;
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
+} mod_websocket_frame_control_t;
+
+typedef struct {
+    mod_websocket_frame_control_t ctl;
     mod_websocket_frame_state_t state;
     mod_websocket_frame_type_t type, type_before;
     buffer *payload;
