@@ -18,13 +18,33 @@ AC_CHECK_HEADERS([stdlib.h string.h unicode/ucnv.h unicode/ucsdet.h CUnit/CUnit.
 # Checks for libraries.
 CFLAGS="-g -I/usr/local/include/ -I/opt/local/include/"
 LDFLAGS="$LDFLAGS -L/usr/local/lib/ -L/opt/local/lib/"
-LIBS="-licui18n -licuuc"
 AC_CHECK_LIB(ev, ev_io_start, has_libev=yes, AC_MSG_ERROR([cant test mod_websocket]))
 AC_CHECK_LIB(cunit, CU_basic_run_tests, has_libcunit=yes, AC_MSG_ERROR([cant test mod_websocket]))
-AC_MSG_CHECKING([for ucnv_open in -licui18n])
-AC_TRY_LINK([#include <unicode/ucnv.h>], [int err; ucnv_open("utf-8", &err);],
-            AC_MSG_RESULT(yes),
-            [AC_MSG_RESULT(no); AC_MSG_ERROR([needs ICU libs])])
+
+dnl check for icu lib
+AC_MSG_CHECKING(whether --with-libicu option specified)
+AC_ARG_WITH(
+        libicu,
+        AC_HELP_STRING([--with-libicu],
+                       [use ICU lib for websocket@<:@default=yes@:>@]),
+        [ with_icu=$withval ],
+        [ with_icu=yes ])
+AC_MSG_RESULT(${with_icu})
+if test "x${with_icu}" != "xno"; then
+   LIBS="-licui18n -licuuc"
+   AC_MSG_CHECKING([for ucnv_open in -licui18n])
+   AC_TRY_LINK([#include <unicode/ucnv.h>], [UErrorCode err = U_ZERO_ERROR; ucnv_open("utf-8", &err);],
+               AC_MSG_RESULT(yes),
+               [AC_MSG_RESULT(no); AC_MSG_ERROR([needs ICU libs])])
+   WEBSOCKET_ICU_CFLAGS="-D_MOD_WEBSOCKET_WITH_ICU_"
+   WEBSOCKET_ICU_LIBS="-licui18n -licuuc"
+else
+   WEBSOCKET_ICU_CFLAGS=
+   WEBSOCKET_ICU_LIBS=
+fi
+AC_SUBST(WEBSOCKET_ICU_CFLAGS)
+AC_SUBST(WEBSOCKET_ICU_LIBS)
+AM_CONDITIONAL(WITH_LIBICU, test x$with_icu != xno)
 CFLGAS=""
 LDFLAGS=""
 LIBS=""
@@ -48,6 +68,7 @@ AC_FUNC_MALLOC
 AC_CHECK_FUNCS([memset strcasecmp])
 
 CFLAGS="$CFLAGS -g -Werror -W -Wall -Wundef -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wwrite-strings -Wsign-compare -Waggregate-return -Wnested-externs -Wno-long-long -Wunused -Wfloat-equal -Wformat -fno-strict-aliasing"
+CFLAGS="$CFLAGS $WEBSOCKET_ICU_CFLAGS"
 
 # Check for websocket version
 AC_MSG_CHECKING(whether --with-websocket option specified)
@@ -74,27 +95,6 @@ elif test "x${websocket}" != "xno"; then
 fi
 AC_SUBST(WEBSOCKET_VERSION_CFLAGS)
 CFLAGS="$CFLAGS $WEBSOCKET_VERSION_CFLAGS"
-
-dnl check for icu lib
-AC_MSG_CHECKING(whether --with-libicu option specified)
-AC_ARG_WITH(
-        libicu,
-        AC_HELP_STRING([--with-libicu],
-                       [use ICU lib for websocket@<:@default=yes@:>@]),
-        [ with_icu=$withval ],
-        [ with_icu=yes ])
-AC_MSG_RESULT(${with_icu})
-if test "x${with_icu}" != "xno"; then
-   WEBSOCKET_ICU_CFLAGS="-D_MOD_WEBSOCKET_WITH_ICU_"
-   WEBSOCKET_ICU_LIBS="-licui18n -licuuc"
-else
-   WEBSOCKET_ICU_CFLAGS=
-   WEBSOCKET_ICU_LIBS=
-fi
-AC_SUBST(WEBSOCKET_ICU_CFLAGS)
-AC_SUBST(WEBSOCKET_ICU_LIBS)
-AM_CONDITIONAL(WITH_LIBICU, test x$with_icu != xno)
-CFLAGS="$CFLAGS $WEBSOCKET_ICU_CFLAGS"
 
 case $host_os in
      *darwin* ) LIBNCURSES="-lncurses";;
