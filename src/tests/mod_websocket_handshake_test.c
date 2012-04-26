@@ -499,9 +499,9 @@ check_response(chunkqueue *q, char *exp) {
         b->used - 1 != strlen(exp)) {
         CU_FAIL("invalid response");
         fprintf(stderr, "exp:\n%s", exp);
-        fprintf(stderr, "---, %d\n", strlen(exp));
+        fprintf(stderr, "---, %u\n", strlen(exp));
         fprintf(stderr, "res:\n%s", b->ptr);
-        fprintf(stderr, "---, %d\n", b->used);
+        fprintf(stderr, "---, %u\n", b->used);
     }
 }
 
