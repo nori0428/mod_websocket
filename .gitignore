@@ -1,0 +1,19 @@
+# ignores
+*~
+*.m4
+m4/
+autom4te*
+!m4/Makefile.rules
+stamp-h1
+libtool
+Makefile
+/config.h
+config.log
+config.status
+configure
+.deps/
+.libs/
+*.in
+*.o
+*.lo
+*.la
