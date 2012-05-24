@@ -373,7 +373,7 @@ handler_t _handle_fdevent(server *srv, void *ctx, int revents) {
             _tcp_server_disconnect(hctx);
             return _handle_subrequest(srv, hctx->con, hctx->pd);
         }
-        if (!b || b > UINT16_MAX - 1) {
+        if (b > UINT16_MAX - 1) {
             b = UINT16_MAX - 1;
         }
         errno = 0;
@@ -383,7 +383,9 @@ handler_t _handle_fdevent(server *srv, void *ctx, int revents) {
                   "sdsx",
                   "recv from server fd:", hctx->fd,
                   ", size:", siz);
-        if (siz > 0) {
+        if (siz == 0) {
+            _tcp_server_disconnect(hctx);
+        } else if (siz > 0) {
             if (hctx->state == MOD_WEBSOCKET_STATE_CONNECTED) {
 
 #if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
@@ -830,6 +832,8 @@ SUBREQUEST_FUNC(_handle_subrequest) {
     chunkqueue_reset(hctx->tosrv);
     chunkqueue_reset(hctx->fromcli);
     chunkqueue_reset(hctx->tocli);
+    DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO,
+              "sd", "disconnect client:", hctx->con->fd);
     connection_set_state(srv, con, CON_STATE_CLOSE);
     _handler_ctx_free(hctx);
     con->plugin_ctx[p->id] = NULL;
