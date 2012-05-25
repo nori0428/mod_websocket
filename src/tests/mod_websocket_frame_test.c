@@ -51,7 +51,6 @@ mod_websocket_frame_send_test() {
     memset(&hctx, 0, sizeof(hctx));
     pd.conf.debug =  MOD_WEBSOCKET_LOG_DEBUG + 1;
     hctx.pd = &pd;
-
     hctx.tocli = chunkqueue_init();
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
     hctx.cnv = mod_websocket_conv_init("UTF-8");
@@ -70,6 +69,7 @@ mod_websocket_frame_send_test() {
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
     fprintf(stderr, "check: ASCII\n");
+    hctx.handshake.version = 0;
     ret = mod_websocket_frame_send(&hctx, MOD_WEBSOCKET_FRAME_TYPE_TEXT,
                                    ASCII_STR, strlen(ASCII_STR));
     CU_ASSERT_EQUAL(ret, 0);
@@ -162,10 +162,14 @@ mod_websocket_frame_send_test() {
     if (b->ptr[b->used - 1] != 0x00) {
         CU_FAIL("frame end bit invalid");
     }
+    buffer_free(b);
+    chunkqueue_reset(hctx.tocli);
 #endif
 
 #if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
     defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
+    b = NULL;
+    hctx.handshake.version = 8;
     fprintf(stderr, "check: ASCII\n");
     ret = mod_websocket_frame_send(&hctx, MOD_WEBSOCKET_FRAME_TYPE_TEXT,
                                    ASCII_STR, strlen(ASCII_STR));
@@ -491,6 +495,7 @@ mod_websocket_frame_recv_test() {
     fprintf(stderr, "check recv\n");
     memset(&hctx, 0, sizeof(hctx));
     hctx.fd = 1;
+    hctx.handshake.version = 0;
     con.fd = 2;
     con.read_queue = chunkqueue_init();
     hctx.con = &con;
@@ -903,6 +908,7 @@ _recv_short_chunk_test(char type, uint64_t ex_len) {
 #endif
 
     hctx.fd = 1;
+    hctx.handshake.version = 8;
     con.fd = 2;
     con.read_queue = chunkqueue_init();
     hctx.con = &con;
@@ -1447,6 +1453,7 @@ _recv_short_chunk_test_2(char type, uint64_t ex_len) {
     con.fd = 2;
     con.read_queue = chunkqueue_init();
     hctx.con = &con;
+    hctx.handshake.version = 8;
     hctx.fromcli = con.read_queue;
     hctx.tocli = chunkqueue_init();
     hctx.tosrv = chunkqueue_init();
@@ -1835,6 +1842,7 @@ _recv_long_chunk_test(char type, uint64_t ex_len) {
 #endif
 
     hctx.fd = 1;
+    hctx.handshake.version = 8;
     con.fd = 2;
     con.read_queue = chunkqueue_init();
     hctx.con = &con;
@@ -2173,6 +2181,7 @@ _recv_long_chunk_test_2(char type, uint64_t ex_len) {
 #endif
 
     hctx.fd = 1;
+    hctx.handshake.version = 8;
     con.fd = 2;
     con.read_queue = chunkqueue_init();
     hctx.con = &con;
@@ -2487,6 +2496,7 @@ mod_websocket_frame_recv_continue_test() {
 #endif
 
     hctx.fd = 1;
+    hctx.handshake.version = 8;
     con.fd = 2;
     con.read_queue = chunkqueue_init();
     hctx.con = &con;
