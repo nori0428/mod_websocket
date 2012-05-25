@@ -9,25 +9,31 @@
 #include "mod_websocket.h"
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
+
+# include "base64.h"
+
 int
-mod_websocket_frame_send(handler_ctx *hctx,
-                         mod_websocket_frame_type_t type,
-                         char *payload, size_t siz) {
+mod_websocket_frame_send_ietf_00(handler_ctx *hctx,
+                                 mod_websocket_frame_type_t type,
+                                 char *payload, size_t siz) {
     const char additional = 0x00;
     const unsigned char head = 0x00;
     const unsigned char tail = 0xff;
     int ret = -1;
     buffer *b = NULL;
+    char *enc = NULL;
 
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
-    char *enc = NULL;
     size_t encsiz = 0;
 #endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
 
-    if (!hctx || (!payload && type == MOD_WEBSOCKET_FRAME_TYPE_TEXT)) {
+    if (!hctx ||
+        (!payload && (type == MOD_WEBSOCKET_FRAME_TYPE_TEXT ||
+                      type == MOD_WEBSOCKET_FRAME_TYPE_BIN))) {
         return -1;
     }
-    if (type == MOD_WEBSOCKET_FRAME_TYPE_TEXT && siz == 0) {
+    if (siz == 0 && (type == MOD_WEBSOCKET_FRAME_TYPE_TEXT ||
+                     type == MOD_WEBSOCKET_FRAME_TYPE_BIN)) {
         return 0;
     }
     b = chunkqueue_get_append_buffer(hctx->tocli);
@@ -58,6 +64,34 @@ mod_websocket_frame_send(handler_ctx *hctx,
         ret = buffer_append_memory(b, payload, siz);
 #endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
 
+        if (ret != 0) {
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
+            break;
+        }
+        ret = buffer_append_memory(b, (const char *)&tail, 1);
+        if (ret != 0) {
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
+            break;
+        }
+        break;
+    case MOD_WEBSOCKET_FRAME_TYPE_BIN:
+        ret = buffer_append_memory(b, (const char *)&head, 1);
+        if (ret != 0) {
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
+            break;
+        }
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO,
+                  "s", "convert binary data into base64 text data");
+        enc = (char *)malloc(siz * 2);
+        if (!enc) {
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
+            break;
+        }
+        memset(enc, 0, siz * 2);
+        base64_encode((unsigned char *)enc, (unsigned char *)payload, siz);
+        ret = buffer_append_memory(b, enc, strlen(enc));
+        free(enc);
+        enc = NULL;
         if (ret != 0) {
             DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
             break;
@@ -100,13 +134,15 @@ mod_websocket_frame_send(handler_ctx *hctx,
 }
 
 int
-mod_websocket_frame_recv(handler_ctx *hctx) {
+mod_websocket_frame_recv_ietf_00(handler_ctx *hctx) {
     const char additional = 0x00;
     char *pff = NULL;
     chunk *c = NULL;
     buffer *frame = NULL, *payload = NULL, *b = NULL;
     int ret;
     size_t i;
+    char *b64 = NULL;
+    size_t b64siz = 0;
 
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
     char *enc = NULL;
@@ -233,8 +269,21 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                         chunkqueue_reset(hctx->fromcli);
                         return -1;
                     }
-                    ret = buffer_append_memory(b, enc, encsiz);
-                    free(enc);
+                    if (hctx->frame.type == MOD_WEBSOCKET_FRAME_TYPE_BIN) {
+                        DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO,
+                                  "s", "convert base64 text data into binary data");
+                        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
+                                  "ss", "receive base64 text:", enc);
+                        b64 = (char *)malloc(encsiz + 1);
+                        memset(b64, 0, encsiz + 1);
+                        base64_decode((unsigned char *)b64, &b64siz, (unsigned char *)enc);
+                        ret = buffer_append_memory(b, b64, b64siz);
+                        free(enc);
+                        free(b64);
+                    } else {
+                        ret = buffer_append_memory(b, enc, encsiz);
+                        free(enc);
+                    }
                     if (ret != 0) {
                         DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
                         chunkqueue_reset(hctx->tosrv);
@@ -242,8 +291,23 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
                         return -1;
                     }
 #else
-                    ret = buffer_append_memory(b, payload->ptr, payload->used);
-                    buffer_reset(payload);
+                    if (hctx->frame.type == MOD_WEBSOCKET_FRAME_TYPE_BIN) {
+                        DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO,
+                                  "s", "convert base64 text data into binary data");
+                        payload->ptr[payload->used] = '\0';
+                        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
+                                  "ss", "receive base64 text:", payload->ptr);
+                        b64 = (char *)malloc(payload->used + 1);
+                        memset(b64, 0, payload->used + 1);
+                        base64_decode((unsigned char *)b64, &b64siz,
+                                      (unsigned char *)payload->ptr);
+                        ret = buffer_append_memory(b, b64, b64siz);
+                        buffer_reset(payload);
+                        free(b64);
+                    } else {
+                        ret = buffer_append_memory(b, payload->ptr, payload->used);
+                        buffer_reset(payload);
+                    }
                     if (ret != 0) {
                         DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
                         chunkqueue_reset(hctx->tosrv);
@@ -279,9 +343,9 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
 #if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
     defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
 int
-mod_websocket_frame_send(handler_ctx *hctx,
-                         mod_websocket_frame_type_t type,
-                         char *payload, size_t siz) {
+mod_websocket_frame_send_rfc_6455(handler_ctx *hctx,
+                                  mod_websocket_frame_type_t type,
+                                  char *payload, size_t siz) {
     const char additional = 0x00;
     int ret = -1;
     char c, len[MOD_WEBSOCKET_FRAME_LEN63 + 1];
@@ -435,7 +499,7 @@ unmask_payload(handler_ctx *hctx) {
 }
 
 int
-mod_websocket_frame_recv(handler_ctx *hctx) {
+mod_websocket_frame_recv_rfc_6455(handler_ctx *hctx) {
     /* for debug log */
     const char *typestr[8] = {"text", "close", "binary", "ping", "pong"};
     char u64str[128];
@@ -734,5 +798,51 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
     return 0;
 }
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+
+int
+mod_websocket_frame_send(handler_ctx *hctx,
+                         mod_websocket_frame_type_t type,
+                         char *payload, size_t siz) {
+    if (!hctx) {
+        return -1;
+    }
+
+#ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
+    if (hctx->handshake.version == 0) {
+        return mod_websocket_frame_send_ietf_00(hctx, type, payload, siz);
+    }
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
+
+#if defined _MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined _MOD_WEBSOCKET_SPEC_RFC_6455_
+    if (hctx->handshake.version >= 8) {
+        return mod_websocket_frame_send_rfc_6455(hctx, type, payload, siz);
+    }
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+
+    return -1;
+}
+
+int
+mod_websocket_frame_recv(handler_ctx *hctx) {
+    if (!hctx) {
+        return -1;
+    }
+
+#ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
+    if (hctx->handshake.version == 0) {
+        return mod_websocket_frame_recv_ietf_00(hctx);
+    }
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
+
+#if defined _MOD_WEBSOCKET_SPEC_IETF_08_ || \
+    defined _MOD_WEBSOCKET_SPEC_RFC_6455_
+    if (hctx->handshake.version >= 8) {
+        return mod_websocket_frame_recv_rfc_6455(hctx);
+    }
+#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+
+    return -1;
+}
 
 /* EOF */

@@ -146,6 +146,7 @@ typedef struct {
     buffer *host;
     buffer *origin;
     buffer *subproto;
+    int version;
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
     buffer *key1;
@@ -176,10 +177,10 @@ typedef enum {
 typedef enum {
     MOD_WEBSOCKET_FRAME_TYPE_TEXT,
     MOD_WEBSOCKET_FRAME_TYPE_CLOSE,
+    MOD_WEBSOCKET_FRAME_TYPE_BIN,
 
 #if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
     defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
-    MOD_WEBSOCKET_FRAME_TYPE_BIN,
     MOD_WEBSOCKET_FRAME_TYPE_PING,
     MOD_WEBSOCKET_FRAME_TYPE_PONG,
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_SPEC_RFC_6455_ */

@@ -67,8 +67,7 @@ base64_encode(unsigned char *dst, const unsigned char *src, size_t siz) {
 }
 
 void
-base64_decode(unsigned char *dst, size_t *dstsiz,
-              const unsigned char *src) {
+base64_decode(unsigned char *dst, size_t *dstsiz, const unsigned char *src) {
     union {
         unsigned long x;
         char c[4];
