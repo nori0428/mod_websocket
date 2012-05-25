@@ -22,7 +22,10 @@ mod_websocket_frame_send_ietf_00(handler_ctx *hctx,
     int ret = -1;
     buffer *b = NULL;
     char *enc = NULL;
+
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     size_t encsiz = 0;
+#endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
 
     if (!hctx ||
         (!payload && (type == MOD_WEBSOCKET_FRAME_TYPE_TEXT ||
@@ -138,10 +141,13 @@ mod_websocket_frame_recv_ietf_00(handler_ctx *hctx) {
     buffer *frame = NULL, *payload = NULL, *b = NULL;
     int ret;
     size_t i;
-    char *enc = NULL;
-    size_t encsiz = 0;
     char *b64 = NULL;
     size_t b64siz = 0;
+
+#ifdef	_MOD_WEBSOCKET_WITH_ICU_
+    char *enc = NULL;
+    size_t encsiz = 0;
+#endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
 
     if (!hctx || !hctx->fromcli) {
         return -1;
@@ -293,7 +299,8 @@ mod_websocket_frame_recv_ietf_00(handler_ctx *hctx) {
                                   "ss", "receive base64 text:", payload->ptr);
                         b64 = (char *)malloc(payload->used + 1);
                         memset(b64, 0, payload->used + 1);
-                        base64_decode(b64, &b64siz, payload->ptr, payload->used);
+                        base64_decode((unsigned char *)b64, &b64siz,
+                                      (unsigned char *)payload->ptr);
                         ret = buffer_append_memory(b, b64, b64siz);
                         buffer_reset(payload);
                         free(b64);

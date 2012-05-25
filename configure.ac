@@ -80,9 +80,9 @@ AC_ARG_WITH(
         [ websocket=yes ])
 AC_MSG_RESULT(${websocket})
 if test "x${websocket}" == "xyes" ||
-   test "x${websocket}" == "xrfc-6455" ||
-   test "x${websocket}" == "xRFC-6455"; then
-   websocket="RFC-6455"
+   test "x${websocket}" == "xall" ||
+   test "x${websocket}" == "xALL"; then
+   websocket="ALL"
    WEBSOCKET_VERSION_CFLAGS="-D_MOD_WEBSOCKET_SPEC_IETF_00_ -D_MOD_WEBSOCKET_SPEC_RFC_6455_"
 elif test "x${websocket}" == "xrfc-6455" ||
      test "x${websocket}" == "xRFC-6455"; then
