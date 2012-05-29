@@ -32,7 +32,10 @@
 #define	_MOD_WEBSOCKET_H_
 
 #include <time.h>
-#include <unicode/ucnv.h>
+
+# ifdef	_MOD_WEBSOCKET_WITH_ICU_
+#  include <unicode/ucnv.h>
+# endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
 
 #include "config.h"
 #include "array.h"
