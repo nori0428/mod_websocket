@@ -30,7 +30,7 @@ install:
 	@echo
 	@echo "$$ cd ${LIGHTTPD_LOCATION}"
 	@echo "$$ ./autogen.sh"
-	@echo "$$ ./configure --with-websocket[=RFC-6455/IETF-00/IETF-08] [--without-libicu]"
+	@echo "$$ ./configure --with-websocket[=ALL/RFC-6455/IETF-00/IETF-08] [--without-libicu]"
 	@echo "$$ make"
 	@echo
 
