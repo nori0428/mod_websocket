@@ -74,7 +74,7 @@ CFLAGS="$CFLAGS $WEBSOCKET_ICU_CFLAGS"
 AC_MSG_CHECKING(whether --with-websocket option specified)
 AC_ARG_WITH(
         websocket,
-        AC_HELP_STRING([--with-websocket=@<:@=All/RFC-6455/IETF-00/IETF-08@:>@],
+        AC_HELP_STRING([--with-websocket=@<:@=All/RFC-6455/IETF-00@:>@],
                        [specify draft version@<:@default=ALL@:>@]),
         [ websocket=$withval ],
         [ websocket=yes ])
@@ -91,11 +91,8 @@ elif test "x${websocket}" == "xrfc-6455" ||
 elif test "x${websocket}" == "xietf-00" ||
      test "x${websocket}" == "xIETF-00"; then
    WEBSOCKET_VERSION_CFLAGS="-D_MOD_WEBSOCKET_SPEC_IETF_00_"
-elif test "x${websocket}" == "xietf-08" ||
-     test "x${websocket}" == "xIETF-08"; then
-   WEBSOCKET_VERSION_CFLAGS="-D_MOD_WEBSOCKET_SPEC_IETF_08_"
 elif test "x${websocket}" != "xno"; then
-   AC_MSG_ERROR([websocket option is invalid. plz specify ALL, IETF-{00,08}, RFC-6455])
+   AC_MSG_ERROR([websocket option is invalid. plz specify ALL, IETF-00, RFC-6455])
 fi
 AC_SUBST(WEBSOCKET_VERSION_CFLAGS)
 CFLAGS="$CFLAGS $WEBSOCKET_VERSION_CFLAGS"

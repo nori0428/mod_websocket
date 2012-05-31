@@ -9,7 +9,6 @@
 #include "mod_websocket.h"
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
-
 # include "base64.h"
 
 int
@@ -340,8 +339,7 @@ mod_websocket_frame_recv_ietf_00(handler_ctx *hctx) {
 }
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
-#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
-    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
+#ifdef	_MOD_WEBSOCKET_SPEC_RFC_6455_
 int
 mod_websocket_frame_send_rfc_6455(handler_ctx *hctx,
                                   mod_websocket_frame_type_t type,
@@ -797,7 +795,7 @@ mod_websocket_frame_recv_rfc_6455(handler_ctx *hctx) {
     chunkqueue_reset(hctx->fromcli);
     return 0;
 }
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+#endif	/* _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
 int
 mod_websocket_frame_send(handler_ctx *hctx,
@@ -813,12 +811,11 @@ mod_websocket_frame_send(handler_ctx *hctx,
     }
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
-#if defined _MOD_WEBSOCKET_SPEC_IETF_08_ || \
-    defined _MOD_WEBSOCKET_SPEC_RFC_6455_
+#ifdef _MOD_WEBSOCKET_SPEC_RFC_6455_
     if (hctx->handshake.version >= 8) {
         return mod_websocket_frame_send_rfc_6455(hctx, type, payload, siz);
     }
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+#endif	/* _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
     return -1;
 }
@@ -835,12 +832,11 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
     }
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
-#if defined _MOD_WEBSOCKET_SPEC_IETF_08_ || \
-    defined _MOD_WEBSOCKET_SPEC_RFC_6455_
+#ifdef _MOD_WEBSOCKET_SPEC_RFC_6455_
     if (hctx->handshake.version >= 8) {
         return mod_websocket_frame_recv_rfc_6455(hctx);
     }
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ */
+#endif	/* _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
     return -1;
 }
