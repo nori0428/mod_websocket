@@ -148,8 +148,8 @@
                                case insensitive, default = "text"
 
                                If specified "bin" when on IETF-00 spec,
-                               mod_websocket is doing base64 {en, de}code
-                               websocket payload automatically.
+                               mod_websocket {en, de}codes websocket payload
+                               into base64 text automatically.
                                So *must* {en,de}code base64 text on clientside.
    ex.
    +---------+            +--------+            +------------------+
