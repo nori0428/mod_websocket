@@ -1,5 +1,5 @@
---- lighttpd-1.4.28.orig/configure.ac	2012-05-31 09:19:16.000000000 +0900
-+++ lighttpd-1.4.28.new/configure.ac	2012-05-31 09:21:14.000000000 +0900
+--- lighttpd-1.4.28.orig/configure.ac	2010-08-13 20:10:15.000000000 +0900
++++ lighttpd-1.4.28.new/configure.ac	2012-05-31 15:00:40.000000000 +0900
 @@ -67,6 +67,13 @@
  AC_TYPE_OFF_T
  AC_TYPE_PID_T
@@ -14,7 +14,7 @@
  
  AC_CHECK_MEMBER(struct tm.tm_gmtoff,[AC_DEFINE([HAVE_STRUCT_TM_GMTOFF],[1],[gmtoff in struct tm])],,[#include <time.h>])
  AC_CHECK_TYPES(struct sockaddr_storage,,,[#include <sys/socket.h>])
-@@ -604,6 +611,61 @@
+@@ -604,6 +611,58 @@
  LIGHTTPD_VERSION_ID=`echo $PACKAGE_VERSION | $AWK -F '.' '{print "(" $1 " << 16 | " $2 " << 8 | " $3 ")"}'`
  AC_DEFINE_UNQUOTED([LIGHTTPD_VERSION_ID], [$LIGHTTPD_VERSION_ID], [lighttpd-version-id])
  
@@ -22,8 +22,8 @@
 +AC_MSG_CHECKING(whether --with-websocket option specified)
 +AC_ARG_WITH(
 +        websocket,
-+        AC_HELP_STRING([--with-websocket@<:@=RFC-6455/IETF-00/IETF-08@:>@],
-+                       [specify websocket version@<:@default=RFC-6455@:>@]),
++        AC_HELP_STRING([--with-websocket@<:@=ALL/RFC-6455/IETF-00@:>@],
++                       [specify websocket version@<:@default=ALL@:>@]),
 +        [ websocket=$withval ],
 +        [ websocket=no ])
 +AC_MSG_RESULT(${websocket})
@@ -39,11 +39,8 @@
 +elif test "x${websocket}" == "xietf-00" ||
 +     test "x${websocket}" == "xIETF-00"; then
 +   WEBSOCKET_VERSION_CFLAGS="-D_MOD_WEBSOCKET_SPEC_IETF_00_"
-+elif test "x${websocket}" == "xietf-08" ||
-+     test "x${websocket}" == "xIETF-08"; then
-+   WEBSOCKET_VERSION_CFLAGS="-D_MOD_WEBSOCKET_SPEC_IETF_08_"
 +elif test "x${websocket}" != "xno"; then
-+   AC_MSG_ERROR([websocket option is invalid. plz specify  RFC-6455, IETF-{00,08}])
++   AC_MSG_ERROR([websocket option is invalid. plz specify ALL, RFC-6455, IETF-00])
 +fi
 +AC_SUBST(websocket)
 +AC_SUBST(WEBSOCKET_VERSION_CFLAGS)
@@ -76,7 +73,7 @@
  AC_CONFIG_FILES([Makefile src/Makefile
  		 doc/config/conf.d/Makefile \
  		 doc/config/vhosts.d/Makefile \
-@@ -734,6 +796,13 @@
+@@ -734,6 +793,13 @@
  	disable_feature="$disable_feature $features"
  fi
  
