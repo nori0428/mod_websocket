@@ -1,5 +1,5 @@
---- lighttpd-1.4.28.orig/configure.ac	2010-08-13 20:10:15.000000000 +0900
-+++ lighttpd-1.4.28.new/configure.ac	2012-01-20 12:01:37.332056217 +0900
+--- lighttpd-1.4.28.orig/configure.ac	2012-05-31 09:19:16.000000000 +0900
++++ lighttpd-1.4.28.new/configure.ac	2012-05-31 09:21:14.000000000 +0900
 @@ -67,6 +67,13 @@
  AC_TYPE_OFF_T
  AC_TYPE_PID_T
@@ -14,7 +14,7 @@
  
  AC_CHECK_MEMBER(struct tm.tm_gmtoff,[AC_DEFINE([HAVE_STRUCT_TM_GMTOFF],[1],[gmtoff in struct tm])],,[#include <time.h>])
  AC_CHECK_TYPES(struct sockaddr_storage,,,[#include <sys/socket.h>])
-@@ -604,6 +611,57 @@
+@@ -604,6 +611,61 @@
  LIGHTTPD_VERSION_ID=`echo $PACKAGE_VERSION | $AWK -F '.' '{print "(" $1 " << 16 | " $2 " << 8 | " $3 ")"}'`
  AC_DEFINE_UNQUOTED([LIGHTTPD_VERSION_ID], [$LIGHTTPD_VERSION_ID], [lighttpd-version-id])
  
@@ -28,7 +28,11 @@
 +        [ websocket=no ])
 +AC_MSG_RESULT(${websocket})
 +if test "x${websocket}" == "xyes" ||
-+   test "x${websocket}" == "xrfc-6455" ||
++   test "x${websocket}" == "xall" ||
++   test "x${websocket}" == "xALL"; then
++   websocket="ALL"
++   WEBSOCKET_VERSION_CFLAGS="-D_MOD_WEBSOCKET_SPEC_IETF_00_ -D_MOD_WEBSOCKET_SPEC_RFC_6455_"
++elif test "x${websocket}" == "xrfc-6455" ||
 +   test "x${websocket}" == "xRFC-6455"; then
 +   websocket="RFC-6455"
 +   WEBSOCKET_VERSION_CFLAGS="-D_MOD_WEBSOCKET_SPEC_RFC_6455_"
@@ -72,7 +76,7 @@
  AC_CONFIG_FILES([Makefile src/Makefile
  		 doc/config/conf.d/Makefile \
  		 doc/config/vhosts.d/Makefile \
-@@ -734,6 +792,13 @@
+@@ -734,6 +796,13 @@
  	disable_feature="$disable_feature $features"
  fi
  
