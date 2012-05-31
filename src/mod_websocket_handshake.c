@@ -24,7 +24,7 @@ typedef li_MD5_CTX MD5_CTX;
 
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
-#ifdef _MOD_WEBSOCKET_SPEC_RFC_6455_
+#ifdef	_MOD_WEBSOCKET_SPEC_RFC_6455_
 # include <limits.h>
 # ifdef HAVE_STDINT_H
 #  include <stdint.h>
@@ -59,7 +59,7 @@ typedef li_MD5_CTX MD5_CTX;
 # define	MD5_STRLEN			(16)
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
-#ifdef _MOD_WEBSOCKET_SPEC_RFC_6455_
+#ifdef	_MOD_WEBSOCKET_SPEC_RFC_6455_
 # define	SEC_WEBSOCKET_KEY_STR		"Sec-WebSocket-Key"
 # define	SEC_WEBSOCKET_ACCEPT_STR	"Sec-WebSocket-Accept"
 # define	GUID_STR			"258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
@@ -203,7 +203,7 @@ create_MD5_sum(unsigned char *md5sum, handler_ctx *hctx) {
 }
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
-#ifdef _MOD_WEBSOCKET_SPEC_RFC_6455_
+#ifdef	_MOD_WEBSOCKET_SPEC_RFC_6455_
 int
 create_accept_body(unsigned char **digest, size_t *digest_siz, handler_ctx *hctx) {
     SHA_CTX sha;
@@ -235,7 +235,7 @@ create_accept_body(unsigned char **digest, size_t *digest_siz, handler_ctx *hctx
         return -1;
     }
     /* get base64 encoded SHA1 hash */
-    if (base64_encode(digest, digest_siz, sha1_digest, SHA1_DIGEST_LENGTH) < 0) {
+    if (base64_encode(digest, digest_siz, sha1_digest, SHA_DIGEST_LENGTH) < 0) {
         return -1;
     }
 # else
@@ -388,7 +388,7 @@ mod_websocket_handshake_check_request(handler_ctx *hctx) {
         }
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
-#ifdef _MOD_WEBSOCKET_SPEC_RFC_6455_
+#ifdef	_MOD_WEBSOCKET_SPEC_RFC_6455_
         if (buffer_is_equal_string(hdr->key,
                                    CONST_STR_LEN(SEC_WEBSOCKET_KEY_STR))) {
             handshake->key = hdr->value;
@@ -441,7 +441,7 @@ mod_websocket_handshake_check_request(handler_ctx *hctx) {
     }
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
-#ifdef _MOD_WEBSOCKET_SPEC_RFC_6455_
+#ifdef	_MOD_WEBSOCKET_SPEC_RFC_6455_
     if (handshake->version >= 8) {
         if (buffer_is_empty(handshake->key)) {
             DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
@@ -518,7 +518,7 @@ create_response_ietf_00(handler_ctx *hctx) {
 }
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
-#ifdef _MOD_WEBSOCKET_SPEC_RFC_6455_
+#ifdef	_MOD_WEBSOCKET_SPEC_RFC_6455_
 mod_websocket_errno_t
 create_response_rfc_6455(handler_ctx *hctx) {
     const char *const_hdrs =
@@ -565,7 +565,7 @@ mod_websocket_handshake_create_response(handler_ctx *hctx) {
     }
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
-#ifdef _MOD_WEBSOCKET_SPEC_RFC_6455_
+#ifdef	_MOD_WEBSOCKET_SPEC_RFC_6455_
     if (hctx->handshake.version >= 8) {
         return create_response_rfc_6455(hctx);
     }

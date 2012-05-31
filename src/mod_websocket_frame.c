@@ -814,7 +814,7 @@ mod_websocket_frame_send(handler_ctx *hctx,
     }
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
-#ifdef _MOD_WEBSOCKET_SPEC_RFC_6455_
+#ifdef	_MOD_WEBSOCKET_SPEC_RFC_6455_
     if (hctx->handshake.version >= 8) {
         return mod_websocket_frame_send_rfc_6455(hctx, type, payload, siz);
     }
@@ -835,7 +835,7 @@ mod_websocket_frame_recv(handler_ctx *hctx) {
     }
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
-#ifdef _MOD_WEBSOCKET_SPEC_RFC_6455_
+#ifdef	_MOD_WEBSOCKET_SPEC_RFC_6455_
     if (hctx->handshake.version >= 8) {
         return mod_websocket_frame_recv_rfc_6455(hctx);
     }
