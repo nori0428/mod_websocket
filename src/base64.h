@@ -12,8 +12,8 @@
 extern "C" {
 #endif
 
-    void base64_encode(unsigned char *, const unsigned char *, size_t);
-    void base64_decode(unsigned char *, size_t *, const unsigned char *);
+    int base64_encode(unsigned char **, size_t *, const unsigned char *, size_t);
+    int base64_decode(unsigned char **, size_t *, const unsigned char *);
 
 #ifdef	__cplusplus
 }

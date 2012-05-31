@@ -73,10 +73,9 @@ handler_ctx *_handler_ctx_init(void) {
     hctx->handshake.key3 = buffer_init();
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
-#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
-    defined	_MOD_WEBSOCKET_RFC_6455_
+#ifdef	_MOD_WEBSOCKET_RFC_6455_
     hctx->handshake.key = NULL;
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_RFC_6455_ */
+#endif	/* _MOD_WEBSOCKET_RFC_6455_ */
 
     hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_INIT;
     hctx->frame.ctl.siz = 0;
@@ -331,7 +330,7 @@ int _tcp_server_connect(handler_ctx *hctx) {
     DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO,
               "sdsdsssss", "connected client fd:", hctx->con->fd,
               " -> server fd:", hctx->fd,
-              "(", host->ptr, ":", port->ptr, "), not used locale");
+              "(", host->ptr, ":", port->ptr, "), locale: unused");
 #endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
 
     return 0;
@@ -355,11 +354,7 @@ handler_t _handle_fdevent(server *srv, void *ctx, int revents) {
     mod_websocket_frame_type_t frame_type;
     char readbuf[UINT16_MAX];
     ssize_t siz;
-
-#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
-    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
     data_string *type;
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_RFC_6455_ */
 
     if (revents & FDEVENT_NVAL) {
         DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
@@ -387,9 +382,6 @@ handler_t _handle_fdevent(server *srv, void *ctx, int revents) {
             _tcp_server_disconnect(hctx);
         } else if (siz > 0) {
             if (hctx->state == MOD_WEBSOCKET_STATE_CONNECTED) {
-
-#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
-    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
                 type = (data_string *)
                     array_get_element(hctx->ext->value,
                                       MOD_WEBSOCKET_CONFIG_TYPE);
@@ -398,15 +390,8 @@ handler_t _handle_fdevent(server *srv, void *ctx, int revents) {
                     0 == strcasecmp(type->value->ptr, MOD_WEBSOCKET_BIN_STR)) {
                     frame_type = MOD_WEBSOCKET_FRAME_TYPE_BIN;
                 } else {
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_RFC_6455_ */
-
                     frame_type = MOD_WEBSOCKET_FRAME_TYPE_TEXT;
-
-#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
-    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
                 }
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_RFC_6455_ */
-
                 if (mod_websocket_frame_send(hctx, frame_type,
                                              readbuf, (size_t)siz) < 0) {
                     DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
@@ -439,10 +424,9 @@ int _dispatch_request(server *srv, connection *con, plugin_data *p) {
     PATCH(debug);
     PATCH(timeout);
 
-#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
-    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
+#ifdef	_MOD_WEBSOCKET_SPEC_RFC_6455_
     PATCH(ping);
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_RFC_6455_ */
+#endif	/* _MOD_WEBSOCKET_RFC_6455_ */
 
     /* skip the first, the global context */
     for (i = 1; i < srv->config_context->used; i++) {
@@ -583,11 +567,10 @@ SETDEFAULTS_FUNC(_set_defaults) {
             { MOD_WEBSOCKET_CONFIG_DEBUG,  NULL,
               T_CONFIG_SHORT, T_CONFIG_SCOPE_CONNECTION },
 
-#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
-    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
+#ifdef	_MOD_WEBSOCKET_SPEC_RFC_6455_
             { MOD_WEBSOCKET_CONFIG_PING_INTERVAL,  NULL,
               T_CONFIG_SHORT, T_CONFIG_SCOPE_CONNECTION },
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_SPEC_RFC_6455_ */
+#endif	/* _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
             { NULL,                        NULL,
               T_CONFIG_UNSET, T_CONFIG_SCOPE_UNSET }
@@ -606,11 +589,10 @@ SETDEFAULTS_FUNC(_set_defaults) {
         cv[1].destination = &(s->timeout);
         cv[2].destination = &(s->debug);
 
-#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
-    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
+#ifdef	_MOD_WEBSOCKET_SPEC_RFC_6455_
         s->ping = 0;
         cv[3].destination = &(s->ping);
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_SPEC_RFC_6455_ */
+#endif	/* _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
         p->config_storage[i] = s;
 
@@ -659,6 +641,7 @@ SUBREQUEST_FUNC(_handle_subrequest) {
     handler_ctx *hctx = con->plugin_ctx[p->id];
     int ret;
     mod_websocket_errno_t wsret;
+    data_string *type = NULL;
 
     if (!hctx) {
         return HANDLER_GO_ON;
@@ -680,6 +663,20 @@ SUBREQUEST_FUNC(_handle_subrequest) {
             hctx->con->http_status = wsret;
             hctx->con->mode = DIRECT;
             return HANDLER_FINISHED;
+        }
+        /* auto base64 {encode, decode} for hybi-00 */
+        if (hctx->handshake.version == 0) {
+            type = (data_string *)
+                array_get_element(hctx->ext->value,
+                                  MOD_WEBSOCKET_CONFIG_TYPE);
+            if (type &&
+                0 == strcasecmp(type->value->ptr, MOD_WEBSOCKET_BIN_STR)) {
+                DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO,
+                          "s", "specified binary type on hybi-00 spec.");
+                hctx->frame.type = MOD_WEBSOCKET_FRAME_TYPE_BIN;
+            } else {
+                hctx->frame.type = MOD_WEBSOCKET_FRAME_TYPE_TEXT;
+            }
         }
         /* connect to backend server */
         if (_tcp_server_connect(hctx) < 0) {
@@ -730,10 +727,9 @@ SUBREQUEST_FUNC(_handle_subrequest) {
         connection_set_state(srv, hctx->con, CON_STATE_READ_CONTINUOUS);
         hctx->last_access = srv->cur_ts;
 
-#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
-    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
+#ifdef	_MOD_WEBSOCKET_SPEC_RFC_6455_
         hctx->ping_ts = srv->cur_ts;
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_SPEC_RFC_6455_ */
+#endif	/* _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
         return HANDLER_WAIT_FOR_EVENT;
         break;
@@ -776,7 +772,7 @@ SUBREQUEST_FUNC(_handle_subrequest) {
                 srv->NETWORK_BACKEND_WRITE(srv, con,
                                            hctx->con->fd, hctx->tocli);
             }
-            chunkqueue_remove_finished_chunks(hctx->tocli);
+            chunkqueue_reset(hctx->tocli);
             break;
         } else {
             if (!chunkqueue_is_empty(hctx->tocli)) {
@@ -855,17 +851,16 @@ TRIGGER_FUNC(_handle_trigger) {
         if (!hctx) {
             continue;
         }
-
-#if defined	_MOD_WEBSOCKET_SPEC_IETF_08_ || \
-    defined	_MOD_WEBSOCKET_SPEC_RFC_6455_
-        if (p->conf.ping != 0 &&
-            srv->cur_ts - hctx->ping_ts >= (time_t)p->conf.ping) {
+        if (p->conf.ping == 0 || hctx->handshake.version == 0) {
+            continue;
+        }
+        if (srv->cur_ts - hctx->ping_ts >= (time_t)p->conf.ping) {
             mod_websocket_frame_send(hctx, MOD_WEBSOCKET_FRAME_TYPE_PING,
                                      MOD_WEBSOCKET_PING_STR,
                                      strlen(MOD_WEBSOCKET_PING_STR));
             if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
 
-# ifdef	USE_OPENSSL
+#ifdef	USE_OPENSSL
                 DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
                           "sdsx",
                           "[SSL]send to client fd:", hctx->con->ssl,
@@ -873,7 +868,11 @@ TRIGGER_FUNC(_handle_trigger) {
                 srv->NETWORK_SSL_BACKEND_WRITE(srv, con,
                                                hctx->con->ssl,
                                                hctx->tocli);
-# endif	/* USE_OPENSSL */
+                hctx->ping_ts = srv->cur_ts;
+                chunkqueue_remove_finished_chunks(hctx->tocli);
+#else	/* SSL is not available */
+                chunkqueue_reset(hctx->tocli);
+#endif	/* USE_OPENSSL */
 
             } else {
                 DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
@@ -881,11 +880,10 @@ TRIGGER_FUNC(_handle_trigger) {
                           ", size:", chunkqueue_length(hctx->tocli));
                 srv->NETWORK_BACKEND_WRITE(srv, con, hctx->con->fd,
                                            hctx->tocli);
+                hctx->ping_ts = srv->cur_ts;
+                chunkqueue_remove_finished_chunks(hctx->tocli);
             }
-            hctx->ping_ts = srv->cur_ts;
-            chunkqueue_remove_finished_chunks(hctx->tocli);
         }
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_08_ || _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
         if (p->conf.timeout != 0 &&
             srv->cur_ts - hctx->last_access >= (time_t)p->conf.timeout) {

@@ -21,8 +21,14 @@
 
   https://github.com/nori0428/mod_websocket/wiki
 
+- Changes
+  1.Support dual protocols: hybi-00(for iOS) and RFC-6455(Chrome, Firefox etc.)
+    by specifying --with-websocket or --with-websocket=ALL
+  2.Automatic base64 {en, de}code on hybi-00 spec by specifying "bin" type in websocket.conf.
+    ( my answer of https://github.com/nori0428/mod_websocket/issues/19 )
+
 - Roadmaps for near future
-  I'll delete IETF-00 and IETF-08 option when iOS supports RFC-6455 specs.
+  I'll delete IETF-00 option when iOS supports RFC-6455 specs.
 
   see below for browser support
   <URL: http://en.wikipedia.org/wiki/WebSocket#Browser_support>

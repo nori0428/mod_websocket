@@ -12,9 +12,9 @@
 int
 main(int argc, char *argv[]) {
     FILE *fp;
-    size_t siz, revsiz;
+    size_t siz, dstsiz, revsiz;
     unsigned char *src, *dst, *rev;
-    int i;
+    int i, ret;
 
     fp = fopen(argv[1], "r");
     fseek(fp, 0, SEEK_END);
@@ -22,14 +22,11 @@ main(int argc, char *argv[]) {
     fseek(fp, 0, SEEK_SET);
 
     src = (unsigned char *)malloc(siz);
-    dst = (unsigned char *)malloc(siz * 2);
-    rev = (unsigned char *)malloc(siz);
-    memset(dst, 0, siz * 2);
-
     fread(src, siz, 1, fp);
-    base64_encode(dst, src, siz);
+    base64_encode(&dst, &dstsiz, src, siz);
     fclose(fp);
-    base64_decode(rev, &revsiz, dst);
+    ret = base64_decode(&rev, &revsiz, dst);
+    assert(ret == 0);
 
     for (i = 0; i < siz; i++) {
         if (src[i] != rev[i]) {

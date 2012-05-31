@@ -37,17 +37,17 @@
 2.Test mod_websocket
   $ cd mod_websocket
   $ ./bootstrap
-  $ ./configure --with-websocket[=RFC-6455, IETF-{00,08}]
+  $ ./configure --with-websocket[=ALL, RFC-6455, IETF-00]
   $ make clean check
 
   If bootstrap or configure failed, check your environment again.
   If make check failed, plz send config.log and make check output to
   me.
 
-3.Get the lighttpd-1.4.28 source from
+3.Get the lighttpd-1.4.30 source from
   http://www.lighttpd.net/download/
 
-  $ tar xzvf lighttpd-1.4.28.tar.gz
+  $ tar xzvf lighttpd-1.4.30.tar.gz
 
 4.Install mod_websocket into lighty's dir
 
@@ -63,7 +63,7 @@
 
   $ cd /path/to/lighttpd_top_srcdir
   $ ./autogen.sh
-  $ ./configure --with-websocket[=RFC-6455, IETF-{00,08}] [--without-libicu] [--with-openssl] ...
+  $ ./configure --with-websocket[=ALL, RFC-6455, IETF-00] [--without-libicu] [--with-openssl] ...
 
   If you want to use latest spec, plz specify --with-websocket
   And If you want not to use UTF-8 {validation, conversion},
@@ -144,10 +144,32 @@
 7. websocket.server section format
    "host"  = STRING          : FQDN or IPAddr [mandatory]
    "service" = STRING        : port number or service name [mandatory]
-   "type"  = "bin" or "text" : payload type [optional]
+   "type"  = "bin" or "text" : backend server type [optional]
                                case insensitive, default = "text"
-                               This parameter becomes effective only at
-                               --with-websocket=IETF-08.
+
+                               If specified "bin" when on IETF-00 spec,
+                               mod_websocket {en, de}codes websocket payload
+                               into base64 text automatically.
+                               So *must* {en,de}code base64 text on clientside.
+   ex.
+   +---------+            +--------+            +------------------+
+   | browser | <--------> | lighty | <--------> | binary server    |
+   |         |  Internet  |        |  Localnet  | 192.168.0.2:9000 |
+   | hybi00  |            |        |            |                  |
+   +---------+            +--------+            +------------------+
+     must      <-------->      ^     <-------->
+     endecode    base64        |       binary
+     base64      text          |
+                               |
+   +---------+                 |
+   | browser | <---------------+
+   |         |  Internet
+   | rfc6455 |
+   +---------+
+               <--------------->
+                    binary
+                 (arraybuffer(view)/blob)
+
    "origins" = STRING ARRAY  : part of domain or IPAddr [optional]
                                enable to access only from specified origins.
                                NOTE: it's easy to misrepresent origin by an
