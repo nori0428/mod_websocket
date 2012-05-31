@@ -31,6 +31,7 @@
 #ifndef	_MOD_WEBSOCKET_H_
 #define	_MOD_WEBSOCKET_H_
 
+#include <stdint.h>
 #include <time.h>
 
 # ifdef	_MOD_WEBSOCKET_WITH_ICU_

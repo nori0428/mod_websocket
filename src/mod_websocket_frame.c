@@ -4,7 +4,6 @@
  */
 
 #include <string.h>
-#include <stdint.h>
 
 #include "mod_websocket.h"
 
