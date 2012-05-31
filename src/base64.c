@@ -4,6 +4,8 @@
  */
 
 #include <string.h>
+#include <stdlib.h>
+
 #include "base64.h"
 
 static const char base64_encode_chars[] =
@@ -45,48 +47,70 @@ static const char base64_decode_chars[] = {
 	- 1, - 1, - 1, - 1, - 1, - 1, - 1, - 1,
 	- 1, - 1, - 1, - 1, - 1, - 1, - 1, - 1};
 
-void
-base64_encode(unsigned char *dst, const unsigned char *src, size_t siz) {
+int
+base64_encode(unsigned char **dst, size_t *dstsiz, const unsigned char *src, size_t srcsiz) {
     unsigned long x = 0UL;
     int i = 0, l = 0;
+    unsigned char *pdst;
 
-    for (; siz > 0; src++, siz--) {
+    *dst = (unsigned char *)malloc(srcsiz * 2);
+    if (!*dst) {
+        return -1;
+    }
+    pdst = *dst;
+    *dstsiz = 0;
+    for (; srcsiz > 0; src++, srcsiz--) {
         x = x << 8 | *src;
         for (l += 8; l >= 6; l -= 6) {
-            dst[i++] = base64_encode_chars[(x >> (l - 6)) & 0x3f];
+            pdst[i++] = base64_encode_chars[(x >> (l - 6)) & 0x3f];
         }
     }
     if (l > 0) {
         x <<= 6 - l;
-        dst[i++] = base64_encode_chars[x & 0x3f];
+        pdst[i++] = base64_encode_chars[x & 0x3f];
     }
     for (; i % 4;) {
-        dst[i++] = '=';
+        pdst[i++] = '=';
     }
-    return;
+    *dstsiz = i;
+    pdst[i] = '\0';
+    return 0;
 }
 
-void
-base64_decode(unsigned char *dst, size_t *dstsiz, const unsigned char *src) {
+int
+base64_decode(unsigned char **dst, size_t *dstsiz, const unsigned char *src) {
     union {
         unsigned long x;
         char c[4];
     } base64;
+    unsigned char *pdst;
     int i, j = 0;
     size_t srcsiz = strlen((const char *)src);
 
+    if ((srcsiz % 4) != 0) {
+        return -1;
+    }
     base64.x = 0UL;
+    *dst = (unsigned char *)malloc(srcsiz);
+    if (!*dst) {
+        return -1;
+    }
+    pdst = *dst;
     *dstsiz = 0;
     for (; srcsiz > 0; src+=4, srcsiz-=4) {
         for (i = 0; i < 4; i++) {
+            if (base64_decode_chars[src[i]] == -1) {
+                return -1;
+            }
             base64.x = base64.x << 6 | base64_decode_chars[src[i]];
             j += (src[i] == '=');
         }
         for (i = 3; i > j; i--, (*dstsiz)++) {
-            *dst++ = base64.c[i - 1];
+            *pdst++ = base64.c[i - 1];
         }
     }
-    return;
+    *pdst = '\0';
+    return 0;
 }
 
 /* EOF */

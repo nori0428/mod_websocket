@@ -79,7 +79,7 @@ static mod_websocket_errno_t create_response_ietf_00(handler_ctx *);
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
 #ifdef _MOD_WEBSOCKET_SPEC_RFC_6455_
-static int create_accept_body(unsigned char *, handler_ctx *);
+static int create_accept_body(unsigned char **, size_t *, handler_ctx *);
 static mod_websocket_errno_t create_response_rfc_6455(handler_ctx *);
 #endif	/* _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
@@ -205,7 +205,7 @@ create_MD5_sum(unsigned char *md5sum, handler_ctx *hctx) {
 
 #ifdef _MOD_WEBSOCKET_SPEC_RFC_6455_
 int
-create_accept_body(unsigned char *digest, handler_ctx *hctx) {
+create_accept_body(unsigned char **digest, size_t *digest_siz, handler_ctx *hctx) {
     SHA_CTX sha;
 
 # ifdef	USE_OPENSSL
@@ -235,14 +235,18 @@ create_accept_body(unsigned char *digest, handler_ctx *hctx) {
         return -1;
     }
     /* get base64 encoded SHA1 hash */
-    base64_encode(digest, sha1_digest, SHA_DIGEST_LENGTH);
+    if (base64_encode(digest, digest_siz, sha1_digest, SHA1_DIGEST_LENGTH) < 0) {
+        return -1;
+    }
 # else
     SHA1_Init(&sha);
     SHA1_Update(&sha, (sha1_byte *)hctx->handshake.key->ptr,
                 hctx->handshake.key->used - 1);
     SHA1_Final(sha1_digest, &sha);
     /* get base64 encoded SHA1 hash */
-    base64_encode(digest, sha1_digest, SHA1_DIGEST_LENGTH);
+    if (base64_encode(digest, digest_siz, sha1_digest, SHA1_DIGEST_LENGTH) < 0) {
+        return -1;
+    }
 #endif
 
     return 0;
@@ -522,7 +526,8 @@ create_response_rfc_6455(handler_ctx *hctx) {
         "Upgrade: websocket\r\n"
         "Connection: Upgrade\r\n";
     buffer *resp = NULL;
-    unsigned char accept_body[ACCEPT_BODY_STRLEN];
+    unsigned char *accept_body;
+    size_t accept_body_siz;
 
     resp = chunkqueue_get_append_buffer(hctx->tocli);
     buffer_append_string(resp, const_hdrs);
@@ -534,15 +539,14 @@ create_response_rfc_6455(handler_ctx *hctx) {
         buffer_append_string(resp, CRLF_STR);
     }
     /* Sec-WebSocket-Accept header */
-    memset(accept_body, 0, sizeof(accept_body));
-    if (create_accept_body(accept_body, hctx) < 0) {
+    if (create_accept_body(&accept_body, &accept_body_siz, hctx) < 0) {
         DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
                   "s", "invalid Sec-WebSocket-Key");
         return MOD_WEBSOCKET_BAD_REQUEST;
     }
     buffer_append_string(resp, SEC_WEBSOCKET_ACCEPT_STR ": ");
-    buffer_append_string_len(resp,
-                             (char *)accept_body, strlen((char *)accept_body));
+    buffer_append_string_len(resp, (char *)accept_body, accept_body_siz);
+    free(accept_body);
     buffer_append_string(resp, CRLF_STR);
     buffer_append_string(resp, CRLF_STR);
     return MOD_WEBSOCKET_OK;

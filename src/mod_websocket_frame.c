@@ -21,10 +21,7 @@ mod_websocket_frame_send_ietf_00(handler_ctx *hctx,
     int ret = -1;
     buffer *b = NULL;
     char *enc = NULL;
-
-#ifdef	_MOD_WEBSOCKET_WITH_ICU_
     size_t encsiz = 0;
-#endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
 
     if (!hctx ||
         (!payload && (type == MOD_WEBSOCKET_FRAME_TYPE_TEXT ||
@@ -81,14 +78,13 @@ mod_websocket_frame_send_ietf_00(handler_ctx *hctx,
         }
         DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO,
                   "s", "convert binary data into base64 text data");
-        enc = (char *)malloc(siz * 2);
-        if (!enc) {
+        ret = base64_encode((unsigned char **)&enc, &encsiz,
+                            (unsigned char *)payload, siz);
+        if (ret != 0) {
             DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
             break;
         }
-        memset(enc, 0, siz * 2);
-        base64_encode((unsigned char *)enc, (unsigned char *)payload, siz);
-        ret = buffer_append_memory(b, enc, strlen(enc));
+        ret = buffer_append_memory(b, enc, encsiz);
         free(enc);
         enc = NULL;
         if (ret != 0) {
@@ -273,9 +269,13 @@ mod_websocket_frame_recv_ietf_00(handler_ctx *hctx) {
                                   "s", "convert base64 text data into binary data");
                         DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
                                   "ss", "receive base64 text:", enc);
-                        b64 = (char *)malloc(encsiz + 1);
-                        memset(b64, 0, encsiz + 1);
-                        base64_decode((unsigned char *)b64, &b64siz, (unsigned char *)enc);
+                        ret = base64_decode((unsigned char **)&b64, &b64siz, (unsigned char *)enc);
+                        if (ret != 0) {
+                            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "invalid base64 text");
+                            chunkqueue_reset(hctx->tosrv);
+                            chunkqueue_reset(hctx->fromcli);
+                            return -1;
+                        }
                         ret = buffer_append_memory(b, b64, b64siz);
                         free(enc);
                         free(b64);
@@ -296,10 +296,14 @@ mod_websocket_frame_recv_ietf_00(handler_ctx *hctx) {
                         payload->ptr[payload->used] = '\0';
                         DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
                                   "ss", "receive base64 text:", payload->ptr);
-                        b64 = (char *)malloc(payload->used + 1);
-                        memset(b64, 0, payload->used + 1);
-                        base64_decode((unsigned char *)b64, &b64siz,
-                                      (unsigned char *)payload->ptr);
+                        ret = base64_decode((unsigned char **)&b64, &b64siz,
+                                            (unsigned char *)payload->ptr);
+                        if (ret != 0) {
+                            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "invalid base64 text");
+                            chunkqueue_reset(hctx->tosrv);
+                            chunkqueue_reset(hctx->fromcli);
+                            return -1;
+                        }
                         ret = buffer_append_memory(b, b64, b64siz);
                         buffer_reset(payload);
                         free(b64);

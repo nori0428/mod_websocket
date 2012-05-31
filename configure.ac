@@ -1,7 +1,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_INIT([mod_websocket], [0.1], [nori.0428@gmail.com])
+AC_INIT([mod_websocket], [0.2], [nori.0428@gmail.com])
 AC_CONFIG_SRCDIR([src/mod_websocket.c])
 AC_CONFIG_HEADER([config.h])
 AC_CONFIG_MACRO_DIR(m4)
