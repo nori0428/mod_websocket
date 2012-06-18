@@ -371,13 +371,13 @@ handler_t _handle_fdevent(server *srv, void *ctx, int revents) {
         errno = 0;
         memset(readbuf, 0, sizeof(readbuf));
         siz = read(hctx->fd, readbuf, UINT16_MAX - 1);
-        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
-                  "sdsx",
-                  "recv from server fd:", hctx->fd,
-                  ", size:", siz);
         if (siz == 0) {
             _tcp_server_disconnect(hctx);
         } else if (siz > 0) {
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
+                      "sdsx",
+                      "recv from server fd:", hctx->fd,
+                      ", size:", siz);
             if (hctx->state == MOD_WEBSOCKET_STATE_CONNECTED) {
                 type = (data_string *)
                     array_get_element(hctx->ext->value,
@@ -400,6 +400,9 @@ handler_t _handle_fdevent(server *srv, void *ctx, int revents) {
             DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
                       "ss", "can't read from server:", strerror(errno));
             _tcp_server_disconnect(hctx);
+        } else {
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
+                      "s", strerror(errno));
         }
     }
     return _handle_subrequest(srv, hctx->con, hctx->pd);
