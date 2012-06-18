@@ -349,7 +349,6 @@ void _tcp_server_disconnect(handler_ctx *hctx) {
 }
 
 handler_t _handle_fdevent(server *srv, void *ctx, int revents) {
-    int b = 0;
     handler_ctx *hctx = (handler_ctx *)ctx;
     mod_websocket_frame_type_t frame_type;
     char readbuf[UINT16_MAX];
