@@ -349,7 +349,6 @@ void _tcp_server_disconnect(handler_ctx *hctx) {
 }
 
 handler_t _handle_fdevent(server *srv, void *ctx, int revents) {
-    int b = 0;
     handler_ctx *hctx = (handler_ctx *)ctx;
     mod_websocket_frame_type_t frame_type;
     char readbuf[UINT16_MAX];
@@ -362,18 +361,16 @@ handler_t _handle_fdevent(server *srv, void *ctx, int revents) {
                   "recv NVAL event: fd(srv) =", hctx->fd,
                   "fd(cli) =", hctx->con->fd);
         _tcp_server_disconnect(hctx);
+    } else if (revents & FDEVENT_HUP || revents & FDEVENT_ERR) {
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+                  "sdsd",
+                  "recv HUP or ERR event: fd(srv) =", hctx->fd,
+                  "fd(cli) =", hctx->con->fd);
+        _tcp_server_disconnect(hctx);
     } else if (revents & FDEVENT_IN) {
-        if (ioctl(hctx->fd, FIONREAD, &b)) {
-            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "sd", "ioctl failed:", hctx->fd);
-            _tcp_server_disconnect(hctx);
-            return _handle_subrequest(srv, hctx->con, hctx->pd);
-        }
-        if (b > UINT16_MAX - 1) {
-            b = UINT16_MAX - 1;
-        }
         errno = 0;
         memset(readbuf, 0, sizeof(readbuf));
-        siz = read(hctx->fd, readbuf, b);
+        siz = read(hctx->fd, readbuf, UINT16_MAX - 1);
         DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
                   "sdsx",
                   "recv from server fd:", hctx->fd,
@@ -404,12 +401,6 @@ handler_t _handle_fdevent(server *srv, void *ctx, int revents) {
                       "ss", "can't read from server:", strerror(errno));
             _tcp_server_disconnect(hctx);
         }
-    } else if (revents & FDEVENT_HUP || revents & FDEVENT_ERR) {
-        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
-                  "sdsd",
-                  "recv HUP or ERR event: fd(srv) =", hctx->fd,
-                  "fd(cli) =", hctx->con->fd);
-        _tcp_server_disconnect(hctx);
     }
     return _handle_subrequest(srv, hctx->con, hctx->pd);
 }
