@@ -2,7 +2,7 @@
 
 - What is this?
   mod_websocket.c provides a WebSocket extension for
-  lighttpd HTTP server ver 1.4.28 - 1.4.30( http://www.lighttpd.net/ )
+  lighttpd HTTP server ver 1.4.28 - 1.4.31( http://www.lighttpd.net/ )
 
 - How does mod_websocket work?
   Please see these figures.
@@ -26,6 +26,7 @@
     by specifying --with-websocket or --with-websocket=ALL
   2.Automatic base64 {en, de}code on hybi-00 spec by specifying "bin" type in websocket.conf.
     ( my answer of https://github.com/nori0428/mod_websocket/issues/19 )
+    A more detailed description has been described in the INSTALL.
 
 - Roadmaps for near future
   I'll delete IETF-00 option when iOS supports RFC-6455 specs.
