@@ -3,12 +3,6 @@
 SUBDIRS = \
 	.
 
-INCLUDES = \
-	-I${top_srcdir} \
-	-I/opt/local/include \
-	-I/usr/local/include \
-	-I.
-
 noinst_LTLIBRARIES = libtest.la
 
 libtest_la_SOURCES = \

@@ -1,5 +1,5 @@
---- lighttpd-1.4.28.orig/src/Makefile.am	2010-08-12 05:44:17.000000000 +0900
-+++ lighttpd-1.4.28.new/src/Makefile.am	2012-01-19 06:01:15.444648892 +0900
+--- lighttpd-1.4.28.orig/src/Makefile.am	2012-07-12 19:40:45.000000000 +0900
++++ lighttpd-1.4.28.new/src/Makefile.am	2012-07-12 19:42:59.000000000 +0900
 @@ -264,6 +264,24 @@
  mod_accesslog_la_LDFLAGS = -module -export-dynamic -avoid-version -no-undefined
  mod_accesslog_la_LIBADD = $(common_libadd)
@@ -17,12 +17,11 @@
 +mod_websocket_la_SOURCES += sha1.h sha1.c
 +endif
 +
-+mod_websocket_la_CFLAGS = $(AM_CFLAGS) $(WEBSOCKET_VERSION_CFLAGS) $(WEBSOCKET_ICU_CFLAGS)
-+mod_websocket_la_LDFLAGS = -module -export-dynamic -avoid-version -no-undefined
-+mod_websocket_la_LIBADD = $(common_libadd) $(WEBSOCKET_ICU_LIBS)
++mod_websocket_la_CFLAGS = $(AM_CFLAGS) $(WEBSOCKET_CFLAGS)
++mod_websocket_la_LDFLAGS = -module -export-dynamic -avoid-version -no-undefined $(WEBSOCKET_LDFLAGS)
++mod_websocket_la_LIBADD = $(common_libadd) $(WEBSOCKET_LIBS)
 +
 +endif
  
  hdr = server.h buffer.h network.h log.h keyvalue.h \
        response.h request.h fastcgi.h chunk.h \
-lighttpd-1.4.28.orig/src のみに存在: Makefile.in

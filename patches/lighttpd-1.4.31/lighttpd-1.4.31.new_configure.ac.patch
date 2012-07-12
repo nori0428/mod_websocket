@@ -1,90 +1,96 @@
 --- lighttpd-1.4.31.orig/configure.ac	2012-06-20 09:35:22.000000000 +0900
-+++ lighttpd-1.4.31.new/configure.ac	2012-06-20 10:19:28.000000000 +0900
-@@ -67,6 +67,13 @@
- AC_TYPE_OFF_T
++++ lighttpd-1.4.31.new/configure.ac	2012-07-12 17:50:33.000000000 +0900
+@@ -68,6 +68,12 @@
  AC_TYPE_PID_T
  AC_TYPE_SIZE_T
-+AC_CHECK_SIZEOF(size_t)
-+
+ 
 +dnl Checks for Endian
 +AC_C_BIGENDIAN
 +if test "x$ac_cv_c_bigendian" = "xyes"; then
 +    CFLAGS="$CFLAGS -DWORDS_BIGENDIAN"
 +fi
- 
++
  AC_CHECK_MEMBER(struct tm.tm_gmtoff,[AC_DEFINE([HAVE_STRUCT_TM_GMTOFF],[1],[gmtoff in struct tm])],,[#include <time.h>])
  AC_CHECK_TYPES(struct sockaddr_storage,,,[#include <sys/socket.h>])
-@@ -619,6 +626,58 @@
+ AC_CHECK_TYPES(socklen_t,,,[#include <sys/types.h>
+@@ -619,6 +625,66 @@
  LIGHTTPD_VERSION_ID=`echo $PACKAGE_VERSION | $AWK -F '.' '{print "(" $1 " << 16 | " $2 " << 8 | " $3 ")"}'`
  AC_DEFINE_UNQUOTED([LIGHTTPD_VERSION_ID], [$LIGHTTPD_VERSION_ID], [lighttpd-version-id])
  
 +dnl check for websocket support
 +AC_MSG_CHECKING(whether --with-websocket option specified)
-+AC_ARG_WITH(
-+        websocket,
-+        AC_HELP_STRING([--with-websocket@<:@=ALL/RFC-6455/IETF-00@:>@],
-+                       [specify websocket version@<:@default=ALL@:>@]),
-+        [ websocket=$withval ],
-+        [ websocket=no ])
-+AC_MSG_RESULT(${websocket})
-+if test "x${websocket}" == "xyes" ||
-+   test "x${websocket}" == "xall" ||
-+   test "x${websocket}" == "xALL"; then
-+   websocket="ALL"
-+   WEBSOCKET_VERSION_CFLAGS="-D_MOD_WEBSOCKET_SPEC_IETF_00_ -D_MOD_WEBSOCKET_SPEC_RFC_6455_"
-+elif test "x${websocket}" == "xrfc-6455" ||
-+   test "x${websocket}" == "xRFC-6455"; then
-+   websocket="RFC-6455"
-+   WEBSOCKET_VERSION_CFLAGS="-D_MOD_WEBSOCKET_SPEC_RFC_6455_"
-+elif test "x${websocket}" == "xietf-00" ||
-+     test "x${websocket}" == "xIETF-00"; then
-+   WEBSOCKET_VERSION_CFLAGS="-D_MOD_WEBSOCKET_SPEC_IETF_00_"
-+elif test "x${websocket}" != "xno"; then
-+   AC_MSG_ERROR([websocket option is invalid. plz specify ALL, RFC-6455, IETF-00])
++AC_ARG_WITH(websocket,
++            AC_HELP_STRING([--with-websocket@<:@=ALL/RFC-6455/IETF-00@:>@],
++                           [specify draft version@<:@default=no@:>@]),
++                           [ with_websocket=$withval ],
++                           [ with_websocket=no ])
++AC_MSG_RESULT(${with_websocket})
++if test "x${with_websocket}" = "xyes" -o "x${with_websocket}" = "xYES" \
++   -o "x${with_websocket}" = "xall" -o "x${with_websocket}" = "xALL" ; then
++    with_websocket=ALL
++    WEBSOCKET_CFLAGS="-D_MOD_WEBSOCKET_SPEC_IETF_00_ -D_MOD_WEBSOCKET_SPEC_RFC_6455_"
++elif test "x${with_websocket}" = "xrfc-6455" -o "x${with_websocket}" = "xRFC-6455" ; then
++    WEBSOCKET_CFLAGS="-D_MOD_WEBSOCKET_SPEC_RFC_6455_"
++elif test "x${with_websocket}" = "xietf-00" -o "x${with_websocket}" = "xIETF-00" ; then
++    WEBSOCKET_CFLAGS="-D_MOD_WEBSOCKET_SPEC_IETF_00_"
++elif test "x${with_websocket}" != "xno" ; then
++    AC_MSG_ERROR([websocket option is invalid. plz specify ALL, IETF-00, RFC-6455])
 +fi
-+AC_SUBST(websocket)
-+AC_SUBST(WEBSOCKET_VERSION_CFLAGS)
-+AM_CONDITIONAL(WITH_WEBSOCKET, test x$websocket != xno)
++AC_SUBST(with_websocket)
++AC_SUBST(WEBSOCKET_CFLAGS)
++AM_CONDITIONAL(WITH_WEBSOCKET, test x$with_websocket != xno)
 +AM_CONDITIONAL(WEBSOCKET_USE_OPENSSL, test x$use_openssl = xyes)
 +
-+dnl check for icu lib
-+AC_MSG_CHECKING(whether --with-libicu option specified)
-+AC_ARG_WITH(
-+        libicu,
-+        AC_HELP_STRING([--with-libicu@<:@=PATH@:>@],
-+                       [Include libicu support for websocket in PATH/include and PATH/lib]),
-+        [ with_icu=$withval ],
-+        [ with_icu=yes ])
-+AC_MSG_RESULT(${with_icu})
-+if test "x${with_icu}" == "xyes"; then
-+   WEBSOCKET_ICU_CFLAGS="-D_MOD_WEBSOCKET_WITH_ICU_"
-+   WEBSOCKET_ICU_LIBS="-licui18n -licuuc"
-+elif test "x${with_icu}" != "xno"; then
-+   WEBSOCKET_ICU_CFLAGS="-D_MOD_WEBSOCKET_WITH_ICU_ -I${with_icu}/include"
-+   WEBSOCKET_ICU_LIBS="-L${with_icu}/lib -licui18n -licuuc"
++dnl check for libicu
++if test "x${with_websocket}" = "xno" ; then
++     with_libicu=no
 +else
-+   WEBSOCKET_ICU_CFLAGS=
-+   WEBSOCKET_ICU_LIBS=
++     AC_MSG_CHECKING(whether --with-libicu option specified)
++     AC_ARG_WITH(libicu,
++                 AC_HELP_STRING([--with-libicu],
++                                [use ICU lib for websocket@<:@default=yes@:>@]),
++                                [ with_libicu=$withval ],
++                                [ with_libicu=yes ])
++     AC_MSG_RESULT(${with_libicu})
++     if test "x${with_libicu}" != "xno" ; then
++         WEBSOCKET_CFLAGS="$WEBSOCKET_CFLAGS -D_MOD_WEBSOCKET_WITH_ICU_"
++         WEBSOCKET_LIBS="-licui18n -licuuc"
++         if test "x${with_libicu}" != "xyes"; then
++             WEBSOCKET_CFLAGS="$WEBSOCKET_CFLAGS -I${with_libicu}/include"
++             WEBSOCKET_LDFLAGS="-L${with_libicu}/lib"
++         fi
++         BACKUP_LDFLAGS="$LDFLAGS"
++         BACKUP_LIBS="$LIBS"
++         LDFLAGS="$BACKUP_LDFLAGS $WEBSOCKET_LDFLAGS"
++         LIBS="$BACKUP_LIBS $WEBSOCKET_LIBS"
++         AC_MSG_CHECKING([for ucnv_open in -licui18n])
++         AC_TRY_LINK([#include <unicode/ucnv.h>],
++                     [UErrorCode err = U_ZERO_ERROR; ucnv_open("utf-8", &err);],
++                     AC_MSG_RESULT(yes),
++                     [AC_MSG_RESULT(no); AC_MSG_ERROR([needs ICU libs])])
++         LDFLAGS="$BACKUP_LDFLAGS"
++         LIBS="$BACKUP_LIBS"
++         AC_SUBST(WEBSOCKET_CFLAGS)
++         AC_SUBST(WEBSOCKET_LIBS)
++         AC_SUBST(WEBSOCKET_LDFLAGS)
++     fi
 +fi
-+AC_SUBST(WEBSOCKET_ICU_CFLAGS)
-+AC_SUBST(WEBSOCKET_ICU_LIBS)
-+AM_CONDITIONAL(WITH_LIBICU, test x$with_icu != xno)
++AM_CONDITIONAL(WITH_LIBICU, test x$with_libicu != xno)
 +
  AC_CONFIG_FILES([Makefile src/Makefile
  		 doc/config/conf.d/Makefile \
  		 doc/config/vhosts.d/Makefile \
-@@ -751,6 +810,13 @@
+@@ -751,6 +817,13 @@
  	disable_feature="$disable_feature $features"
  fi
  
 +dnl websocket
 +plugins="mod_websocket"
-+if test "x${websocket}" != "xno"; then
-+       do_build="$do_build $plugins(${websocket})"
++if test "x${with_websocket}" != "xno"; then
++	do_build="$do_build $plugins(${with_websocket})"
 +else
-+       no_build="$no_build $plugins"
++	no_build="$no_build $plugins"
 +fi
  
  dnl output
  
-Only in lighttpd-1.4.31.new/: configure.ac.orig

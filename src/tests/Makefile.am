@@ -14,19 +14,11 @@ endif
 
 INCLUDES = \
 	-I${top_srcdir}/stub/ \
-	-I${top_srcdir}/src/ \
-	-I/usr/local/include/ \
-	-I/opt/local/include/ \
-	-I.
+	-I${top_srcdir}/src/
 
 LDADD = \
-	-L/usr/local/lib \
-	-L/opt/local/lib \
 	${top_srcdir}/src/libwebsocket.la \
-	${top_srcdir}/stub/libtest.la \
-	${LIBNCURSES} ${WEBSOCKET_ICU_LIBS} -lcunit -lev 
-
-CFLAGS = -Wall -g ${WEBSOCKET_VERSION_CFLAGS} ${WEBSOCKET_ICU_CFLAGS}
+	${top_srcdir}/stub/libtest.la
 
 if WITH_LIBICU
 noinst_PROGRAMS = \
