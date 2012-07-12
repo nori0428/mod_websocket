@@ -1,5 +1,5 @@
 --- lighttpd-1.4.31.orig/src/Makefile.am	2012-06-20 09:35:22.000000000 +0900
-+++ lighttpd-1.4.31.new/src/Makefile.am	2012-06-20 10:09:19.000000000 +0900
++++ lighttpd-1.4.31.new/src/Makefile.am	2012-07-12 17:49:14.000000000 +0900
 @@ -265,6 +265,24 @@
  mod_accesslog_la_LDFLAGS = -module -export-dynamic -avoid-version -no-undefined
  mod_accesslog_la_LIBADD = $(common_libadd)
@@ -17,9 +17,9 @@
 +mod_websocket_la_SOURCES += sha1.h sha1.c
 +endif
 +
-+mod_websocket_la_CFLAGS = $(AM_CFLAGS) $(WEBSOCKET_VERSION_CFLAGS) $(WEBSOCKET_ICU_CFLAGS)
-+mod_websocket_la_LDFLAGS = -module -export-dynamic -avoid-version -no-undefined
-+mod_websocket_la_LIBADD = $(common_libadd) $(WEBSOCKET_ICU_LIBS)
++mod_websocket_la_CFLAGS = $(AM_CFLAGS) $(WEBSOCKET_CFLAGS)
++mod_websocket_la_LDFLAGS = -module -export-dynamic -avoid-version -no-undefined $(WEBSOCKET_LDFLAGS)
++mod_websocket_la_LIBADD = $(common_libadd) $(WEBSOCKET_LIBS)
 +
 +endif
  
