@@ -1,15 +1,18 @@
 ## $Id$
 
+if WITH_TEST
+TESTS_DIR = tests
+endif
+
+if WITH_SAMPLE
+SAMPLES_DIR = samples
+endif
+
 SUBDIRS = \
-	. tests samples
+	. $(TESTS_DIR) $(SAMPLES_DIR)
 
 INCLUDES = \
-	-I${top_srcdir} \
-	-I${top_srcdir}/stub \
-	-I${top_srcdir}/src \
-	-I/usr/local/include \
-	-I/opt/local/include \
-	-I.
+	-I${top_srcdir}/stub
 
 noinst_LTLIBRARIES = libwebsocket.la
 
@@ -24,6 +27,7 @@ libwebsocket_la_SOURCES = \
 	mod_websocket_connector.c \
 	mod_websocket_handshake.c \
 	mod_websocket_frame.c
+libwebsocket_la_CFLAGS = $(MODULE_CFLAGS)
 else
 libwebsocket_la_SOURCES = \
 	base64.h \
@@ -34,6 +38,7 @@ libwebsocket_la_SOURCES = \
 	mod_websocket_connector.c \
 	mod_websocket_handshake.c \
 	mod_websocket_frame.c
+libwebsocket_la_CFLAGS = $(MODULE_CFLAGS)
 endif
 
 include $(top_srcdir)/m4/Makefile.rules

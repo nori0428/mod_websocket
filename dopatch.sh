@@ -31,7 +31,7 @@ if [ ${ANSWER} = 'y' -o ${ANSWER} = 'yes' ]; then
     PATCHES=`ls patches/${LIGHTTPD_VERSION}/*.patch`
     for p in ${PATCHES}
     do
-        patch -d ${LIGHTTPD_DIR} -p1 < ${p}
+        patch -N -d ${LIGHTTPD_DIR} -p1 < ${p}
     done
 fi
 
