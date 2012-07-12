@@ -1,7 +1,11 @@
 ## $Id$
 
+if WITH_TEST
+STUB_DIR = stub
+endif
+
 SUBDIRS = \
-	. stub src
+	. $(STUB_DIR) src
 
 install:
 	@if [ -z "${LIGHTTPD_LOCATION}" ]; then \
