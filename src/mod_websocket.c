@@ -650,9 +650,7 @@ SUBREQUEST_FUNC(_handle_subrequest) {
         /* check request */
         wsret = mod_websocket_handshake_check_request(hctx);
         if (wsret == MOD_WEBSOCKET_NOT_WEBSOCKET) {
-            hctx->con->http_status = MOD_WEBSOCKET_BAD_REQUEST;
-            hctx->con->mode = DIRECT;
-            return HANDLER_FINISHED;
+            return HANDLER_GO_ON;
         } else if (wsret != MOD_WEBSOCKET_OK) {
             hctx->con->http_status = wsret;
             hctx->con->mode = DIRECT;
