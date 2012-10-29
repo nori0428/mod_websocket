@@ -196,7 +196,7 @@ mod_websocket_frame_recv_ietf_00(handler_ctx *hctx) {
                         buffer_reset(payload);
                         return -1;
                     }
-                    i = frame->used - i - 1;
+                    i += frame->used - i - 1;
                 } else {
                     DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
                               "sx", "got final payload size:", (pff - &frame->ptr[i]));
