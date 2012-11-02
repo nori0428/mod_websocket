@@ -38,7 +38,7 @@ static const char base64_encode_chars[] =
 	"abcdefghijklmnopqrstuvwxyz"
 	"0123456789+/";
 
-static const char base64_decode_chars[] = {
+static const signed char base64_decode_chars[] = {
 	- 1, - 1, - 1, - 1, - 1, - 1, - 1, - 1,
 	- 1, - 1, - 1, - 1, - 1, - 1, - 1, - 1,
 	- 1, - 1, - 1, - 1, - 1, - 1, - 1, - 1,
