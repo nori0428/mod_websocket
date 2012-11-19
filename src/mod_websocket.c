@@ -241,6 +241,16 @@ int _tcp_server_connect(handler_ctx *hctx) {
     buffer *port = NULL;
     int flag = 1;
 
+    // for logging remote ipaddr and port
+    socklen_t len;
+    struct sockaddr_storage caddr;
+    int cport, ret;
+#ifndef INET6_ADDRSTRLEN
+# define	INET6_ADDRSTRLEN	(46)
+#endif
+    char ipstr[INET6_ADDRSTRLEN];
+    // ends here
+
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
     char *locale = NULL;
 #endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
@@ -321,17 +331,41 @@ int _tcp_server_connect(handler_ctx *hctx) {
     fdevent_register(hctx->srv->ev, hctx->fd, _handle_fdevent, hctx);
     fdevent_event_set(hctx->srv->ev, &(hctx->fd_idx), hctx->fd, FDEVENT_IN);
 
+    // for logging remote ipaddr and port
+    if (hctx->pd->conf.debug > MOD_WEBSOCKET_LOG_INFO) {
+        char logstr[4096];
+
+        len = sizeof(caddr);
+        ret = getpeername(hctx->con->fd, (struct sockaddr*)&caddr, &len);
+        if (ret != -1) {
+            if (caddr.ss_family == AF_INET) {
+                struct sockaddr_in *s = (struct sockaddr_in *)&caddr;
+                cport = ntohs(s->sin_port);
+                inet_ntop(AF_INET, &s->sin_addr, ipstr, sizeof(ipstr));
+            } else {
+                struct sockaddr_in6 *s = (struct sockaddr_in6 *)&caddr;
+                cport = ntohs(s->sin6_port);
+                inet_ntop(AF_INET6, &s->sin6_addr, ipstr, sizeof(ipstr));
+            }
+        } else {
+            snprintf(ipstr, INET6_ADDRSTRLEN, "failed getpeername");
+            cport = -1;
+        }
+
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
-    DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO,
-              "sdsdssssss", "connected client fd:", hctx->con->fd,
-              " -> server fd:", hctx->fd,
-              "(", host->ptr, ":", port->ptr, "), locale:", locale);
+        // connected client fd: num(addr:port,UTF-8) -> server fd: num(addr:port,locale)
+        snprintf(logstr, sizeof(logstr),
+                 "connect client fd: %d (%s:%d) -> server fd: %d (%s:%s,%s)",
+                 hctx->con->fd, ipstr, cport, hctx->fd, host->ptr, port->ptr, locale);
 #else
-    DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO,
-              "sdsdsssss", "connected client fd:", hctx->con->fd,
-              " -> server fd:", hctx->fd,
-              "(", host->ptr, ":", port->ptr, "), locale: unused");
+        // connected client fd: num(addr:port,UTF-8) -> server fd: num(addr:port,UTF-8)
+        snprintf(logstr, sizeof(logstr),
+                 "connect client fd: %d (%s:%d) -> server fd: %d (%s:%s)",
+                 hctx->con->fd, ipstr, cport, hctx->fd, host->ptr, port->ptr);
 #endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
+
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO, "s", logstr);
+    }
 
     return 0;
 }
@@ -339,7 +373,7 @@ int _tcp_server_connect(handler_ctx *hctx) {
 void _tcp_server_disconnect(handler_ctx *hctx) {
     if (hctx->fd > 0) {
         DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO,
-                  "sd", "disconnect server:", hctx->fd);
+                  "sd", "disconnect server fd:", hctx->fd);
         fdevent_event_del(hctx->srv->ev, &(hctx->fd_idx), hctx->fd);
         fdevent_unregister(hctx->srv->ev, hctx->fd);
         mod_websocket_tcp_server_disconnect(hctx->fd);
@@ -501,7 +535,7 @@ handler_t _disconnect(server *srv, connection *con, void *pd) {
     srv = srv; // suppress warning
     if (con->plugin_ctx[p->id]) {
         DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO,
-                  "sd", "disconnect client:", hctx->con->fd);
+                  "sd", "disconnect client fd:", hctx->con->fd);
         if (hctx->fd > 0) {
             _tcp_server_disconnect(hctx);
         }
@@ -821,7 +855,7 @@ SUBREQUEST_FUNC(_handle_subrequest) {
     chunkqueue_reset(hctx->fromcli);
     chunkqueue_reset(hctx->tocli);
     DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO,
-              "sd", "disconnect client:", hctx->con->fd);
+              "sd", "disconnect client fd:", hctx->con->fd);
     connection_set_state(srv, con, CON_STATE_CLOSE);
     _handler_ctx_free(hctx);
     con->plugin_ctx[p->id] = NULL;
