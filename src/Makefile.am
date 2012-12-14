@@ -51,7 +51,4 @@ endif
 
 include $(top_srcdir)/m4/Makefile.rules
 
-clean-local:
-	${RM} *~ parser.h parser.c scanner.c
-
 ## EOF
