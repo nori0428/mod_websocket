@@ -13,8 +13,7 @@ extern int yylex();
 extern FILE *yyin;
 
 void yyerror(const char *e) {
-    /* nothing to do */
-    e = e;
+    fprintf(stderr, "%s\n", e);
 }
 
 int yywrap() {
