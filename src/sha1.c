@@ -57,9 +57,12 @@ typedef union _BYTE64QUAD16 {
 /* Hash a single 512-bit block. This is the core of the algorithm. */
 void SHA1_Transform(sha1_quadbyte state[5], sha1_byte buffer[64]) {
     sha1_quadbyte a, b, c, d, e;
+    BYTE64QUAD16 src;
     BYTE64QUAD16 *block;
 
-    block = (BYTE64QUAD16*)buffer;
+    /* slow but cast-align */
+    memcpy(src.c, buffer, sizeof(buffer));
+    block = &src;
     /* Copy context->state[] to working vars */
     a = state[0];
     b = state[1];
