@@ -61,7 +61,7 @@ void SHA1_Transform(sha1_quadbyte state[5], sha1_byte buffer[64]) {
     BYTE64QUAD16 *block;
 
     /* slow but cast-align */
-    memcpy(src.c, buffer, sizeof(buffer));
+    memcpy(src.c, buffer, sizeof(sha1_byte) * 64);
     block = &src;
     /* Copy context->state[] to working vars */
     a = state[0];
