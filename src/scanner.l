@@ -1,5 +1,7 @@
 %{
 
+#define	YY_NO_INPUT
+
 //#define	DEBUG
 //#define	DEBUG_LEX_ONLY
 
