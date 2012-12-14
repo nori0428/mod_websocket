@@ -1,0 +1,14 @@
+language: c
+compiler:
+  - gcc
+  - clang
+
+before_script:
+  - ./bootstrap
+  - ./configure --with-test
+
+script:
+  - "make check"
+
+notifications:
+  email: false
