@@ -4,8 +4,8 @@ compiler:
   - clang
 
 before_script:
-  - ./bootstrap
-  - ./configure --with-test
+  - "./bootstrap"
+  - "./configure --with-test"
 
 script:
   - "make check"
