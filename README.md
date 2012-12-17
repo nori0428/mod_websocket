@@ -34,7 +34,7 @@ Characteristics
 
   (my answer of https://github.com/nori0428/mod_websocket/issues/19)
 
-A more detailed description has been described in the [INSTALL](https://github.com/nori0428/mod_websocket/blob/feature/configparser/INSTALL).
+  A more detailed description has been described in the [INSTALL](https://github.com/nori0428/mod_websocket/blob/feature/configparser/INSTALL).
 
 LICENCE
 ------
