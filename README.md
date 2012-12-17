@@ -17,9 +17,11 @@ How can I use this?
 ------
 
 First, clone code.
+
 <code>
     $ git clone git://github.com/nori0428/mod_websocket.git
 </code>
+
 and follow the instructions in [INSTALL](https://github.com/nori0428/mod_websocket/blob/feature/configparser/INSTALL) or read [Wiki Page](https://github.com/nori0428/mod_websocket/wiki) for Quick Start.
 
 Characteristics
@@ -29,6 +31,7 @@ Characteristics
    see [Can I use...](http://caniuse.com/#feat=websockets) for  browser suppot.
 
 2. Automatic base64 {en, de}code on hybi-00 spec by specifying "bin" type in websocket.conf.
+
   (my answer of https://github.com/nori0428/mod_websocket/issues/19)
   A more detailed description has been described in the [INSTALL](https://github.com/nori0428/mod_websocket/blob/feature/configparser/INSTALL).
 
