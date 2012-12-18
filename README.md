@@ -1,4 +1,4 @@
-mod_websocket [![Build Status](https://secure.travis-ci.org/nori0428/mod_websocket.png)](http://travis-ci.org/nori0428/mod_websocket)
+mod_websocket [![Build Status](https://travis-ci.org/nori0428/mod_websocket.png?branch=feature/configparser)](https://travis-ci.org/nori0428/mod_websocket)
 =============
 
 What is this?
