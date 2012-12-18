@@ -17,3 +17,7 @@ configure
 *.o
 *.lo
 *.la
+
+src/scanner.c
+src/parser.h
+src/parser.c

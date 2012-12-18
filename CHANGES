@@ -1,0 +1,7 @@
+## Changes
+
+- 2012-12-18
+  Add config parser for websocket.conf.
+   But this is not used in mod_websocket.
+   Functions that are defined in mod_websocket_config.h are for use in
+   other programs like a fastcgi application, for example.
