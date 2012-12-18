@@ -4,7 +4,7 @@ mod_websocket [![Build Status](https://travis-ci.org/nori0428/mod_websocket.png?
 What is this?
 -------
 
-mod_websocket.c provides a WebSocket extension for lighttpd HTTP server ver 1.4.28 - 1.4.31(http://www.lighttpd.net/)
+mod_websocket.c provides a WebSocket extension for lighttpd HTTP server ver 1.4.28 - 1.4.32(http://www.lighttpd.net/)
 
 How does mod_websocket work?
 ------
@@ -22,7 +22,7 @@ First, clone code.
     $ git clone git://github.com/nori0428/mod_websocket.git
 </code>
 
-and follow the instructions in [INSTALL](INSTALL) or read [Wiki Page](https://github.com/nori0428/mod_websocket/wiki/_pages) for Quick Start.
+and follow the instructions in [INSTALL](https://github.com/nori0428/mod_websocket/blob/master/INSTALL) or read [Wiki Page](https://github.com/nori0428/mod_websocket/wiki/_pages) for Quick Start.
 
 Characteristics
 ------
@@ -34,12 +34,12 @@ Characteristics
 
   (my answer of https://github.com/nori0428/mod_websocket/issues/19)
 
-  A more detailed description has been described in the [INSTALL](INSTALL).
+  A more detailed description has been described in the [INSTALL](https://github.com/nori0428/mod_websocket/blob/master/INSTALL).
 
 LICENCE
 ------
 
-see  [COPYING](COPYING).(same as lighty's LICENCE) and see lighttpd LICENCE.
+see  [COPYING](https://github.com/nori0428/mod_websocket/blob/master/COPYING).(same as lighty's LICENCE) and see lighttpd LICENCE.
 
 great thanks to
 ------
