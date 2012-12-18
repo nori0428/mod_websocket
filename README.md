@@ -22,7 +22,7 @@ First, clone code.
     $ git clone git://github.com/nori0428/mod_websocket.git
 </code>
 
-and follow the instructions in [INSTALL](https://github.com/nori0428/mod_websocket/blob/feature/configparser/INSTALL) or read [Wiki Page](https://github.com/nori0428/mod_websocket/wiki/_pages) for Quick Start.
+and follow the instructions in [INSTALL](INSTALL) or read [Wiki Page](https://github.com/nori0428/mod_websocket/wiki/_pages) for Quick Start.
 
 Characteristics
 ------
@@ -39,7 +39,7 @@ Characteristics
 LICENCE
 ------
 
-see  [COPYING](https://github.com/nori0428/mod_websocket/blob/feature/configparser/COPYING).(same as lighty's LICENCE) and see lighttpd LICENCE.
+see  [COPYING](COPYING).(same as lighty's LICENCE) and see lighttpd LICENCE.
 
 great thanks to
 ------
