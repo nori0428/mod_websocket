@@ -1,5 +1,9 @@
 ## $Id$
 
+BUILT_SOURCES = parser.h
+AM_YFLAGS = -d
+AM_LFLAGS = -i
+
 if WITH_TEST
 TESTS_DIR = tests
 endif
@@ -18,6 +22,8 @@ noinst_LTLIBRARIES = libwebsocket.la
 
 if WITH_LIBICU
 libwebsocket_la_SOURCES = \
+	scanner.l \
+	parser.y \
 	base64.h \
 	base64.c \
 	sha1.h \
@@ -30,6 +36,8 @@ libwebsocket_la_SOURCES = \
 libwebsocket_la_CFLAGS = $(MODULE_CFLAGS)
 else
 libwebsocket_la_SOURCES = \
+	scanner.l \
+	parser.y \
 	base64.h \
 	base64.c \
 	sha1.h \
