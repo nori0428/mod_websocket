@@ -1,9 +1,9 @@
-mod_websocket [![Build Status](https://travis-ci.org/nori0428/mod_websocket.png?branch=feature/configparser)](https://travis-ci.org/nori0428/mod_websocket)
+mod_websocket [![Build Status](https://travis-ci.org/nori0428/mod_websocket.png)](https://travis-ci.org/nori0428/mod_websocket)
 =============
 
 What is this?
 -------
-    
+
 mod_websocket.c provides a WebSocket extension for lighttpd HTTP server ver 1.4.28 - 1.4.31(http://www.lighttpd.net/)
 
 How does mod_websocket work?

@@ -37,7 +37,7 @@
 2.Test mod_websocket
   $ cd mod_websocket
   $ ./bootstrap
-  $ ./configure --with-websocket[=ALL, RFC-6455, IETF-00]
+  $ ./configure --with-websocket[=ALL, RFC-6455, IETF-00] --with-test
   $ make clean check
 
   If bootstrap or configure failed, check your environment again.
@@ -126,7 +126,7 @@
   websocket.timeout = 30
 
   6-5. send PING frame
-       This parameter becomes effective only at --with-websocket=IETF-08.
+       This parameter becomes effective only at --with-websocket=RFC-6455.
        add websocket.ping_interval section.(sec)
        not send PING frame by default.
 
@@ -142,15 +142,15 @@
   # websocket.debug = 4 # LOG_DEBUG
 
 7. websocket.server section format
-   "host"  = STRING          : FQDN or IPAddr [mandatory]
-   "service" = STRING        : port number or service name [mandatory]
-   "type"  = "bin" or "text" : backend server type [optional]
-                               case insensitive, default = "text"
+   "host"    = STRING            : FQDN or IPAddr [mandatory]
+   "service" = STRING or Integer : port number or service name [mandatory]
+   "type"    = "bin" or "text"   : backend server type [optional]
+                                   case insensitive, default = "text"
 
-                               If specified "bin" when on IETF-00 spec,
-                               mod_websocket {en, de}codes websocket payload
-                               into base64 text automatically.
-                               So *must* {en,de}code base64 text on clientside.
+                                   If specified "bin" when on IETF-00 spec,
+                                   mod_websocket {en, de}codes websocket payload
+                                   into base64 text automatically.
+                                   So *must* {en,de}code base64 text on clientside.
    ex.
    +---------+            +--------+            +------------------+
    | browser | <--------> | lighty | <--------> | binary server    |
