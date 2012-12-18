@@ -133,6 +133,8 @@ int _set_subproto_extension(data_array *dst, const data_array *src) {
     data_string *origin = NULL;
     data_string *type = NULL;
     buffer *key = NULL;
+#define	PORTSTRLEN_MAX	(5)
+    char portstr[PORTSTRLEN_MAX + 1];
 
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
     data_string *locale = NULL;
@@ -150,8 +152,15 @@ int _set_subproto_extension(data_array *dst, const data_array *src) {
         } else if ( 0 == strcmp(key->ptr, MOD_WEBSOCKET_CONFIG_PORT) ) {
             port = data_string_init();
             buffer_copy_string_buffer(port->key, key);
-            buffer_copy_string_buffer(port->value,
-                                      ((data_string *)data)->value);
+            if (data->type == TYPE_STRING) {
+                buffer_copy_string_buffer(port->value,
+                                          ((data_string *)data)->value);
+            } else if (data->type == TYPE_INTEGER) {
+                memset(portstr, 0, PORTSTRLEN_MAX + 1);
+                snprintf(portstr, PORTSTRLEN_MAX + 1, "%d", ((data_string *)data)->value);
+                buffer_copy_string(port->value, portstr);
+#undef	PORTSTRLEN_MAX
+            }
             array_insert_unique(dst->value, (data_unset *)port);
         } else if ( 0 == strcmp(key->ptr, MOD_WEBSOCKET_CONFIG_SUBPROTO) ) {
             buffer_copy_string_buffer(dst->key, ((data_string *)data)->value);
@@ -242,6 +251,7 @@ int _tcp_server_connect(handler_ctx *hctx) {
     int flag = 1;
 
     // for logging remote ipaddr and port
+    char logstr[4096];
     socklen_t len;
     struct sockaddr_storage caddr;
     int cport, ret;
@@ -283,6 +293,9 @@ int _tcp_server_connect(handler_ctx *hctx) {
         hctx->con->mode = DIRECT;
         return -1;
     }
+    snprintf(logstr, sizeof(logstr),
+             "try to connect backend server: %s:%s", host->ptr, port->ptr);
+    DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "s", logstr);
     hctx->fd = mod_websocket_tcp_server_connect(host->ptr, port->ptr);
     if (hctx->fd < 0) {
         DEBUG_LOG(MOD_WEBSOCKET_LOG_WARNING,
@@ -333,8 +346,6 @@ int _tcp_server_connect(handler_ctx *hctx) {
 
     // for logging remote ipaddr and port
     if (hctx->pd->conf.debug > MOD_WEBSOCKET_LOG_INFO) {
-        char logstr[4096];
-
         len = sizeof(caddr);
         ret = getpeername(hctx->con->fd, (struct sockaddr*)&caddr, &len);
         if (ret != -1) {
@@ -355,12 +366,12 @@ int _tcp_server_connect(handler_ctx *hctx) {
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
         // connected client fd: num(addr:port,UTF-8) -> server fd: num(addr:port,locale)
         snprintf(logstr, sizeof(logstr),
-                 "connect client fd: %d (%s:%d) -> server fd: %d (%s:%s,%s)",
+                 "connected client fd: %d (%s:%d) -> server fd: %d (%s:%s,%s)",
                  hctx->con->fd, ipstr, cport, hctx->fd, host->ptr, port->ptr, locale);
 #else
         // connected client fd: num(addr:port,UTF-8) -> server fd: num(addr:port,UTF-8)
         snprintf(logstr, sizeof(logstr),
-                 "connect client fd: %d (%s:%d) -> server fd: %d (%s:%s)",
+                 "connected client fd: %d (%s:%d) -> server fd: %d (%s:%s)",
                  hctx->con->fd, ipstr, cport, hctx->fd, host->ptr, port->ptr);
 #endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
 
