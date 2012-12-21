@@ -119,11 +119,11 @@ if test "x${lighttpd}" != "xno"; then
 fi
 
 # additional CFLAGS
-# tentative add -Wno-sign-compare for old version flex
+# add -Wno-sign-compare and remove -Wundef for flex
 if test "x${with_test}" = "xyes" -o "x${with_sample}" = "xyes" ; then
-   MODULE_CFLAGS="-g -O3 -Werror -W -Wall -Wundef -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wwrite-strings -Wno-sign-compare -Waggregate-return -Wnested-externs -Wno-long-long -Wunused -Wfloat-equal -Wformat -fno-strict-aliasing"
+   MODULE_CFLAGS="-g -O3 -Werror -W -Wall -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wwrite-strings -Wno-sign-compare -Waggregate-return -Wnested-externs -Wno-long-long -Wunused -Wfloat-equal -Wformat -fno-strict-aliasing"
 else
-   MODULE_CFLAGS="-O3 -Werror -W -Wall -Wundef -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wwrite-strings -Wno-sign-compare -Waggregate-return -Wnested-externs -Wno-long-long -Wunused -Wfloat-equal -Wformat -fno-strict-aliasing"
+   MODULE_CFLAGS="-O3 -Werror -W -Wall -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wwrite-strings -Wno-sign-compare -Waggregate-return -Wnested-externs -Wno-long-long -Wunused -Wfloat-equal -Wformat -fno-strict-aliasing"
 fi
 AC_SUBST(MODULE_CFLAGS)
 
