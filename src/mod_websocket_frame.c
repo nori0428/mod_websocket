@@ -146,9 +146,6 @@ mod_websocket_frame_recv_ietf_00(handler_ctx *hctx) {
     if (!hctx || !hctx->fromcli) {
         return -1;
     }
-    if (chunkqueue_is_empty(hctx->fromcli)) {
-        return 0;
-    }
     DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "sd", "recv from client fd:", hctx->con->fd);
     for (c = hctx->fromcli->first; c; c = c->next) {
         frame = c->mem;
@@ -519,9 +516,6 @@ mod_websocket_frame_recv_rfc_6455(handler_ctx *hctx) {
 
     if (!hctx || !hctx->fromcli) {
         return -1;
-    }
-    if (chunkqueue_is_empty(hctx->fromcli)) {
-        return 0;
     }
     DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "sd", "recv from client fd:", hctx->con->fd);
     for (c = hctx->fromcli->first; c; c = c->next) {
