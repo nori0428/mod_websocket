@@ -775,25 +775,27 @@ SUBREQUEST_FUNC(_handle_subrequest) {
         if (hctx->con->fd < 0) {
             break;
         } else {
-            if (mod_websocket_frame_recv(hctx) < 0) {
-                break;
-            }
-            if (!chunkqueue_is_empty(hctx->tosrv)) {
-                DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
-                          "sdsx", "send to server fd:", hctx->fd,
-                          ", size:", chunkqueue_length(hctx->tosrv));
-                ret = srv->NETWORK_BACKEND_WRITE(srv, con,
-                                                 hctx->fd, hctx->tosrv);
-                if (0 <= ret) {
-                    chunkqueue_remove_finished_chunks(hctx->tosrv);
-                } else {
-                    DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
-                              "ss", "can't send data to server:",
-                              strerror(errno));
+            if (!chunkqueue_is_empty(hctx->fromcli)) {
+                hctx->last_access = srv->cur_ts;
+                if (mod_websocket_frame_recv(hctx) < 0) {
                     break;
                 }
+                if (!chunkqueue_is_empty(hctx->tosrv)) {
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG,
+                              "sdsx", "send to server fd:", hctx->fd,
+                              ", size:", chunkqueue_length(hctx->tosrv));
+                    ret = srv->NETWORK_BACKEND_WRITE(srv, con,
+                                                     hctx->fd, hctx->tosrv);
+                    if (0 <= ret) {
+                        chunkqueue_remove_finished_chunks(hctx->tosrv);
+                    } else {
+                        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR,
+                                  "ss", "can't send data to server:",
+                                  strerror(errno));
+                        break;
+                    }
+                }
             }
-            hctx->last_access = srv->cur_ts;
         }
         if (hctx->fd < 0) {
             mod_websocket_frame_send(hctx, MOD_WEBSOCKET_FRAME_TYPE_CLOSE,
