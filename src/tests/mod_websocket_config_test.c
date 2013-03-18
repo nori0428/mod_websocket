@@ -37,6 +37,8 @@ mod_websocket_config_test() {
             test = 3;
         } else if (strcasecmp(resource->key, "/comm") == 0) {
             test = 4;
+        } else if (strcasecmp(resource->key, "/res0") == 0) {
+            test = 5;
         } else {
             CU_FAIL("invalid resource");
         }
@@ -93,6 +95,14 @@ mod_websocket_config_test() {
                 CU_ASSERT_EQUAL(0, strcasecmp("UTF-8", backend->locale));
                 CU_ASSERT_PTR_NULL(backend->origins);
                 break;
+            case 5:
+                CU_ASSERT_EQUAL(0, strcasecmp("::1", backend->host));
+                CU_ASSERT_EQUAL(1, backend->port);
+                CU_ASSERT_EQUAL(0, backend->type);
+                CU_ASSERT_PTR_NULL(backend->subproto);
+                CU_ASSERT_PTR_NULL(backend->locale);
+                CU_ASSERT_PTR_NULL(backend->origins);
+                break;
             default:
                 CU_FAIL("invalid backend");
                 break;
@@ -131,7 +141,7 @@ mod_websocket_config_test() {
                     break;
                 }
             }
-            if (test != 0 && test != 4) {
+            if (test != 0 && test != 4 && test != 5) {
                 CU_ASSERT_EQUAL(2, origin_count);
             }
         }
@@ -144,7 +154,7 @@ mod_websocket_config_test() {
             break;
         }
     }
-    CU_ASSERT_EQUAL(5, resource_count);
+    CU_ASSERT_EQUAL(6, resource_count);
 }
 
 int
