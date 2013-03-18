@@ -21,7 +21,7 @@ int state, stack;
 %option nounput
 
 NUMBER				[0-9]+
-IDENT				[a-zA-Z0-9./_-]+
+IDENT				[a-zA-Z0-9.:/_-]+
 
 SHARP_CHR			"#"
 CR_CHR				"\n"
