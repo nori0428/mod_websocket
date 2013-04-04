@@ -9,6 +9,8 @@
 # include <stdio.h>
 #endif
 
+#include <string.h>
+
 #include "mod_websocket_config.h"
 
 #if ! defined (DEBUG_LEX_ONLY)
