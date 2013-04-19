@@ -778,6 +778,19 @@ SUBREQUEST_FUNC(_handle_subrequest) {
             if (!chunkqueue_is_empty(hctx->fromcli)) {
                 hctx->last_access = srv->cur_ts;
                 if (mod_websocket_frame_recv(hctx) < 0) {
+                    mod_websocket_frame_send(hctx, MOD_WEBSOCKET_FRAME_TYPE_CLOSE,
+                                             "1000", 0); // NORMAL
+                    if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
+
+#ifdef	USE_OPENSSL
+                        srv->NETWORK_SSL_BACKEND_WRITE(srv, con,
+                                                       hctx->con->ssl, hctx->tocli);
+#endif	/* USE_OPENSSL */
+
+                    } else {
+                        srv->NETWORK_BACKEND_WRITE(srv, con,
+                                                   hctx->con->fd, hctx->tocli);
+                    }
                     break;
                 }
                 if (!chunkqueue_is_empty(hctx->tosrv)) {
@@ -799,7 +812,7 @@ SUBREQUEST_FUNC(_handle_subrequest) {
         }
         if (hctx->fd < 0) {
             mod_websocket_frame_send(hctx, MOD_WEBSOCKET_FRAME_TYPE_CLOSE,
-                                     NULL, 0);
+                                     "1001", 0); // GOAWAY
             if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
 
 #ifdef	USE_OPENSSL
