@@ -215,7 +215,7 @@ typedef struct {
     mod_websocket_state_t state;
     mod_websocket_handshake_t handshake;
     mod_websocket_frame_t frame;
-    time_t last_access;
+    unsigned int timeout_cnt;
 
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
     mod_websocket_conv_t *cnv;

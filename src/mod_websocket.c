@@ -762,7 +762,7 @@ SUBREQUEST_FUNC(_handle_subrequest) {
             hctx->state = MOD_WEBSOCKET_STATE_CONNECTED;
         }
         connection_set_state(srv, hctx->con, CON_STATE_READ_CONTINUOUS);
-        hctx->last_access = srv->cur_ts;
+        hctx->timeout_cnt = 0;
 
 #ifdef	_MOD_WEBSOCKET_SPEC_RFC_6455_
         hctx->ping_ts = srv->cur_ts;
@@ -776,7 +776,7 @@ SUBREQUEST_FUNC(_handle_subrequest) {
             break;
         } else {
             if (!chunkqueue_is_empty(hctx->fromcli)) {
-                hctx->last_access = srv->cur_ts;
+                hctx->timeout_cnt = 0;
                 if (mod_websocket_frame_recv(hctx) < 0) {
                     mod_websocket_frame_send(hctx, MOD_WEBSOCKET_FRAME_TYPE_CLOSE,
                                              "1000", 0); // NORMAL
@@ -936,9 +936,8 @@ TRIGGER_FUNC(_handle_trigger) {
                 chunkqueue_remove_finished_chunks(hctx->tocli);
             }
         }
-
-        if (p->conf.timeout != 0 &&
-            srv->cur_ts - hctx->last_access >= (time_t)p->conf.timeout) {
+        hctx->timeout_cnt += 1;
+        if (p->conf.timeout != 0 && hctx->timeout_cnt >= p->conf.timeout) {
             DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO,
                       "sd", "timeout client:", con->fd);
             mod_websocket_frame_send(hctx, MOD_WEBSOCKET_FRAME_TYPE_CLOSE,
