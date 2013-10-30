@@ -42,6 +42,10 @@
 # include <sys/filio.h>
 #endif	/* HAVE_SYS_FILIO_H */
 
+#ifdef	HAVE_PCRE_H
+# include <pcre.h>
+#endif	/* HAVE_PCRE_H */
+
 /* prototypes */
 static handler_ctx *_handler_ctx_init(void);
 static void _handler_ctx_free(handler_ctx *);
@@ -500,6 +504,16 @@ handler_t _check_request(server *srv, connection *con, void *p_d) {
     data_array *ext = NULL;
     handler_ctx *hctx = NULL;
 
+
+#ifdef	HAVE_PCRE_H
+    pcre *re;
+    int rc;
+    const char* err_str;
+    int err_off;
+# define	N	(10)
+    int ovec[N * 3];
+#endif	/* HAVE_PCRE_H */
+
     if (con->request.http_method != HTTP_METHOD_GET) {
         return HANDLER_GO_ON;
     }
@@ -508,11 +522,27 @@ handler_t _check_request(server *srv, connection *con, void *p_d) {
     }
     for (i = p->conf.exts->used; i > 0; i--) {
         ext = (data_array *)p->conf.exts->data[i - 1];
+
+#ifdef	HAVE_PCRE_H
+        re = pcre_compile(ext->key->ptr, 0, &err_str, &err_off, NULL);
+        rc = pcre_exec(re, NULL, con->uri.path->ptr, con->uri.path->size, 0, PCRE_ANCHORED, ovec, N);
+        if (rc > 0) {
+            break;
+        }
+#else
         if (0 == strcmp(con->uri.path->ptr, ext->key->ptr)) {
             break;
         }
+#endif	/* HAVE_PCRE_H */
+
         ext = NULL;
     }
+
+#ifdef	HAVE_PCRE_H
+    free(re);
+#undef N
+#endif	/* HAVE_PCRE_H */
+
     if (!ext) {
         return HANDLER_GO_ON;
     }
