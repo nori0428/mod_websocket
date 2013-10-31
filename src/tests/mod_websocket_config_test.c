@@ -39,8 +39,11 @@ mod_websocket_config_test() {
             test = 4;
         } else if (strcasecmp(resource->key, "/res0") == 0) {
             test = 5;
+        } else if (strcasecmp(resource->key, "/proxy") == 0) {
+            test = 6;
         } else {
             CU_FAIL("invalid resource");
+            return;
         }
         for (backend = resource->backends; backend; backend = backend->next) {
             origin_count = 0;
@@ -103,6 +106,15 @@ mod_websocket_config_test() {
                 CU_ASSERT_PTR_NULL(backend->locale);
                 CU_ASSERT_PTR_NULL(backend->origins);
                 break;
+            case 6:
+                CU_ASSERT_EQUAL(0, strcasecmp("192.168.0.5", backend->host));
+                CU_ASSERT_EQUAL(4, backend->port);
+                CU_ASSERT_EQUAL(0, backend->type);
+                CU_ASSERT_PTR_NULL(backend->subproto);
+                CU_ASSERT_PTR_NULL(backend->locale);
+                CU_ASSERT_PTR_NULL(backend->origins);
+                CU_ASSERT_EQUAL(0, strcasecmp("websocket", backend->proto));
+                break;
             default:
                 CU_FAIL("invalid backend");
                 break;
@@ -141,7 +153,7 @@ mod_websocket_config_test() {
                     break;
                 }
             }
-            if (test != 0 && test != 4 && test != 5) {
+            if (test != 0 && test != 4 && test != 5 && test != 6) {
                 CU_ASSERT_EQUAL(2, origin_count);
             }
         }
@@ -154,7 +166,7 @@ mod_websocket_config_test() {
             break;
         }
     }
-    CU_ASSERT_EQUAL(6, resource_count);
+    CU_ASSERT_EQUAL(7, resource_count);
 }
 
 int

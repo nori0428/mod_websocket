@@ -9,6 +9,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
 
 #include "mod_websocket.h"
 
@@ -69,6 +71,7 @@ typedef li_MD5_CTX MD5_CTX;
 /* prototypes */
 static mod_websocket_bool_t is_allowed_origin(handler_ctx *);
 static int replace_extension(handler_ctx *);
+static buffer* create_x_forwarded_for(int);
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
 static int get_key3(handler_ctx *);
@@ -463,6 +466,12 @@ mod_websocket_handshake_check_request(handler_ctx *hctx) {
     if (is_allowed_origin(hctx) != MOD_WEBSOCKET_TRUE) {
         return MOD_WEBSOCKET_FORBIDDEN;
     }
+    data_string *proto = (data_string *)
+        array_get_element(hctx->ext->value,
+                          MOD_WEBSOCKET_CONFIG_PROTO);
+    if (proto && 0 == strcasecmp(proto->value->ptr, MOD_WEBSOCKET_PROTO_WEBSOCKET) ) {
+        hctx->bypass = 1;
+    }
     return MOD_WEBSOCKET_OK;
 }
 
@@ -552,6 +561,137 @@ create_response_rfc_6455(handler_ctx *hctx) {
     return MOD_WEBSOCKET_OK;
 }
 #endif	/* _MOD_WEBSOCKET_SPEC_RFC_6455_ */
+
+buffer*
+create_x_forwarded_for(int fd) {
+    buffer *x_forwarded = NULL;
+    int ret = -1;
+
+    socklen_t len;
+    struct sockaddr_storage sa;
+    int port;
+#ifndef INET6_ADDRSTRLEN
+# define	INET6_ADDRSTRLEN	(46)
+#endif
+    char ipstr[INET6_ADDRSTRLEN], ipportstr[INET6_ADDRSTRLEN * 2];
+
+    x_forwarded = buffer_init();
+    if (!x_forwarded) {
+        return NULL;
+    }
+    // for X-Forwarded-For: client, self
+    ret = buffer_append_string(x_forwarded, "X-Forwarded-For: ");
+    if (ret != 0) {
+        buffer_free(x_forwarded);
+        return NULL;
+    }
+    len = sizeof(sa);
+    ret = getpeername(fd, (struct sockaddr*)&sa, &len);
+    if (ret != -1) {
+        if (sa.ss_family == AF_INET) {
+            struct sockaddr_in *s = (struct sockaddr_in *)&sa;
+            port = ntohs(s->sin_port);
+            inet_ntop(AF_INET, &s->sin_addr, ipstr, sizeof(ipstr));
+        } else {
+            struct sockaddr_in6 *s = (struct sockaddr_in6 *)&sa;
+            port = ntohs(s->sin6_port);
+            inet_ntop(AF_INET6, &s->sin6_addr, ipstr, sizeof(ipstr));
+        }
+        snprintf(ipportstr, sizeof(ipportstr), "%s:%d, ", ipstr, port);
+        ret = buffer_append_string_len(x_forwarded, ipportstr, strlen(ipportstr));
+        if (ret != 0) {
+            buffer_free(x_forwarded);
+            return NULL;
+        }
+    } else {
+        buffer_free(x_forwarded);
+        return NULL;
+    }
+    len = sizeof(sa);
+    ret = getsockname(fd, (struct sockaddr*)&sa, &len);
+    if (ret != -1) {
+        if (sa.ss_family == AF_INET) {
+            struct sockaddr_in *s = (struct sockaddr_in *)&sa;
+            port = ntohs(s->sin_port);
+            inet_ntop(AF_INET, &s->sin_addr, ipstr, sizeof(ipstr));
+        } else {
+            struct sockaddr_in6 *s = (struct sockaddr_in6 *)&sa;
+            port = ntohs(s->sin6_port);
+            inet_ntop(AF_INET6, &s->sin6_addr, ipstr, sizeof(ipstr));
+        }
+        snprintf(ipportstr, sizeof(ipportstr), "%s:%d", ipstr, port);
+        ret = buffer_append_string_len(x_forwarded, ipportstr, strlen(ipportstr));
+        if (ret != 0) {
+            buffer_free(x_forwarded);
+            return NULL;
+        }
+    } else {
+        buffer_free(x_forwarded);
+        return NULL;
+    }
+    ret = buffer_append_string(x_forwarded, CRLF_STR);
+    return x_forwarded;
+}
+
+mod_websocket_errno_t
+mod_websocket_handshake_forward(handler_ctx *hctx) {
+    int ret = -1;
+    buffer *src = NULL, *dst = NULL;
+    buffer *x_forwarded = NULL;
+
+    if (!hctx || !hctx->con) {
+        return MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
+    }
+    src = buffer_init();
+    if (!src) {
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
+        return MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
+    }
+    dst = chunkqueue_get_append_buffer(hctx->tosrv);
+    if (!dst) {
+        buffer_free(src);
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
+        return MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
+    }
+    ret = buffer_append_string_buffer(src, hctx->con->request.request);
+    if (ret != 0) {
+        buffer_free(src);
+        buffer_reset(dst);
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
+        return MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
+    }
+    // remove \r\n\0 from orig
+    ret = buffer_append_string_len(dst, src->ptr, src->used - 3);
+    if (ret != 0) {
+        buffer_free(src);
+        buffer_reset(dst);
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
+        return MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
+    }
+    x_forwarded = create_x_forwarded_for(hctx->con->fd);
+    if (x_forwarded) {
+        ret = buffer_append_string_buffer(dst, x_forwarded);
+        if (ret != 0) {
+            buffer_free(src);
+            buffer_reset(dst);
+            buffer_free(x_forwarded);
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
+            return MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
+        }
+    }
+    ret = buffer_append_string(dst, CRLF_STR);
+    if (ret != 0) {
+        buffer_free(src);
+        buffer_reset(dst);
+        buffer_free(x_forwarded);
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
+        return MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
+    }
+    buffer_free(src);
+    buffer_free(x_forwarded);
+    DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "ss", "forward WebSocket handshake:", dst->ptr);
+    return MOD_WEBSOCKET_OK;
+}
 
 mod_websocket_errno_t
 mod_websocket_handshake_create_response(handler_ctx *hctx) {

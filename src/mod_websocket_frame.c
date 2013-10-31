@@ -797,11 +797,68 @@ mod_websocket_frame_recv_rfc_6455(handler_ctx *hctx) {
 #endif	/* _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
 int
+mod_websocket_frame_send_forward(handler_ctx *hctx, char *payload, size_t siz) {
+    const char additional = 0x00;
+    int ret = -1;
+    buffer *b = NULL;
+
+    if (!hctx || !payload) {
+        return -1;
+    }
+    b = chunkqueue_get_append_buffer(hctx->tocli);
+    if (!b) {
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
+        return -1;
+    }
+    ret = buffer_append_memory(b, payload, siz);
+    if (ret != 0) {
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
+        buffer_reset(b);
+        return -1;
+    }
+    /* lighty needs additional char to send */
+    ret = buffer_append_memory(b, &additional, 1);
+    if (ret != 0) {
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
+        buffer_reset(b);
+    }
+    return ret;
+}
+
+int
+mod_websocket_frame_recv_forward(handler_ctx *hctx) {
+    chunk *c = NULL;
+    buffer *frame = NULL, *b = NULL;
+
+    if (!hctx || !hctx->fromcli) {
+        return -1;
+    }
+    DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "sd", "recv from client fd:", hctx->con->fd);
+    for (c = hctx->fromcli->first; c; c = c->next) {
+        frame = c->mem;
+        if (!frame) {
+            continue;
+        }
+        b = chunkqueue_get_append_buffer(hctx->tosrv);
+        if (!b) {
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
+            return -1;
+        }
+        buffer_append_memory(b, frame->ptr, frame->used);
+    }
+    chunkqueue_reset(hctx->fromcli);
+    return 0;
+}
+
+int
 mod_websocket_frame_send(handler_ctx *hctx,
                          mod_websocket_frame_type_t type,
                          char *payload, size_t siz) {
     if (!hctx) {
         return -1;
+    }
+    if (hctx->bypass) {
+        return mod_websocket_frame_send_forward(hctx, payload, siz);
     }
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
@@ -823,6 +880,9 @@ int
 mod_websocket_frame_recv(handler_ctx *hctx) {
     if (!hctx) {
         return -1;
+    }
+    if (hctx->bypass) {
+        return mod_websocket_frame_recv_forward(hctx);
     }
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_

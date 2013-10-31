@@ -14,7 +14,8 @@ typedef enum {
     TYPE,
     SUBPROTO,
     LOCALE,
-    ORIGINS
+    ORIGINS,
+    PROTO
 } mod_websocket_key_t;
 
 typedef struct {
@@ -35,6 +36,7 @@ typedef struct _mod_websocket_backend_t {
     mod_websocket_origin_t *origins;		// null if not set
     char *locale;				// null if not set
     struct _mod_websocket_backend_t *next;	// exists at least 1 object
+    char *proto;				// "websocket" or null if not set.
 } mod_websocket_backend_t;
 
 typedef struct _mod_websocket_resource_t {

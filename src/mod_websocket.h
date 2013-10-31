@@ -58,6 +58,7 @@
 
 #define	MOD_WEBSOCKET_CONFIG_HOST		"host"
 #define	MOD_WEBSOCKET_CONFIG_PORT		"port"
+#define	MOD_WEBSOCKET_CONFIG_PROTO		"proto"
 #define	MOD_WEBSOCKET_CONFIG_SUBPROTO		"subproto"
 #define	MOD_WEBSOCKET_CONFIG_ORIGINS		"origins"
 
@@ -86,6 +87,8 @@
 #define	MOD_WEBSOCKET_UTF8_STR			"UTF-8"
 #define	MOD_WEBSOCKET_BIN_STR			"bin"
 #define	MOD_WEBSOCKET_PING_STR			"ping"
+
+#define MOD_WEBSOCKET_PROTO_WEBSOCKET		"websocket"
 
 typedef unsigned char mod_websocket_bool_t;
 
@@ -216,6 +219,7 @@ typedef struct {
     mod_websocket_handshake_t handshake;
     mod_websocket_frame_t frame;
     unsigned int timeout_cnt;
+    int bypass;
 
 #ifdef	_MOD_WEBSOCKET_WITH_ICU_
     mod_websocket_conv_t *cnv;
@@ -252,6 +256,7 @@ int mod_websocket_conv_to_server(mod_websocket_conv_t *,
 void mod_websocket_conv_final(mod_websocket_conv_t *);
 #endif	/* _MOD_WEBSOCKET_WITH_ICU_ */
 
+mod_websocket_errno_t mod_websocket_handshake_forward(handler_ctx *);
 mod_websocket_errno_t mod_websocket_handshake_check_request(handler_ctx *);
 mod_websocket_errno_t mod_websocket_handshake_create_response(handler_ctx *);
 

@@ -45,6 +45,7 @@ TYPE_STR			"\"type\""
 SUBPROTO_STR			"\"subproto\""
 ORIGINS_STR			"\"origins\""
 LOCALE_STR			"\"locale\""
+PROTO_STR			"\"proto\""
 
 %x STATE_COMMENT
 %s STATE_SERVER STATE_PING_INTERVAL STATE_TIMEOUT STATE_DEBUG
@@ -217,6 +218,15 @@ LOCALE_STR			"\"locale\""
     return KEY;
 #endif
 }
+<STATE_SERVER>{PROTO_STR} {
+#if defined (DEBUG) || defined (DEBUG_LEX_ONLY)
+    fprintf(stderr, "STATE_SERVER: [%s]\n", yytext);
+#endif
+#if ! defined (DEBUG_LEX_ONLY)
+    yylval.assign.key = PROTO;
+    return KEY;
+#endif
+}
 <STATE_SERVER>{ORIGINS_STR} {
 #if defined (DEBUG) || defined (DEBUG_LEX_ONLY)
     fprintf(stderr, "STATE_SERVER: [%s]\n", yytext);
@@ -325,5 +335,6 @@ main(int argc, char **argv) {
     yyin = input_file;
     BEGIN(INITIAL);
     yylex();
+    return 0;
 }
 #endif

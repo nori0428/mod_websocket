@@ -111,6 +111,7 @@ backend:
                     $$->subproto = NULL;
                     $$->locale = NULL;
                     $$->origins = NULL;
+                    $$->proto = NULL;
                     switch ($1.key) {
                     case HOST:
                         $$->host = (char *)$1.val;
@@ -139,6 +140,9 @@ backend:
                         break;
                     case ORIGINS:
                         $$->origins = (mod_websocket_origin_t *)$1.val;
+                        break;
+                    case PROTO:
+                        $$->proto = (char *)$1.val;
                         break;
                     default:
                         break;
@@ -178,6 +182,9 @@ backend:
                         break;
                     case ORIGINS:
                         $$->origins = (mod_websocket_origin_t *)$3.val;
+                        break;
+                    case PROTO:
+                        $$->proto = (char *)$3.val;
                         break;
                     default:
                         break;
@@ -284,6 +291,9 @@ void mod_websocket_config_free(mod_websocket_config_t *config) {
             if (backend->host != NULL) {
                 free(backend->host);
             }
+            if (backend->proto != NULL) {
+                free(backend->proto);
+            }
             if (backend->subproto != NULL) {
                 free(backend->subproto);
             }
@@ -317,6 +327,7 @@ void mod_websocket_config_print(mod_websocket_config_t *config) {
     mod_websocket_resource_t *resource = NULL;
 
     if (config == NULL) {
+        fprintf(stderr, "config is null\n");
         return;
     }
     for (resource = config->resources; resource; resource = resource->next) {
@@ -327,9 +338,10 @@ void mod_websocket_config_print(mod_websocket_config_t *config) {
                     "\t\tport = [%d]\n"
                     "\t\ttype = [%d]\n"
                     "\t\tsubproto = [%s]\n"
-                    "\t\tlocale = [%s]\n",
+                    "\t\tlocale = [%s]\n"
+                    "\t\tproto = [%s]\n",
                     backend->host, backend->port, backend->type,
-                    backend->subproto, backend->locale);
+                    backend->subproto, backend->locale, backend->proto);
             fprintf(stderr, "\t\tallowed_origins = [ ");
             for (origin = backend->origins; origin; origin = origin->next) {
                 fprintf(stderr, "[%s] ", origin->origin);
