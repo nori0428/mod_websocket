@@ -110,7 +110,12 @@
                                     "host" => "192.168.0.5",
                                     "port" => "9000",
                                     "locale" => "EUCJP"
-                                  )
+                                  ),
+                     "/websocket_proxy" => ( // works as a WebSocket Proxy
+                                             "host" => "192.168.0.6",
+                                             "port" => "9000",
+                                             "proto" => "websocket"
+                                           )
                      )
 
   6-3. locale

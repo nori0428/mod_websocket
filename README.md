@@ -27,10 +27,13 @@ and follow the instructions in [INSTALL](https://github.com/nori0428/mod_websock
 Characteristics
 ------
 
-1. Supported protocols: hybi-00 and RFC-6455.
-   see [Can I use...](http://caniuse.com/#feat=websockets) for  browser suppot.
+1. Supports WebSocket Proxy and WebSocket-TCP Proxy:
+   You can choose either WebSocket Proxy or WebSocket-TCP Proxy to every request URI.
 
-2. Automatic base64 {en, de}code on hybi-00 spec by specifying "bin" type in websocket.conf.
+2. Supported protocols: hybi-00 and RFC-6455.
+   see [Can I use...](http://caniuse.com/#feat=websockets) for browser support.
+
+3. Automatic base64 {en, de}code on hybi-00 spec by specifying "bin" type in websocket.conf.
 
   (my answer of https://github.com/nori0428/mod_websocket/issues/19)
 
