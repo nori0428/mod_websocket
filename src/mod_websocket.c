@@ -528,7 +528,9 @@ handler_t _check_request(server *srv, connection *con, void *p_d) {
     if (_dispatch_request(srv, con, p) < 0) {
         return HANDLER_GO_ON;
     }
-    log_error_write(srv, __FILE__, __LINE__, "ss", "request:", con->uri.path->ptr);
+    if (p->conf.debug > MOD_WEBSOCKET_LOG_INFO) {
+        log_error_write(srv, __FILE__, __LINE__, "ss", "request:", con->uri.path->ptr);
+    }
     for (i = p->conf.exts->used; i > 0; i--) {
         ext = (data_array *)p->conf.exts->data[i - 1];
 
