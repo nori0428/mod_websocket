@@ -43,7 +43,6 @@ mod_websocket_config_test() {
             test = 6;
         } else {
             CU_FAIL("invalid resource");
-            return;
         }
         for (backend = resource->backends; backend; backend = backend->next) {
             origin_count = 0;
