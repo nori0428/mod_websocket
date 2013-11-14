@@ -1,12 +1,8 @@
-/**
- * $Id$
- **/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 
-#include "base64.h"
+#include "mod_websocket_base64.h"
 
 int
 main(int argc, char *argv[]) {
@@ -22,7 +18,7 @@ main(int argc, char *argv[]) {
     src = (unsigned char *)malloc(srcsiz);
 
     fread(src, srcsiz, 1, fp);
-    base64_encode(&dst, &dstsiz, src, srcsiz);
+    mod_websocket_base64_encode(&dst, &dstsiz, src, srcsiz);
     fprintf(stdout, "%s", dst);
     fclose(fp);
 
@@ -31,5 +27,3 @@ main(int argc, char *argv[]) {
 
     return 0;
 }
-
-/* EOF */

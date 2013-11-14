@@ -1,13 +1,15 @@
-## $Id$
+SUBDIRS = . stub src
 
 if WITH_TEST
-STUB_DIR = stub
+SUBDIRS += test
+all-local:
+	(cd $(top_srcdir)/contrib/gtest-1.7.0; make)
 endif
 
-SUBDIRS = \
-	. $(STUB_DIR) src
+clean-local:
+	${RM} -f *~
 
-install:
+install-data-local:
 	@if [ -z "${LIGHTTPD_LOCATION}" ]; then \
 		echo "not specified lighttpd location"; \
 		exit 0; \
@@ -22,8 +24,6 @@ install:
 	fi;
 	@echo "copy mod_websocket files into ${LIGHTTPD_LOCATION}"
 	cp src/mod_websocket*.{h,c} ${LIGHTTPD_LOCATION}/src
-	cp src/sha1.{h,c} ${LIGHTTPD_LOCATION}/src
-	cp src/base64.{h,c} ${LIGHTTPD_LOCATION}/src
 	@echo "done"
 
 	@echo "patch the lighttpd sources"
@@ -34,10 +34,6 @@ install:
 	@echo
 	@echo "$$ cd ${LIGHTTPD_LOCATION}"
 	@echo "$$ ./autogen.sh"
-	@echo "$$ ./configure --with-websocket[=ALL/RFC-6455/IETF-00] [--without-libicu]"
+	@echo "$$ ./configure --with-websocket[=ALL/RFC-6455/IETF-00]"
 	@echo "$$ make"
 	@echo
-
-include $(top_srcdir)/m4/Makefile.rules
-
-## EOF

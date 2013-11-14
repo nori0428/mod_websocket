@@ -1,19 +1,21 @@
-/**
- * $Id$
- * a part of mod_websocket
+/*
+ * Copyright(c) 2010, Norio Kobota, All rights reserved.
  */
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <errno.h>
 
-int
-mod_websocket_tcp_server_connect(const char *host, const char *service) {
+#include "mod_websocket_socket.h"
+
+int mod_websocket_connect(const char *host, const char *service) {
     struct addrinfo hints;
     struct addrinfo *res = NULL;
     struct addrinfo *ai = NULL;
@@ -97,10 +99,38 @@ mod_websocket_tcp_server_connect(const char *host, const char *service) {
     return connfd;
 }
 
-void
-mod_websocket_tcp_server_disconnect(int sockfd) {
-    close(sockfd);
-    return;
+void mod_websocket_disconnect(int fd) {
+    close(fd);
 }
 
-/* EOF */
+static void store_sockinfo(struct sockaddr_storage *sa, mod_websocket_addrinfo_t *info) {
+    assert(sa != NULL && info != NULL);
+    if (sa->ss_family == AF_INET) {
+        struct sockaddr_in *s = (struct sockaddr_in *)sa;
+        info->port = ntohs(s->sin_port);
+        inet_ntop(AF_INET, &s->sin_addr, info->addr, sizeof(info->addr));
+    } else {
+        struct sockaddr_in6 *s = (struct sockaddr_in6 *)sa;
+        info->port = ntohs(s->sin6_port);
+        inet_ntop(AF_INET6, &s->sin6_addr, info->addr, sizeof(info->addr));
+    }
+}
+
+int mod_websocket_getsockinfo(int fd, mod_websocket_sockinfo_t *info) {
+    socklen_t len;
+    struct sockaddr_storage sa;
+
+    if (info == NULL) {
+        return -1;
+    }
+    len = sizeof(sa);
+    if (getsockname(fd, (struct sockaddr*)&sa, &len) == -1) {
+        return -1;
+    }
+    store_sockinfo(&sa, &info->self);
+    if (getpeername(fd, (struct sockaddr*)&sa, &len) == -1) {
+        return -1;
+    }
+    store_sockinfo(&sa, &info->peer);
+    return 0;
+}

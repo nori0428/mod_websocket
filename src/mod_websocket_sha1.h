@@ -24,8 +24,8 @@
  * SUCH DAMAGE.
  */
 
-#ifndef __SHA1_H__
-#define __SHA1_H__
+#ifndef __MOD_WEBSOCKET_SHA1_H__
+#define __MOD_WEBSOCKET_SHA1_H__
 
 #ifdef __cplusplus
 extern "C" {

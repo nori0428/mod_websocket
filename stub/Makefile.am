@@ -1,11 +1,6 @@
-## $Id$
+noinst_LTLIBRARIES = libstub.la
 
-SUBDIRS = \
-	.
-
-noinst_LTLIBRARIES = libtest.la
-
-libtest_la_SOURCES = \
+libstub_la_SOURCES = \
 	settings.h \
 	buffer.h \
 	buffer.c \
@@ -20,6 +15,8 @@ libtest_la_SOURCES = \
 	md5.h \
 	md5.c
 
-include $(top_srcdir)/m4/Makefile.rules
+clean-local:
+	${RM} -f *~
 
-## EOF
+distclean-local:
+	${RM} -f Makefile.in

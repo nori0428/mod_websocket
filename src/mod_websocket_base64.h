@@ -1,6 +1,4 @@
-/*
- * $Id$
- *
+/**
  * Copyright(c) 2010, Norio Kobota, All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,8 +35,8 @@
 extern "C" {
 #endif
 
-    int base64_encode(unsigned char **, size_t *, const unsigned char *, size_t);
-    int base64_decode(unsigned char **, size_t *, const unsigned char *);
+    int mod_websocket_base64_encode(unsigned char **, size_t *, const unsigned char *, size_t);
+    int mod_websocket_base64_decode(unsigned char **, size_t *, const unsigned char *);
 
 #ifdef	__cplusplus
 }

@@ -25,7 +25,7 @@
 
 #include <string.h>
 
-#include "sha1.h"
+#include "mod_websocket_sha1.h"
 
 #define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
 
