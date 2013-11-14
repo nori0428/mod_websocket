@@ -189,15 +189,22 @@ typedef struct {
     chunkqueue  *tocli;		/* chunkqueue to client */
 } handler_ctx;
 
-/* prototypes */
-int mod_websocket_backend_connect(const char *, const char *);
-void mod_websocket_backend_disconnect(int);
+#ifdef  __cplusplus
+extern "C" {
+#endif
 
-mod_websocket_errno_t mod_websocket_handshake_check_request(handler_ctx *);
-mod_websocket_errno_t mod_websocket_handshake_create_response(handler_ctx *);
-mod_websocket_errno_t mod_websocket_handshake_forward_request(handler_ctx *);
+    int mod_websocket_backend_connect(const char *, const char *);
+    void mod_websocket_backend_disconnect(int);
 
-int mod_websocket_frame_send(handler_ctx *, mod_websocket_frame_type_t, char *, size_t);
-int mod_websocket_frame_recv(handler_ctx *);
+    mod_websocket_errno_t mod_websocket_handshake_check_request(handler_ctx *);
+    mod_websocket_errno_t mod_websocket_handshake_create_response(handler_ctx *);
+    mod_websocket_errno_t mod_websocket_handshake_forward_request(handler_ctx *);
+
+    int mod_websocket_frame_send(handler_ctx *, mod_websocket_frame_type_t, char *, size_t);
+    int mod_websocket_frame_recv(handler_ctx *);
+
+#ifdef  __cplusplus
+}
+#endif
 
 #endif /* _MOD_WEBSOCKET_H_ */
