@@ -45,7 +45,7 @@ fi
 AC_MSG_CHECKING(whether --with-test option specified)
 AC_ARG_WITH([test],
             AC_HELP_STRING([--with-test],
-                           [make tests of mod_websocket_config_validator@<:@default=no@:>@]),
+                           [make tests of mod_websocket_config_parser@<:@default=no@:>@]),
             [test="$withval"], [test=no])
 AC_MSG_RESULT(${test})
 AM_CONDITIONAL(WITH_TEST, test x$test != xno)
