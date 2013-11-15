@@ -241,8 +241,8 @@ static int send_rfc_6455(handler_ctx *hctx, mod_websocket_frame_type_t type, cha
         break;
     case MOD_WEBSOCKET_FRAME_TYPE_CLOSE:
     default:
-        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "s", "type = close");
         c = (char)(0x80 | MOD_WEBSOCKET_OPCODE_CLOSE);
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "s", "type = close");
         break;
     }
     buffer_append_memory(b, &c, 1);
@@ -387,7 +387,7 @@ static int recv_rfc_6455(handler_ctx *hctx) {
                         chunkqueue_reset(hctx->fromcli);
                         return -1;
                     }
-                    if (hctx->pd->conf.debug > MOD_WEBSOCKET_LOG_DEBUG) {
+                    if (hctx->pd->conf.debug >= MOD_WEBSOCKET_LOG_DEBUG) {
                         char u64str[128];
                         snprintf(u64str, sizeof(u64str),
                                  "specified payload size = 0x%llx",
@@ -438,7 +438,7 @@ static int recv_rfc_6455(handler_ctx *hctx) {
                     buffer_append_memory(payload, &frame->ptr[i], frame->used - i - 1);
                     hctx->frame.ctl.siz -= (uint64_t)(frame->used - i - 1);
                     i += (frame->used - i - 1);
-                    if (hctx->pd->conf.debug > MOD_WEBSOCKET_LOG_DEBUG) {
+                    if (hctx->pd->conf.debug >= MOD_WEBSOCKET_LOG_DEBUG) {
                         char u64str[128];
                         snprintf(u64str, sizeof(u64str),
                                  "rest of payload size = 0x%llx",
@@ -476,14 +476,14 @@ static int recv_rfc_6455(handler_ctx *hctx) {
                     break;
                 case MOD_WEBSOCKET_FRAME_TYPE_CLOSE:
                 default:
-                    DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "BUG: invalid state");
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "BUG: invalid frame type");
                     chunkqueue_reset(hctx->fromcli);
                     buffer_reset(payload);
                     return -1;
                 }
                 break;
             default:
-                DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "BUG: unknown state");
+                DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "BUG: invalid state");
                 chunkqueue_reset(hctx->fromcli);
                 buffer_reset(payload);
                 return -1;
@@ -581,5 +581,3 @@ int mod_websocket_frame_recv(handler_ctx *hctx) {
     }
     return -1;
 }
-
-/* EOF */
