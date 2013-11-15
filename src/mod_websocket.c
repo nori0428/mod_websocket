@@ -213,7 +213,6 @@ void prepare_disconnect_client(handler_ctx *hctx) {
 /* OK */
 handler_t handle_backend(server *srv, void *ctx, int revents) {
     handler_ctx *hctx = (handler_ctx *)ctx;
-    mod_websocket_frame_type_t frame_type;
     char readbuf[UINT16_MAX];
     ssize_t siz;
 
@@ -232,8 +231,7 @@ handler_t handle_backend(server *srv, void *ctx, int revents) {
         } else if (siz > 0) {
             DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "sdsx",
                       "recv data from backend ( fd =", hctx->fd, "), size =", siz);
-            frame_type = hctx->frame.type;
-            if (mod_websocket_frame_send(hctx, frame_type, readbuf, (size_t)siz) < 0) {
+            if (mod_websocket_frame_send(hctx, hctx->frame.type, readbuf, (size_t)siz) < 0) {
                 DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "fail to send data to client");
                 chunkqueue_reset(hctx->tocli);
             }
@@ -749,13 +747,13 @@ TRIGGER_FUNC(mod_websocket_handle_trigger) {
             continue;
         }
 
-        if (srv->cur_ts - hctx->ping_ts >= (time_t)p->conf.ping_interval) {
+        if ((time_t)p->conf.ping_interval < (int)difftime(srv->cur_ts, hctx->ping_ts)) {
             mod_websocket_frame_send(hctx, MOD_WEBSOCKET_FRAME_TYPE_PING, (char *)"ping", strlen("ping"));
             if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
 
 #ifdef	USE_OPENSSL
                 DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "sdsx",
-                          "send ping to client ( fd =", hctx->con->ssl,
+                          "send data to client ( fd =", hctx->con->ssl,
                           "), size =", chunkqueue_length(hctx->tocli));
                 srv->NETWORK_SSL_BACKEND_WRITE(srv, con, hctx->con->ssl, hctx->tocli);
 #else	/* SSL is not available */
@@ -765,7 +763,7 @@ TRIGGER_FUNC(mod_websocket_handle_trigger) {
 
             } else {
                 DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "sdsx",
-                          "send ping to client ( fd =", hctx->con->fd,
+                          "send data to client ( fd =", hctx->con->fd,
                           "), size =", chunkqueue_length(hctx->tocli));
                 srv->NETWORK_BACKEND_WRITE(srv, con, hctx->con->fd, hctx->tocli);
             }
