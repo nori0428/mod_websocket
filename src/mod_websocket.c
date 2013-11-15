@@ -13,10 +13,6 @@
 #include "mod_websocket.h"
 #include "mod_websocket_socket.h"
 
-#ifdef	HAVE_SYS_FILIO_H
-# include <sys/filio.h>
-#endif	/* HAVE_SYS_FILIO_H */
-
 #ifdef	HAVE_PCRE_H
 # include <pcre.h>
 #endif	/* HAVE_PCRE_H */
@@ -638,7 +634,8 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
                                   "disconnected from client ( fd =", hctx->con->ssl, ")");
                         DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "sds",
                                   "send close response to client ( fd =", hctx->con->ssl, ")");
-                        mod_websocket_frame_send(hctx, MOD_WEBSOCKET_FRAME_TYPE_CLOSE, "1000", strlen("1000"));
+                        mod_websocket_frame_send(hctx, MOD_WEBSOCKET_FRAME_TYPE_CLOSE,
+                                                 (char *)"1000", strlen("1000"));
                         srv->NETWORK_SSL_BACKEND_WRITE(srv, con, hctx->con->ssl, hctx->tocli);
 #endif	/* USE_OPENSSL */
 
@@ -647,7 +644,8 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
                                   "disconnected from client ( fd =", hctx->con->fd, ")");
                         DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "sds",
                                   "send close response to client ( fd =", hctx->con->fd, ")");
-                        mod_websocket_frame_send(hctx, MOD_WEBSOCKET_FRAME_TYPE_CLOSE, "1000", strlen("1000"));
+                        mod_websocket_frame_send(hctx, MOD_WEBSOCKET_FRAME_TYPE_CLOSE,
+                                                 (char *)"1000", strlen("1000"));
                         srv->NETWORK_BACKEND_WRITE(srv, con, hctx->con->fd, hctx->tocli);
                     }
                     break;
@@ -674,14 +672,14 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
 #ifdef	USE_OPENSSL
                 DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "sds",
                           "send close request to client ( fd =", hctx->con->ssl, ")");
-                mod_websocket_frame_send(hctx, MOD_WEBSOCKET_FRAME_TYPE_CLOSE, "1001", strlen("1001"));
+                mod_websocket_frame_send(hctx, MOD_WEBSOCKET_FRAME_TYPE_CLOSE, (char *)"1001", strlen("1001"));
                 srv->NETWORK_SSL_BACKEND_WRITE(srv, con, hctx->con->ssl, hctx->tocli);
 #endif	/* USE_OPENSSL */
 
             } else {
                 DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "sds",
                           "send close request to client ( fd =", hctx->con->fd, ")");
-                mod_websocket_frame_send(hctx, MOD_WEBSOCKET_FRAME_TYPE_CLOSE, "1001", strlen("1001"));
+                mod_websocket_frame_send(hctx, MOD_WEBSOCKET_FRAME_TYPE_CLOSE, (char *)"1001", strlen("1001"));
                 srv->NETWORK_BACKEND_WRITE(srv, con, hctx->con->fd, hctx->tocli);
             }
             break;
@@ -756,11 +754,7 @@ TRIGGER_FUNC(mod_websocket_handle_trigger) {
         }
 
         if (srv->cur_ts - hctx->ping_ts >= (time_t)p->conf.ping_interval) {
-
-#define PING "ping"
-            mod_websocket_frame_send(hctx, MOD_WEBSOCKET_FRAME_TYPE_PING, PING, strlen(PING));
-#undef PING
-
+            mod_websocket_frame_send(hctx, MOD_WEBSOCKET_FRAME_TYPE_PING, (char *)"ping", strlen("ping"));
             if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
 
 #ifdef	USE_OPENSSL

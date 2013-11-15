@@ -29,10 +29,12 @@
 #ifndef	_MOD_WEBSOCKET_H_
 #define	_MOD_WEBSOCKET_H_
 
-#include <stdint.h>
-#include <time.h>
-
 #include "config.h"
+
+#ifdef HAVE_STDINT_H
+# include <stdint.h>
+#endif /* HAVE_STDINT_H */
+
 #include "array.h"
 #include "buffer.h"
 #include "chunk.h"
