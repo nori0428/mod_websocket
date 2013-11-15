@@ -74,16 +74,19 @@ static int get_key3(handler_ctx *hctx) {
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
 static mod_websocket_bool_t is_allowed_origin(handler_ctx *hctx) {
-#define	N	(10)
     size_t i;
     data_unset *du = NULL;
     array *allowed_origins = NULL;
     data_string *allowed_origin = NULL;
+
+#ifdef	HAVE_PCRE_H
     pcre *re = NULL;
     int rc = 0;
     const char *err_str;
     int err_off;
+# define	N	(10)
     int ovec[N * 3];
+#endif	/* HAVE_PCRE_H */
 
     du = array_get_element(hctx->ext->value, "origins");
     if (!du || du->type != TYPE_ARRAY) {
@@ -106,6 +109,8 @@ static mod_websocket_bool_t is_allowed_origin(handler_ctx *hctx) {
             DEBUG_LOG(MOD_WEBSOCKET_LOG_WARN, "s", "allowed origin value is empty");
             continue;
         }
+
+#ifdef	HAVE_PCRE_H
         re = pcre_compile(allowed_origin->value->ptr, 0, &err_str, &err_off, NULL);
         if (!re) {
             DEBUG_LOG(MOD_WEBSOCKET_LOG_WARN, "ss", allowed_origin->value->ptr, "is invalid RegExp");
@@ -114,17 +119,24 @@ static mod_websocket_bool_t is_allowed_origin(handler_ctx *hctx) {
         rc = pcre_exec(re, NULL, hctx->handshake.origin->ptr, hctx->handshake.origin->used,
                        0, PCRE_ANCHORED, ovec, N);
         free(re);
-        re = NULL;
         if (rc > 0) {
             DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO, "sss",
                       hctx->handshake.origin->ptr, "is match allowed origin:", allowed_origin->value->ptr);
             return MOD_WEBSOCKET_TRUE;
         }
+# undef	N
+#else
+        if (buffer_is_equal(allowed_origin->value, hctx->handshake.origin)) {
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO, "sss",
+                      hctx->handshake.origin->ptr, "is match allowed origin:", allowed_origin->value->ptr);
+            return MOD_WEBSOCKET_TRUE;
+        }
+#endif	/* HAVE_PCRE_H */
+
     }
     DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO, "ss",
               hctx->handshake.origin->ptr, "is not match any allowed origins");
     return MOD_WEBSOCKET_FALSE;
-#undef N
 }
 
 mod_websocket_errno_t mod_websocket_handshake_check_request(handler_ctx *hctx) {

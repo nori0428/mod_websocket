@@ -321,23 +321,19 @@ static handler_t mod_websocket_check_extension(server *srv, connection *con, voi
 #ifdef	HAVE_PCRE_H
         re = pcre_compile(ext->key->ptr, 0, &err_str, &err_off, NULL);
         rc = pcre_exec(re, NULL, con->uri.path->ptr, con->uri.path->size, 0, PCRE_ANCHORED, ovec, N);
+        free(re);
         if (rc > 0) {
             break;
         }
+# undef	N
 #else
-        if (0 == strcmp(con->uri.path->ptr, ext->key->ptr)) {
+        if (buffer_is_equal(con->uri.path, ext->key)) {
             break;
         }
 #endif	/* HAVE_PCRE_H */
 
         ext = NULL;
     }
-
-#ifdef	HAVE_PCRE_H
-    free(re);
-#undef N
-#endif	/* HAVE_PCRE_H */
-
     if (!ext) {
         return HANDLER_GO_ON;
     }
