@@ -146,7 +146,6 @@ mod_websocket_errno_t mod_websocket_handshake_check_request(handler_ctx *hctx) {
     buffer *version_hdr_value = NULL;
 
     if (hctx == NULL || hctx->con == NULL) {
-        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "BUG: invalid context");
         return MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
     }
     hdrs = hctx->con->request.headers;
@@ -393,7 +392,6 @@ static mod_websocket_errno_t create_response_rfc_6455(handler_ctx *hctx) {
 mod_websocket_errno_t mod_websocket_handshake_create_response(handler_ctx *hctx) {
     DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "s", "send handshake response");
     if (!hctx) {
-        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "BUG: invalid context");
         return MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
     }
 
@@ -444,7 +442,6 @@ mod_websocket_errno_t mod_websocket_handshake_forward_request(handler_ctx *hctx)
     buffer *x_forwarded = NULL;
 
     if (!hctx || !hctx->con || !hctx->tosrv) {
-        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "BUG: invalid context");
         return MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
     }
     src = buffer_init();

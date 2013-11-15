@@ -58,11 +58,11 @@ static int send_ietf_00(handler_ctx *hctx, mod_websocket_frame_type_t type, char
         buffer_append_memory(b, (const char *)&head, 1);
         if (mod_websocket_base64_encode((unsigned char **)&enc, &encsiz,
                                         (unsigned char *)payload, siz) != 0) {
-            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "fail to base64-encode");
             chunkqueue_reset(hctx->tocli);
             return -1;
         }
-        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "ss", "covert base64 text:", enc);
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "ss", "base64-encoded data:", enc, ", size = ", encsiz);
         buffer_append_memory(b, enc, encsiz);
         free(enc);
         buffer_append_memory(b, (const char *)&tail, 1);
@@ -177,10 +177,10 @@ static int recv_ietf_00(handler_ctx *hctx) {
                             return -1;
                         }
                         payload->ptr[payload->used] = '\0';
-                        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "ss", "recv base64 text:", payload->ptr);
+                        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "ss", "try to base64 decode:", payload->ptr);
                         if (mod_websocket_base64_decode((unsigned char **)&b64, &b64siz,
                                                         (unsigned char *)payload->ptr) != 0) {
-                            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "invalid base64 text");
+                            DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "fail to base64-decode");
                             chunkqueue_reset(hctx->tosrv);
                             chunkqueue_reset(hctx->fromcli);
                             return -1;
@@ -536,7 +536,6 @@ static int recv_forward(handler_ctx *hctx) {
 int mod_websocket_frame_send(handler_ctx *hctx, mod_websocket_frame_type_t type,
                              char *payload, size_t siz) {
     if (!hctx) {
-        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "BUG: invalid context");
         return -1;
     }
     if (hctx->mode == MOD_WEBSOCKET_WEBSOCKET_PROXY) {
@@ -561,7 +560,6 @@ int mod_websocket_frame_send(handler_ctx *hctx, mod_websocket_frame_type_t type,
 
 int mod_websocket_frame_recv(handler_ctx *hctx) {
     if (!hctx) {
-        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "BUG: invalid context");
         return -1;
     }
     if (hctx->mode == MOD_WEBSOCKET_WEBSOCKET_PROXY) {
