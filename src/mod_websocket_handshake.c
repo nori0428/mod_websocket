@@ -2,8 +2,6 @@
  * Copyright(c) 2010, Norio Kobota, All rights reserved.
  */
 
-#include <assert.h>
-
 #include "mod_websocket.h"
 #include "mod_websocket_socket.h"
 
@@ -50,7 +48,6 @@ static int get_key3(handler_ctx *hctx) {
     struct pollfd pfd;
     ssize_t siz;
 
-    assert(hctx != NULL);
     q = hctx->con->read_queue;
     if (chunkqueue_is_empty(q)) {
         pfd.fd = hctx->con->fd;
@@ -148,8 +145,10 @@ mod_websocket_errno_t mod_websocket_handshake_check_request(handler_ctx *hctx) {
     buffer *upgrade_hdr_value = NULL;
     buffer *version_hdr_value = NULL;
 
-    assert(hctx != NULL && hctx->con != NULL);
-
+    if (hctx == NULL || hctx->con == NULL) {
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "BUG: invalid context");
+        return MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
+    }
     hdrs = hctx->con->request.headers;
     handshake = &hctx->handshake;
 
@@ -304,8 +303,6 @@ static mod_websocket_errno_t create_response_ietf_00(handler_ctx *hctx) {
     buffer *response = NULL;
     unsigned char md5sum[MD5_STRLEN];
 
-    assert(hctx != NULL);
-
     /* calc MD5 sum from keys */
     if (create_MD5_sum(md5sum, hctx) < 0) {
         DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "Sec-WebSocket-Key is invalid");
@@ -357,8 +354,6 @@ static mod_websocket_errno_t create_response_rfc_6455(handler_ctx *hctx) {
     unsigned char *accept_body;
     size_t accept_body_siz;
 
-    assert(hctx != NULL);
-
     if (buffer_is_empty(hctx->handshake.key)) {
         DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "Sec-WebSocket-Key is invalid");
         return MOD_WEBSOCKET_BAD_REQUEST;
@@ -398,7 +393,7 @@ static mod_websocket_errno_t create_response_rfc_6455(handler_ctx *hctx) {
 mod_websocket_errno_t mod_websocket_handshake_create_response(handler_ctx *hctx) {
     DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "s", "send handshake response");
     if (!hctx) {
-        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "invalid context");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "BUG: invalid context");
         return MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
     }
 
@@ -422,7 +417,6 @@ static buffer* create_x_forwarded_for(handler_ctx *hctx) {
     buffer *x_forwarded = NULL;
     mod_websocket_sockinfo_t info;
 
-    assert(hctx != NULL && hctx->con != NULL);
     x_forwarded = buffer_init();
     if (!x_forwarded) {
         return NULL;
@@ -450,7 +444,7 @@ mod_websocket_errno_t mod_websocket_handshake_forward_request(handler_ctx *hctx)
     buffer *x_forwarded = NULL;
 
     if (!hctx || !hctx->con || !hctx->tosrv) {
-        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "fail to forward handshake request");
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "BUG: invalid context");
         return MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
     }
     src = buffer_init();

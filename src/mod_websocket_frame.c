@@ -536,6 +536,7 @@ static int recv_forward(handler_ctx *hctx) {
 int mod_websocket_frame_send(handler_ctx *hctx, mod_websocket_frame_type_t type,
                              char *payload, size_t siz) {
     if (!hctx) {
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "BUG: invalid context");
         return -1;
     }
     if (hctx->mode == MOD_WEBSOCKET_WEBSOCKET_PROXY) {
@@ -560,6 +561,7 @@ int mod_websocket_frame_send(handler_ctx *hctx, mod_websocket_frame_type_t type,
 
 int mod_websocket_frame_recv(handler_ctx *hctx) {
     if (!hctx) {
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "BUG: invalid context");
         return -1;
     }
     if (hctx->mode == MOD_WEBSOCKET_WEBSOCKET_PROXY) {
