@@ -747,7 +747,7 @@ TRIGGER_FUNC(mod_websocket_handle_trigger) {
             continue;
         }
 
-        if ((time_t)p->conf.ping_interval < (int)difftime(srv->cur_ts, hctx->ping_ts)) {
+        if (p->conf.ping_interval < (int)difftime(srv->cur_ts, hctx->ping_ts)) {
             mod_websocket_frame_send(hctx, MOD_WEBSOCKET_FRAME_TYPE_PING, (char *)"ping", strlen("ping"));
             if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
 
