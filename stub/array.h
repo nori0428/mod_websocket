@@ -10,12 +10,14 @@
 #endif
 
 #include "buffer.h"
-
 #include <stdlib.h>
 
 #define DATA_IS_STRING(x) (x->type == TYPE_STRING)
 
-typedef enum { TYPE_UNSET, TYPE_STRING, TYPE_COUNT, TYPE_ARRAY, TYPE_INTEGER, TYPE_FASTCGI, TYPE_CONFIG } data_type_t;
+typedef enum {
+    TYPE_UNSET, TYPE_STRING, TYPE_COUNT, TYPE_ARRAY, TYPE_INTEGER, TYPE_FASTCGI, TYPE_CONFIG
+} data_type_t;
+
 #define DATA_UNSET \
 	data_type_t type; \
 	buffer *key; \
@@ -32,42 +34,28 @@ typedef struct data_unset {
 
 typedef struct {
 	data_unset  **data;
-
 	size_t *sorted;
-
 	size_t used;
 	size_t size;
-
 	size_t unique_ndx;
-
 	size_t next_power_of_2;
 	int is_weakref; /* data is weakref, don't bother the data */
 } array;
 
 typedef struct {
 	DATA_UNSET;
-
 	int count;
 } data_count;
 
-data_count *data_count_init(void);
-
 typedef struct {
 	DATA_UNSET;
-
 	buffer *value;
 } data_string;
 
-data_string *data_string_init(void);
-data_string *data_response_init(void);
-
 typedef struct {
 	DATA_UNSET;
-
 	array *value;
 } data_array;
-
-data_array *data_array_init(void);
 
 /**
  * possible compare ops in the configfile parser
@@ -104,19 +92,14 @@ typedef enum {
  * for print:   comp_key      op    string
  * for compare: comp          cond  string/regex
  */
-
 typedef struct _data_config data_config;
 struct _data_config {
 	DATA_UNSET;
-
 	array *value;
-
 	buffer *comp_key;
 	comp_key_t comp;
-
 	config_cond_t cond;
 	buffer *op;
-
 	int context_ndx; /* more or less like an id */
 	array *childs;
 	/* nested */
@@ -124,54 +107,59 @@ struct _data_config {
 	/* for chaining only */
 	data_config *prev;
 	data_config *next;
-
 	buffer *string;
+
 #ifdef HAVE_PCRE_H
 	pcre   *regex;
 	pcre_extra *regex_study;
 #endif
-};
 
-data_config *data_config_init(void);
+};
 
 typedef struct {
 	DATA_UNSET;
-
 	int value;
 } data_integer;
 
-data_integer *data_integer_init(void);
-
 typedef struct {
 	DATA_UNSET;
-
 	buffer *host;
-
 	unsigned short port;
-
 	time_t disable_ts;
 	int is_disabled;
 	size_t balance;
-
 	int usage; /* fair-balancing needs the no. of connections active on this host */
 	int last_used_ndx; /* round robin */
 } data_fastcgi;
 
-data_fastcgi *data_fastcgi_init(void);
+#ifdef  __cplusplus
+extern "C" {
+#endif
 
-array *array_init(void);
-array *array_init_array(array *a);
-void array_free(array *a);
-void array_reset(array *a);
-int array_insert_unique(array *a, data_unset *str);
-data_unset *array_pop(array *a);
-int array_print(array *a, int depth);
-data_unset *array_get_unused_element(array *a, data_type_t t);
-data_unset *array_get_element(array *a, const char *key);
-void array_set_key_value(array *hdrs, const char *key, size_t key_len, const char *value, size_t val_len);
-data_unset *array_replace(array *a, data_unset *du);
-int array_strcasecmp(const char *a, size_t a_len, const char *b, size_t b_len);
-void array_print_indent(int depth);
-size_t array_get_max_key_length(array *a);
+    data_count *data_count_init(void);
+    data_string *data_string_init(void);
+    data_string *data_response_init(void);
+    data_array *data_array_init(void);
+    data_config *data_config_init(void);
+    data_integer *data_integer_init(void);
+    data_fastcgi *data_fastcgi_init(void);
+    array *array_init(void);
+    array *array_init_array(array *a);
+    void array_free(array *a);
+    void array_reset(array *a);
+    int array_insert_unique(array *a, data_unset *str);
+    data_unset *array_pop(array *a);
+    int array_print(array *a, int depth);
+    data_unset *array_get_unused_element(array *a, data_type_t t);
+    data_unset *array_get_element(array *a, const char *key);
+    void array_set_key_value(array *hdrs, const char *key, size_t key_len, const char *value, size_t val_len);
+    data_unset *array_replace(array *a, data_unset *du);
+    int array_strcasecmp(const char *a, size_t a_len, const char *b, size_t b_len);
+    void array_print_indent(int depth);
+    size_t array_get_max_key_length(array *a);
+
+#ifdef  __cplusplus
+}
+#endif
 
 #endif

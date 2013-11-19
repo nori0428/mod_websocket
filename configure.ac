@@ -15,12 +15,10 @@ case $host_os in
               LDFLAGS="$LDFLAGS -L/usr/local/lib/"
 esac
 
-# Checks for programs.
 AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_LIBTOOL
 
-# Checks for making test
 AC_MSG_CHECKING(whether --enable-debug option specified)
 AC_ARG_ENABLE([debug],
               AC_HELP_STRING([--enable-debug], [no optimization@<:@default=no@:>@]),
@@ -28,11 +26,12 @@ AC_ARG_ENABLE([debug],
 AC_MSG_RESULT(${debug})
 if test "x${debug}" != "xno"; then
    CFLAGS="$CFLAGS -g"
+   CXXFLAGS="$CXXFLAGS -g"
 else
    CFLAGS="$CFLAGS -O3"
+   CXXFLAGS="$CXXFLAGS -O3"
 fi
 
-# Checks for making test
 AC_MSG_CHECKING(whether --with-test option specified)
 AC_ARG_WITH([test],
             AC_HELP_STRING([--with-test],
@@ -41,7 +40,6 @@ AC_ARG_WITH([test],
 AC_MSG_RESULT(${with_test})
 AM_CONDITIONAL(WITH_TEST, test x$with_test != xno)
 
-# Check for websocket version
 AC_MSG_CHECKING(whether --with-websocket option specified)
 AC_ARG_WITH([websocket],
             AC_HELP_STRING([--with-websocket@<:@=ALL/RFC-6455/IETF-00@:>@],
@@ -49,20 +47,22 @@ AC_ARG_WITH([websocket],
             [websocket="$withval"], [websocket=ALL])
 AC_MSG_RESULT(${websocket})
 if test "x${websocket}" = "xall" -o "x${websocket}" = "xALL" ; then
-   MODULE_CFLAGS="$MODULE_CFLAGS -D_MOD_WEBSOCKET_SPEC_IETF_00_ -D_MOD_WEBSOCKET_SPEC_RFC_6455_"
+   SUPPORT_VERSION_CFLAGS="-D_MOD_WEBSOCKET_SPEC_IETF_00_ -D_MOD_WEBSOCKET_SPEC_RFC_6455_"
 elif test "x${websocket}" = "xrfc-6455" -o "x${websocket}" = "xRFC-6455" ; then
-   MODULE_CFLAGS="$MODULE_CFLAGS -D_MOD_WEBSOCKET_SPEC_RFC_6455_"
+   SUPPORT_VERSION_CFLAGS="-D_MOD_WEBSOCKET_SPEC_RFC_6455_"
 elif test "x${websocket}" = "xietf-00" -o "x${websocket}" = "xIETF-00" ; then
-   MODULE_CFLAGS="$MODULE_CFLAGS -D_MOD_WEBSOCKET_SPEC_IETF_00_"
+   SUPPORT_VERSION_CFLAGS="-D_MOD_WEBSOCKET_SPEC_IETF_00_"
 elif test "x${websocket}" != "xno" ; then
    AC_MSG_ERROR([websocket option is invalid. plz specify ALL, IETF-00, RFC-6455])
 fi
+AC_SUBST(SUPPORT_VERSION_CFLAGS)
 
-# Checks for typedefs, structures, and compiler characteristics.
 AC_C_BIGENDIAN
 if test "x$ac_cv_c_bigendian" = "xyes"; then
    MODULE_CFLAGS="$MODULE_CFLAGS -DWORDS_BIGENDIAN"
 fi
+AC_CHECK_HEADERS([stdint.h pcre.h])
+AC_CHECK_LIB([pcre], [pcre_compile])
 
 # Check for target lighttpd
 AC_MSG_CHECKING(whether --with-lighttpd option specified)
@@ -78,7 +78,7 @@ fi
 
 # additional CFLAGS
 # add -Wno-sign-compare and remove -Wundef for flex
-MODULE_CFLAGS="$MODULE_CFLAGS -Werror -W -Wall -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wwrite-strings -Wno-sign-compare -Waggregate-return -Wnested-externs -Wno-long-long -Wunused -Wfloat-equal -Wformat -fno-strict-aliasing"
+MODULE_CFLAGS="$MODULE_CFLAGS $SUPPORT_VERSION_CFLAGS -Werror -W -Wall -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wwrite-strings -Wno-sign-compare -Waggregate-return -Wnested-externs -Wno-long-long -Wunused -Wfloat-equal -Wformat -fno-strict-aliasing"
 AC_SUBST(MODULE_CFLAGS)
 
 AC_CONFIG_FILES([Makefile \

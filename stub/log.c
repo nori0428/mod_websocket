@@ -1,17 +1,10 @@
-/**
- * $Id$
- * log.c for test
- */
-
 #include <stdio.h>
 #include <stdarg.h>
 
 #include "buffer.h"
 #include "log.h"
 
-int
-log_error_write(void *dummy, const char *fname, unsigned int line,
-                const char *fmt, ...) {
+int log_error_write(void *dummy, const char *fname, unsigned int line, const char *fmt, ...) {
     va_list ap;
     buffer *log = buffer_init();
 
@@ -90,6 +83,3 @@ log_error_write(void *dummy, const char *fname, unsigned int line,
     fprintf(stderr, "%s", log->ptr);
     return 0;
 }
-
-/* EOF */
-

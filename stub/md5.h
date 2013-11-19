@@ -41,7 +41,14 @@ typedef struct {
   unsigned char buffer[64];                         /* input buffer */
 } MD5_CTX;
 
-void MD5_Init (MD5_CTX *);
-void MD5_Update (MD5_CTX *, const void *, unsigned int);
-void MD5_Final (unsigned char [16], MD5_CTX *);
+#ifdef  __cplusplus
+extern "C" {
+#endif
 
+    void MD5_Init (MD5_CTX *);
+    void MD5_Update (MD5_CTX *, const void *, unsigned int);
+    void MD5_Final (unsigned char [16], MD5_CTX *);
+
+#ifdef  __cplusplus
+}
+#endif

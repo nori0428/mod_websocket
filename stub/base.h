@@ -1,8 +1,3 @@
-/**
- * $Id$
- * bash.h for test
- */
-
 #ifndef	_BASE_H_
 #define	_BASE_H_
 
@@ -18,7 +13,7 @@ typedef struct {
     buffer *request;
     buffer *uri;
     array  *headers;
-} request;
+} request_t;
 
 typedef struct {
     buffer *path;
@@ -27,7 +22,7 @@ typedef struct {
 typedef struct {
     int fd;
     chunkqueue *read_queue;
-    request request;
+    request_t request;
     server_socket *srv_socket;
     request_uri uri;
 } connection;

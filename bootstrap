@@ -1,7 +1,13 @@
 #!/bin/sh
 
 set -e
-git submodule sync
+
+# lighttpd
 git submodule update --init
+(mkdir -p ./workspace; cp -r ./contrib/lighttpd1.4 ./workspace/)
+
+# gtest
 unzip -n contrib/gtest-1.7.0.zip -d contrib/
+
+# reconf
 autoreconf --force --install --verbose

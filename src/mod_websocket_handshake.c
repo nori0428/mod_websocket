@@ -347,6 +347,7 @@ static mod_websocket_errno_t create_response_rfc_6455(handler_ctx *hctx) {
     const char *const_hdr = "HTTP/1.1 101 Switching Protocols\r\n"
                             "Upgrade: websocket\r\n"
                             "Connection: Upgrade\r\n";
+    buffer *key;
     buffer *response = NULL;
     SHA_CTX sha;
     unsigned char sha_digest[SHA1_DIGEST_LENGTH];
@@ -358,15 +359,17 @@ static mod_websocket_errno_t create_response_rfc_6455(handler_ctx *hctx) {
         return MOD_WEBSOCKET_BAD_REQUEST;
     }
 
+    key = buffer_init_buffer(hctx->handshake.key);
 /* refer: RFC-6455 Sec.1.3 Opening Handshake */
 #define	GUID	"258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-    buffer_append_string(hctx->handshake.key, GUID);
+    buffer_append_string(key, GUID);
 #undef GUID
 
     /* get SHA1 hash of key */
     SHA1_Init(&sha);
-    SHA1_Update(&sha, (sha1_byte *)hctx->handshake.key->ptr, hctx->handshake.key->used - 1);
+    SHA1_Update(&sha, (sha1_byte *)key->ptr, key->used - 1);
     SHA1_Final(sha_digest, &sha);
+    buffer_free(key);
 
     /* get base64 encoded SHA1 hash */
     if (mod_websocket_base64_encode(&accept_body, &accept_body_siz, sha_digest, SHA1_DIGEST_LENGTH) < 0) {
@@ -390,10 +393,10 @@ static mod_websocket_errno_t create_response_rfc_6455(handler_ctx *hctx) {
 #endif	/* _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
 mod_websocket_errno_t mod_websocket_handshake_create_response(handler_ctx *hctx) {
-    DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "s", "send handshake response");
     if (!hctx) {
         return MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
     }
+    DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "s", "send handshake response");
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
     if (hctx->handshake.version == 0) {
