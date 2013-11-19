@@ -5,6 +5,8 @@
 #include "mod_websocket.h"
 #include "mod_websocket_socket.h"
 
+# include <string.h>
+
 #ifdef HAVE_PCRE_H
 # include <pcre.h>
 #endif /* HAVE_PCRE_H */
@@ -12,7 +14,6 @@
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
 # include <ctype.h>
 # include <poll.h>
-# include <string.h>
 # include <unistd.h>
 # include "md5.h"
 
