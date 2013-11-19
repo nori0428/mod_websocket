@@ -395,10 +395,14 @@ TEST_F(ModWebsocketHandshakeCheckRequestTest, IETF_00) {
     chunkqueue_reset(con.read_queue);
     ret = mod_websocket_handshake_check_request(&hctx);
     ASSERT_EQ(MOD_WEBSOCKET_BAD_REQUEST, ret);
-    pipe(pipefd);
+    if (pipe(pipefd) != 0) {
+      ASSERT_FALSE(true) << "fail to create pipe";
+    }
     if (fork() == 0) {
       close(pipefd[0]);
-      write(pipefd[1], SEC_WEBSOCKET_KEY3, strlen(SEC_WEBSOCKET_KEY3));
+      if (write(pipefd[1], SEC_WEBSOCKET_KEY3, strlen(SEC_WEBSOCKET_KEY3)) < 0) {
+	ASSERT_FALSE(true) << "fail to write";
+      }
       close(pipefd[1]);
       _exit(0);
     } else {

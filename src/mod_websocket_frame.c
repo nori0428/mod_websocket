@@ -105,7 +105,7 @@ static int recv_ietf_00(handler_ctx *hctx) {
                 if (frame->ptr[i] == 0x00) {
                     hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_PAYLOAD;
                     i++;
-                } else if (frame->ptr[i] == 0xff) {
+                } else if ((unsigned char)frame->ptr[i] == 0xff) {
                     DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "s", "recv close frame");
                     chunkqueue_reset(hctx->tosrv);
                     chunkqueue_reset(hctx->fromcli);
