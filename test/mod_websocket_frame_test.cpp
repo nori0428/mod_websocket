@@ -1,3 +1,6 @@
+#define __STDC_LIMIT_MACROS
+#include <stdint.h>
+
 #include <iomanip>
 #include <gtest/gtest.h>
 
@@ -304,8 +307,11 @@ static void check_frame_rfc_6455(mod_websocket_frame_type_t exp_type, const char
 }
 
 TEST_F(ModWebsocketFrameSendTest, RFC_6455) {
-  char* data = (char *)malloc(UINT32_MAX);
+  char* data = (char *)malloc(UINT16_MAX + 1);
 
+  if (data == NULL) {
+    ASSERT_FALSE(true) << "no memory";
+  }
   hctx.handshake.version = 13;
   // INVALID
   ASSERT_EQ(-1, mod_websocket_frame_send(NULL, MOD_WEBSOCKET_FRAME_TYPE_TEXT,
@@ -561,8 +567,8 @@ static int send_rfc_6455_masked(chunkqueue *q, mod_websocket_frame_type_t type, 
 }
 
 TEST_F(ModWebsocketFrameRecvTest, RFC_6455) {
-  char* data = (char *)malloc(UINT32_MAX);
-  char* mask_data = (char *)malloc(UINT32_MAX);
+  char* data = (char *)malloc(UINT16_MAX + 1);
+  char* mask_data = (char *)malloc(UINT16_MAX + 1);
   char mask[4] = {0x11, 0x22, 0x33, 0x44};
 
   hctx.handshake.version = 13;
