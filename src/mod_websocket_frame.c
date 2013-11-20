@@ -387,13 +387,7 @@ static int recv_rfc_6455(handler_ctx *hctx) {
                         chunkqueue_reset(hctx->fromcli);
                         return -1;
                     }
-                    if (hctx->pd->conf.debug >= MOD_WEBSOCKET_LOG_DEBUG) {
-                        char u64str[128];
-                        snprintf(u64str, sizeof(u64str),
-                                 "specified payload size = 0x%llux",
-                                 (uint64_t)hctx->frame.ctl.siz & UINT64_MAX);
-                        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "s", u64str);
-                    }
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "sx", "specified payload size =", hctx->frame.ctl.siz);
                     hctx->frame.state = MOD_WEBSOCKET_FRAME_STATE_READ_MASK;
                 }
                 i++;
@@ -438,13 +432,7 @@ static int recv_rfc_6455(handler_ctx *hctx) {
                     buffer_append_memory(payload, &frame->ptr[i], frame->used - i - 1);
                     hctx->frame.ctl.siz -= (uint64_t)(frame->used - i - 1);
                     i += (frame->used - i - 1);
-                    if (hctx->pd->conf.debug >= MOD_WEBSOCKET_LOG_DEBUG) {
-                        char u64str[128];
-                        snprintf(u64str, sizeof(u64str),
-                                 "rest of payload size = 0x%llux",
-                                 (uint64_t)hctx->frame.ctl.siz & UINT64_MAX);
-                        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "s", u64str);
-                    }
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "sx", "rest of payload size =", hctx->frame.ctl.siz);
                 }
                 switch (hctx->frame.type) {
                 case MOD_WEBSOCKET_FRAME_TYPE_TEXT:
