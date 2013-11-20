@@ -1,5 +1,8 @@
 TESTS = \
-	mod_websocket_base64_test.sh mod_websocket_sha1_test mod_websocket_handshake_test
+	mod_websocket_base64_test.sh \
+	mod_websocket_sha1_test \
+	mod_websocket_handshake_test \
+	mod_websocket_frame_test
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/stub/ \
@@ -13,8 +16,11 @@ LDADD = \
 	$(top_srcdir)/contrib/gtest-1.7.0/lib/libgtest.la
 
 noinst_PROGRAMS = \
-	mod_websocket_base64_encode_test mod_websocket_base64_decode_test mod_websocket_sha1_test \
-	mod_websocket_handshake_test
+	mod_websocket_base64_encode_test \
+	mod_websocket_base64_decode_test \
+	mod_websocket_sha1_test \
+	mod_websocket_handshake_test \
+	mod_websocket_frame_test
 
 mod_websocket_base64_encode_test_SOURCES = \
 	mod_websocket_base64_encode_test.c
@@ -27,6 +33,9 @@ mod_websocket_sha1_test_SOURCES = \
 
 mod_websocket_handshake_test_SOURCES = \
 	mod_websocket_handshake_test.cpp
+
+mod_websocket_frame_test_SOURCES = \
+	mod_websocket_frame_test.cpp
 
 clean-local:
 	${RM} -f *~

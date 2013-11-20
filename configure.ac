@@ -9,9 +9,11 @@ AC_CANONICAL_HOST
 case $host_os in
      *darwin* )
               CFLAGS="$CFLAGS -I/opt/local/include/"
+              CXXFLAGS="$CXXFLAGS -I/opt/local/include/"
               LDFLAGS="$LDFLAGS -L/opt/local/lib/";;
      * )
               CFLAGS="$CFLAGS -I/usr/local/include/"
+              CXXFLAGS="$CXXFLAGS -I/usr/local/include/"
               LDFLAGS="$LDFLAGS -L/usr/local/lib/"
 esac
 

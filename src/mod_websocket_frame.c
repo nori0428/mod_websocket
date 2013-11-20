@@ -499,6 +499,9 @@ static int send_forward(handler_ctx *hctx, char *payload, size_t siz) {
     const char endl = '\0';
     buffer *b = NULL;
 
+    if (payload == NULL || siz == 0) {
+        return 0;
+    }
     b = chunkqueue_get_append_buffer(hctx->tocli);
     if (!b) {
         DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");

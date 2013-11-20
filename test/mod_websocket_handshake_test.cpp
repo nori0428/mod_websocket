@@ -312,178 +312,178 @@ public:
 
 static void print_headers(array *a) {
 #if 0
-    array_print(a, 1);
-    std::cout << std::endl;
+  array_print(a, 1);
+  std::cout << std::endl;
 #endif
 };
 
 #ifdef _MOD_WEBSOCKET_SPEC_IETF_00_
 TEST_F(ModWebsocketHandshakeCheckRequestTest, IETF_00) {
-    mod_websocket_errno_t ret;
-    data_string *header;
-    data_string *origin;
-    int pipefd[2];
+  mod_websocket_errno_t ret;
+  data_string *header;
+  data_string *origin;
+  int pipefd[2];
 
-    ret = mod_websocket_handshake_check_request(NULL);
-    ASSERT_EQ(MOD_WEBSOCKET_INTERNAL_SERVER_ERROR, ret);
+  ret = mod_websocket_handshake_check_request(NULL);
+  ASSERT_EQ(MOD_WEBSOCKET_INTERNAL_SERVER_ERROR, ret);
 
-    header = data_string_init();
-    buffer_copy_string(header->key, "Connection");
-    buffer_copy_string(header->value, "Upgrade");
-    array_insert_unique(con.request.headers, (data_unset *)header);
-    print_headers(con.request.headers);
-    ret = mod_websocket_handshake_check_request(&hctx);
-    ASSERT_EQ(MOD_WEBSOCKET_PRECONDITION_FAILED, ret);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Connection");
+  buffer_copy_string(header->value, "Upgrade");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  print_headers(con.request.headers);
+  ret = mod_websocket_handshake_check_request(&hctx);
+  ASSERT_EQ(MOD_WEBSOCKET_PRECONDITION_FAILED, ret);
 
-    header = data_string_init();
-    buffer_copy_string(header->key, "Upgrade");
-    buffer_copy_string(header->value, "WebSocket");
-    array_insert_unique(con.request.headers, (data_unset *)header);
-    print_headers(con.request.headers);
-    ret = mod_websocket_handshake_check_request(&hctx);
-    ASSERT_EQ(MOD_WEBSOCKET_BAD_REQUEST, ret);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Upgrade");
+  buffer_copy_string(header->value, "WebSocket");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  print_headers(con.request.headers);
+  ret = mod_websocket_handshake_check_request(&hctx);
+  ASSERT_EQ(MOD_WEBSOCKET_BAD_REQUEST, ret);
 
-    header = data_string_init();
-    buffer_copy_string(header->key, "Host");
-    buffer_copy_string(header->value, "bar.com");
-    array_insert_unique(con.request.headers, (data_unset *)header);
-    print_headers(con.request.headers);
-    ret = mod_websocket_handshake_check_request(&hctx);
-    ASSERT_EQ(MOD_WEBSOCKET_BAD_REQUEST, ret);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Host");
+  buffer_copy_string(header->value, "bar.com");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  print_headers(con.request.headers);
+  ret = mod_websocket_handshake_check_request(&hctx);
+  ASSERT_EQ(MOD_WEBSOCKET_BAD_REQUEST, ret);
 
-    header = data_string_init();
-    buffer_copy_string(header->key, "Sec-WebSocket-Key1");
-    buffer_copy_string(header->value, SEC_WEBSOCKET_KEY1);
-    array_insert_unique(con.request.headers, (data_unset *)header);
-    print_headers(con.request.headers);
-    ret = mod_websocket_handshake_check_request(&hctx);
-    ASSERT_EQ(MOD_WEBSOCKET_BAD_REQUEST, ret);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Sec-WebSocket-Key1");
+  buffer_copy_string(header->value, SEC_WEBSOCKET_KEY1);
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  print_headers(con.request.headers);
+  ret = mod_websocket_handshake_check_request(&hctx);
+  ASSERT_EQ(MOD_WEBSOCKET_BAD_REQUEST, ret);
 
-    header = data_string_init();
-    buffer_copy_string(header->key, "Sec-WebSocket-Key2");
-    buffer_copy_string(header->value, SEC_WEBSOCKET_KEY2);
-    array_insert_unique(con.request.headers, (data_unset *)header);
-    print_headers(con.request.headers);
-    ret = mod_websocket_handshake_check_request(&hctx);
-    ASSERT_EQ(MOD_WEBSOCKET_BAD_REQUEST, ret);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Sec-WebSocket-Key2");
+  buffer_copy_string(header->value, SEC_WEBSOCKET_KEY2);
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  print_headers(con.request.headers);
+  ret = mod_websocket_handshake_check_request(&hctx);
+  ASSERT_EQ(MOD_WEBSOCKET_BAD_REQUEST, ret);
 
-    chunkqueue_append_mem(con.read_queue, SEC_WEBSOCKET_KEY3, sizeof(SEC_WEBSOCKET_KEY3));
-    ret = mod_websocket_handshake_check_request(&hctx);
-    ASSERT_EQ(MOD_WEBSOCKET_BAD_REQUEST, ret);
+  chunkqueue_append_mem(con.read_queue, SEC_WEBSOCKET_KEY3, sizeof(SEC_WEBSOCKET_KEY3));
+  ret = mod_websocket_handshake_check_request(&hctx);
+  ASSERT_EQ(MOD_WEBSOCKET_BAD_REQUEST, ret);
 
-    // not allowed origin
-    origin = data_string_init();
-    buffer_copy_string(origin->value, "http:\\/\\/foo\\.com\\/.*");
-    array_insert_unique(origins->value, (data_unset *)origin);
-    header = data_string_init();
-    buffer_copy_string(header->key, "Origin");
-    buffer_copy_string(header->value, "http://bar.com/foo");
-    array_insert_unique(con.request.headers, (data_unset *)header);
-    print_headers(con.request.headers);
-    ret = mod_websocket_handshake_check_request(&hctx);
-    ASSERT_EQ(MOD_WEBSOCKET_FORBIDDEN, ret);
+  // not allowed origin
+  origin = data_string_init();
+  buffer_copy_string(origin->value, "http:\\/\\/foo\\.com\\/.*");
+  array_insert_unique(origins->value, (data_unset *)origin);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Origin");
+  buffer_copy_string(header->value, "http://bar.com/foo");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  print_headers(con.request.headers);
+  ret = mod_websocket_handshake_check_request(&hctx);
+  ASSERT_EQ(MOD_WEBSOCKET_FORBIDDEN, ret);
 
-    // allowed origin
-    origin = data_string_init();
-    buffer_copy_string(origin->value, ALLOWED_ORIGIN);
-    array_insert_unique(origins->value, (data_unset *)origin);
-    print_headers(con.request.headers);
+  // allowed origin
+  origin = data_string_init();
+  buffer_copy_string(origin->value, ALLOWED_ORIGIN);
+  array_insert_unique(origins->value, (data_unset *)origin);
+  print_headers(con.request.headers);
+  ret = mod_websocket_handshake_check_request(&hctx);
+  ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
+
+  // check chunked key-3
+  chunkqueue_reset(con.read_queue);
+  ret = mod_websocket_handshake_check_request(&hctx);
+  ASSERT_EQ(MOD_WEBSOCKET_BAD_REQUEST, ret);
+  if (pipe(pipefd) != 0) {
+    ASSERT_FALSE(true) << "fail to create pipe";
+  }
+  if (fork() == 0) {
+    close(pipefd[0]);
+    if (write(pipefd[1], SEC_WEBSOCKET_KEY3, strlen(SEC_WEBSOCKET_KEY3)) < 0) {
+      ASSERT_FALSE(true) << "fail to write";
+    }
+    close(pipefd[1]);
+    _exit(0);
+  } else {
+    wait(NULL);
+    con.fd = pipefd[0];
+    close(pipefd[1]);
     ret = mod_websocket_handshake_check_request(&hctx);
     ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
-
-    // check chunked key-3
-    chunkqueue_reset(con.read_queue);
-    ret = mod_websocket_handshake_check_request(&hctx);
-    ASSERT_EQ(MOD_WEBSOCKET_BAD_REQUEST, ret);
-    if (pipe(pipefd) != 0) {
-      ASSERT_FALSE(true) << "fail to create pipe";
-    }
-    if (fork() == 0) {
-      close(pipefd[0]);
-      if (write(pipefd[1], SEC_WEBSOCKET_KEY3, strlen(SEC_WEBSOCKET_KEY3)) < 0) {
-	ASSERT_FALSE(true) << "fail to write";
-      }
-      close(pipefd[1]);
-      _exit(0);
-    } else {
-      wait(NULL);
-      con.fd = pipefd[0];
-      close(pipefd[1]);
-      ret = mod_websocket_handshake_check_request(&hctx);
-      ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
-      close(pipefd[0]);
-    }
+    close(pipefd[0]);
+  }
 }
 #endif
 
 #ifdef  _MOD_WEBSOCKET_SPEC_RFC_6455_
 TEST_F(ModWebsocketHandshakeCheckRequestTest, RFC_6455) {
-    mod_websocket_errno_t ret;
-    data_string *header;
-    data_string *origin;
+  mod_websocket_errno_t ret;
+  data_string *header;
+  data_string *origin;
 
-    ret = mod_websocket_handshake_check_request(NULL);
-    ASSERT_EQ(MOD_WEBSOCKET_INTERNAL_SERVER_ERROR, ret);
+  ret = mod_websocket_handshake_check_request(NULL);
+  ASSERT_EQ(MOD_WEBSOCKET_INTERNAL_SERVER_ERROR, ret);
 
-    header = data_string_init();
-    buffer_copy_string(header->key, "Sec-WebSocket-Version");
-    buffer_copy_string(header->value, "13");
-    array_insert_unique(con.request.headers, (data_unset *)header);
-    print_headers(con.request.headers);
-    ret = mod_websocket_handshake_check_request(&hctx);
-    ASSERT_EQ(MOD_WEBSOCKET_PRECONDITION_FAILED, ret);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Sec-WebSocket-Version");
+  buffer_copy_string(header->value, "13");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  print_headers(con.request.headers);
+  ret = mod_websocket_handshake_check_request(&hctx);
+  ASSERT_EQ(MOD_WEBSOCKET_PRECONDITION_FAILED, ret);
 
-    header = data_string_init();
-    buffer_copy_string(header->key, "Connection");
-    buffer_copy_string(header->value, "Upgrade");
-    array_insert_unique(con.request.headers, (data_unset *)header);
-    print_headers(con.request.headers);
-    ret = mod_websocket_handshake_check_request(&hctx);
-    ASSERT_EQ(MOD_WEBSOCKET_PRECONDITION_FAILED, ret);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Connection");
+  buffer_copy_string(header->value, "Upgrade");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  print_headers(con.request.headers);
+  ret = mod_websocket_handshake_check_request(&hctx);
+  ASSERT_EQ(MOD_WEBSOCKET_PRECONDITION_FAILED, ret);
 
-    header = data_string_init();
-    buffer_copy_string(header->key, "Upgrade");
-    buffer_copy_string(header->value, "WebSocket");
-    array_insert_unique(con.request.headers, (data_unset *)header);
-    print_headers(con.request.headers);
-    ret = mod_websocket_handshake_check_request(&hctx);
-    ASSERT_EQ(MOD_WEBSOCKET_BAD_REQUEST, ret);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Upgrade");
+  buffer_copy_string(header->value, "WebSocket");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  print_headers(con.request.headers);
+  ret = mod_websocket_handshake_check_request(&hctx);
+  ASSERT_EQ(MOD_WEBSOCKET_BAD_REQUEST, ret);
 
-    header = data_string_init();
-    buffer_copy_string(header->key, "Host");
-    buffer_copy_string(header->value, "bar.com");
-    array_insert_unique(con.request.headers, (data_unset *)header);
-    print_headers(con.request.headers);
-    ret = mod_websocket_handshake_check_request(&hctx);
-    ASSERT_EQ(MOD_WEBSOCKET_BAD_REQUEST, ret);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Host");
+  buffer_copy_string(header->value, "bar.com");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  print_headers(con.request.headers);
+  ret = mod_websocket_handshake_check_request(&hctx);
+  ASSERT_EQ(MOD_WEBSOCKET_BAD_REQUEST, ret);
 
-    header = data_string_init();
-    buffer_copy_string(header->key, "Sec-WebSocket-Key");
-    buffer_copy_string(header->value, SEC_WEBSOCKET_KEY);
-    array_insert_unique(con.request.headers, (data_unset *)header);
-    print_headers(con.request.headers);
-    ret = mod_websocket_handshake_check_request(&hctx);
-    ASSERT_EQ(MOD_WEBSOCKET_BAD_REQUEST, ret);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Sec-WebSocket-Key");
+  buffer_copy_string(header->value, SEC_WEBSOCKET_KEY);
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  print_headers(con.request.headers);
+  ret = mod_websocket_handshake_check_request(&hctx);
+  ASSERT_EQ(MOD_WEBSOCKET_BAD_REQUEST, ret);
 
-    // not allowed origin
-    origin = data_string_init();
-    buffer_copy_string(origin->value, "http:\\/\\/foo\\.com\\/.*");
-    array_insert_unique(origins->value, (data_unset *)origin);
-    header = data_string_init();
-    buffer_copy_string(header->key, "Origin");
-    buffer_copy_string(header->value, "http://bar.com/foo");
-    array_insert_unique(con.request.headers, (data_unset *)header);
-    print_headers(con.request.headers);
-    ret = mod_websocket_handshake_check_request(&hctx);
-    ASSERT_EQ(MOD_WEBSOCKET_FORBIDDEN, ret);
+  // not allowed origin
+  origin = data_string_init();
+  buffer_copy_string(origin->value, "http:\\/\\/foo\\.com\\/.*");
+  array_insert_unique(origins->value, (data_unset *)origin);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Origin");
+  buffer_copy_string(header->value, "http://bar.com/foo");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  print_headers(con.request.headers);
+  ret = mod_websocket_handshake_check_request(&hctx);
+  ASSERT_EQ(MOD_WEBSOCKET_FORBIDDEN, ret);
 
-    // allowed origin
-    origin = data_string_init();
-    buffer_copy_string(origin->value, ALLOWED_ORIGIN);
-    array_insert_unique(origins->value, (data_unset *)origin);
-    print_headers(con.request.headers);
-    ret = mod_websocket_handshake_check_request(&hctx);
-    ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
+  // allowed origin
+  origin = data_string_init();
+  buffer_copy_string(origin->value, ALLOWED_ORIGIN);
+  array_insert_unique(origins->value, (data_unset *)origin);
+  print_headers(con.request.headers);
+  ret = mod_websocket_handshake_check_request(&hctx);
+  ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
 }
 #endif
 
@@ -518,101 +518,101 @@ static int check_response(chunkqueue *q, const char *exp) {
 
 #ifdef _MOD_WEBSOCKET_SPEC_IETF_00_
 TEST_F(ModWebsocketHandshakeCreateResponseTest, IETF_00) {
-    mod_websocket_errno_t ret;
-    data_string *header;
-    data_string *origin;
-    int pipefd[2];
+  mod_websocket_errno_t ret;
+  data_string *header;
+  data_string *origin;
+  int pipefd[2];
 
-    ret = mod_websocket_handshake_create_response(NULL);
-    ASSERT_EQ(MOD_WEBSOCKET_INTERNAL_SERVER_ERROR, ret);
+  ret = mod_websocket_handshake_create_response(NULL);
+  ASSERT_EQ(MOD_WEBSOCKET_INTERNAL_SERVER_ERROR, ret);
 
-    // create request
-    header = data_string_init();
-    buffer_copy_string(header->key, "Connection");
-    buffer_copy_string(header->value, "Upgrade");
-    array_insert_unique(con.request.headers, (data_unset *)header);
-    header = data_string_init();
-    buffer_copy_string(header->key, "Upgrade");
-    buffer_copy_string(header->value, "WebSocket");
-    array_insert_unique(con.request.headers, (data_unset *)header);
-    header = data_string_init();
-    buffer_copy_string(header->key, "Host");
-    buffer_copy_string(header->value, "bar.com");
-    array_insert_unique(con.request.headers, (data_unset *)header);
-    header = data_string_init();
-    buffer_copy_string(header->key, "Sec-WebSocket-Key1");
-    buffer_copy_string(header->value, SEC_WEBSOCKET_KEY1);
-    array_insert_unique(con.request.headers, (data_unset *)header);
-    header = data_string_init();
-    buffer_copy_string(header->key, "Sec-WebSocket-Key2");
-    buffer_copy_string(header->value, SEC_WEBSOCKET_KEY2);
-    array_insert_unique(con.request.headers, (data_unset *)header);
-    chunkqueue_append_mem(con.read_queue, SEC_WEBSOCKET_KEY3, sizeof(SEC_WEBSOCKET_KEY3));
-    header = data_string_init();
-    buffer_copy_string(header->key, "Origin");
-    buffer_copy_string(header->value, "http://bar.com/foo");
-    array_insert_unique(con.request.headers, (data_unset *)header);
-    print_headers(con.request.headers);
+  // create request
+  header = data_string_init();
+  buffer_copy_string(header->key, "Connection");
+  buffer_copy_string(header->value, "Upgrade");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Upgrade");
+  buffer_copy_string(header->value, "WebSocket");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Host");
+  buffer_copy_string(header->value, "bar.com");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Sec-WebSocket-Key1");
+  buffer_copy_string(header->value, SEC_WEBSOCKET_KEY1);
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Sec-WebSocket-Key2");
+  buffer_copy_string(header->value, SEC_WEBSOCKET_KEY2);
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  chunkqueue_append_mem(con.read_queue, SEC_WEBSOCKET_KEY3, sizeof(SEC_WEBSOCKET_KEY3));
+  header = data_string_init();
+  buffer_copy_string(header->key, "Origin");
+  buffer_copy_string(header->value, "http://bar.com/foo");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  print_headers(con.request.headers);
 
-    ret = mod_websocket_handshake_check_request(&hctx);
-    ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
+  ret = mod_websocket_handshake_check_request(&hctx);
+  ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
 
-    ret = mod_websocket_handshake_create_response(&hctx);
-    ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
-    check_response(hctx.tocli, RESP_WS_IETF_00);
+  ret = mod_websocket_handshake_create_response(&hctx);
+  ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
+  check_response(hctx.tocli, RESP_WS_IETF_00);
 
-    chunkqueue_reset(hctx.tocli);
-    srv_sock.is_ssl = 1;
-    ret = mod_websocket_handshake_create_response(&hctx);
-    ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
-    check_response(hctx.tocli, RESP_WSS_IETF_00);
+  chunkqueue_reset(hctx.tocli);
+  srv_sock.is_ssl = 1;
+  ret = mod_websocket_handshake_create_response(&hctx);
+  ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
+  check_response(hctx.tocli, RESP_WSS_IETF_00);
 }
 #endif
 
 #ifdef  _MOD_WEBSOCKET_SPEC_RFC_6455_
 TEST_F(ModWebsocketHandshakeCreateResponseTest, RFC_6455) {
-    mod_websocket_errno_t ret;
-    data_string *header;
-    data_string *origin;
+  mod_websocket_errno_t ret;
+  data_string *header;
+  data_string *origin;
 
-    header = data_string_init();
-    buffer_copy_string(header->key, "Sec-WebSocket-Version");
-    buffer_copy_string(header->value, "13");
-    array_insert_unique(con.request.headers, (data_unset *)header);
-    header = data_string_init();
-    buffer_copy_string(header->key, "Connection");
-    buffer_copy_string(header->value, "Upgrade");
-    array_insert_unique(con.request.headers, (data_unset *)header);
-    header = data_string_init();
-    buffer_copy_string(header->key, "Upgrade");
-    buffer_copy_string(header->value, "WebSocket");
-    array_insert_unique(con.request.headers, (data_unset *)header);
-    header = data_string_init();
-    buffer_copy_string(header->key, "Host");
-    buffer_copy_string(header->value, "bar.com");
-    array_insert_unique(con.request.headers, (data_unset *)header);
-    header = data_string_init();
-    buffer_copy_string(header->key, "Sec-WebSocket-Key");
-    buffer_copy_string(header->value, SEC_WEBSOCKET_KEY);
-    array_insert_unique(con.request.headers, (data_unset *)header);
-    header = data_string_init();
-    buffer_copy_string(header->key, "Origin");
-    buffer_copy_string(header->value, "http://bar.com/foo");
-    array_insert_unique(con.request.headers, (data_unset *)header);
-    print_headers(con.request.headers);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Sec-WebSocket-Version");
+  buffer_copy_string(header->value, "13");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Connection");
+  buffer_copy_string(header->value, "Upgrade");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Upgrade");
+  buffer_copy_string(header->value, "WebSocket");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Host");
+  buffer_copy_string(header->value, "bar.com");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Sec-WebSocket-Key");
+  buffer_copy_string(header->value, SEC_WEBSOCKET_KEY);
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Origin");
+  buffer_copy_string(header->value, "http://bar.com/foo");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  print_headers(con.request.headers);
 
-    ret = mod_websocket_handshake_check_request(&hctx);
-    ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
+  ret = mod_websocket_handshake_check_request(&hctx);
+  ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
 
-    ret = mod_websocket_handshake_create_response(&hctx);
-    ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
-    ASSERT_EQ(0, check_response(hctx.tocli, RESP_RFC_6455));
+  ret = mod_websocket_handshake_create_response(&hctx);
+  ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
+  ASSERT_EQ(0, check_response(hctx.tocli, RESP_RFC_6455));
 
-    chunkqueue_reset(hctx.tocli);
-    srv_sock.is_ssl = 1;
-    ret = mod_websocket_handshake_create_response(&hctx);
-    ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
-    ASSERT_EQ(0, check_response(hctx.tocli, RESP_RFC_6455));
+  chunkqueue_reset(hctx.tocli);
+  srv_sock.is_ssl = 1;
+  ret = mod_websocket_handshake_create_response(&hctx);
+  ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
+  ASSERT_EQ(0, check_response(hctx.tocli, RESP_RFC_6455));
 }
 #endif
 
@@ -647,32 +647,32 @@ static int check_forward(chunkqueue *q, const char *exp) {
 
 #ifdef _MOD_WEBSOCKET_SPEC_IETF_00_
 TEST_F(ModWebsocketHandshakeForwardRequestTest, IETF_00) {
-    mod_websocket_errno_t ret;
+  mod_websocket_errno_t ret;
 
-    ret = mod_websocket_handshake_forward_request(NULL);
-    ASSERT_EQ(MOD_WEBSOCKET_INTERNAL_SERVER_ERROR, ret);
+  ret = mod_websocket_handshake_forward_request(NULL);
+  ASSERT_EQ(MOD_WEBSOCKET_INTERNAL_SERVER_ERROR, ret);
 
-    buffer_copy_string(hctx.handshake.key3, SEC_WEBSOCKET_KEY3);
-    buffer_copy_string(con.request.request, REQ_HDR_IETF_00);
+  buffer_copy_string(hctx.handshake.key3, SEC_WEBSOCKET_KEY3);
+  buffer_copy_string(con.request.request, REQ_HDR_IETF_00);
 
-    ret = mod_websocket_handshake_forward_request(&hctx);
-    ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
-    ASSERT_EQ(0, check_forward(hctx.tosrv, REQ_IETF_00));
+  ret = mod_websocket_handshake_forward_request(&hctx);
+  ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
+  ASSERT_EQ(0, check_forward(hctx.tosrv, REQ_IETF_00));
 }
 #endif
 
 #ifdef  _MOD_WEBSOCKET_SPEC_RFC_6455_
 TEST_F(ModWebsocketHandshakeForwardRequestTest, RFC_6455) {
-    mod_websocket_errno_t ret;
+  mod_websocket_errno_t ret;
 
-    ret = mod_websocket_handshake_forward_request(NULL);
-    ASSERT_EQ(MOD_WEBSOCKET_INTERNAL_SERVER_ERROR, ret);
+  ret = mod_websocket_handshake_forward_request(NULL);
+  ASSERT_EQ(MOD_WEBSOCKET_INTERNAL_SERVER_ERROR, ret);
 
-    buffer_copy_string(con.request.request, REQ_RFC_6455);
+  buffer_copy_string(con.request.request, REQ_RFC_6455);
 
-    ret = mod_websocket_handshake_forward_request(&hctx);
-    ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
-    ASSERT_EQ(0, check_forward(hctx.tosrv, REQ_RFC_6455));
+  ret = mod_websocket_handshake_forward_request(&hctx);
+  ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
+  ASSERT_EQ(0, check_forward(hctx.tosrv, REQ_RFC_6455));
 }
 #endif
 
