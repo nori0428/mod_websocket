@@ -390,7 +390,7 @@ static int recv_rfc_6455(handler_ctx *hctx) {
                     if (hctx->pd->conf.debug >= MOD_WEBSOCKET_LOG_DEBUG) {
                         char u64str[128];
                         snprintf(u64str, sizeof(u64str),
-                                 "specified payload size = 0x%llx",
+                                 "specified payload size = 0x%llux",
                                  (uint64_t)hctx->frame.ctl.siz & UINT64_MAX);
                         DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "s", u64str);
                     }
@@ -441,7 +441,7 @@ static int recv_rfc_6455(handler_ctx *hctx) {
                     if (hctx->pd->conf.debug >= MOD_WEBSOCKET_LOG_DEBUG) {
                         char u64str[128];
                         snprintf(u64str, sizeof(u64str),
-                                 "rest of payload size = 0x%llx",
+                                 "rest of payload size = 0x%llux",
                                  (uint64_t)hctx->frame.ctl.siz & UINT64_MAX);
                         DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "s", u64str);
                     }
