@@ -93,7 +93,7 @@ protected:
     con.fd = -1;
 
     // init plugin_data
-    pd.conf.debug = MOD_WEBSOCKET_LOG_DEBUG;
+    pd.conf.debug = MOD_WEBSOCKET_LOG_NONE;
 
     // init handler_ctx
     memset(&hctx, 0, sizeof(hctx));
