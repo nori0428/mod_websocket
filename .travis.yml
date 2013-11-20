@@ -2,20 +2,19 @@ language: c
 
 compiler:
   - gcc
+  - g++
   - clang
+  - clang++
 
 before_install:
   - sudo apt-get update -qq
-  - sudo apt-get install -qq libev-dev
-  - sudo apt-get install -qq libssl-dev
-  - sudo apt-get install -qq libcunit1-dev
-  - sudo apt-get install -qq libicu-dev
+  - sudo apt-get install -qq libpcre
 
 before_script:
   - "./bootstrap"
 
 script:
-  - "./alltest.sh"
+  - "./travis.sh"
 
 notifications:
   email: false
