@@ -1,7 +1,8 @@
-SUBDIRS = . stub src
+SUBDIRS = . src
 
 if WITH_TEST
 SUBDIRS += test
+
 all-local:
 	(cd $(top_srcdir)/contrib/gtest-1.7.0; make)
 endif

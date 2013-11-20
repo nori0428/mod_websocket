@@ -61,12 +61,13 @@ AC_SUBST(SUPPORT_VERSION_CFLAGS)
 
 AC_C_BIGENDIAN
 if test "x$ac_cv_c_bigendian" = "xyes"; then
-   MODULE_CFLAGS="$MODULE_CFLAGS -DWORDS_BIGENDIAN"
+   ENDIAN_CFLAGS="-DWORDS_BIGENDIAN"
+else
+   ENDIAN_CFLAGS=
 fi
 AC_CHECK_HEADERS([stdint.h pcre.h])
 AC_CHECK_LIB([pcre], [pcre_compile])
 
-# Check for target lighttpd
 AC_MSG_CHECKING(whether --with-lighttpd option specified)
 AC_ARG_WITH([lighttpd],
             AC_HELP_STRING([--with-lighttpd@<:@=/path/to/lighttpd@:>@],
@@ -78,15 +79,14 @@ if test "x${lighttpd}" != "xno"; then
    AC_SUBST(LIGHTTPD_LOCATION)
 fi
 
-# additional CFLAGS
-# add -Wno-sign-compare and remove -Wundef for flex
-MODULE_CFLAGS="$MODULE_CFLAGS $SUPPORT_VERSION_CFLAGS -Werror -W -Wall -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wwrite-strings -Wno-sign-compare -Waggregate-return -Wnested-externs -Wno-long-long -Wunused -Wfloat-equal -Wformat -fno-strict-aliasing"
+MODULE_CFLAGS="$SUPPORT_VERSION_CFLAGS $ENDIAN_CFLAGS -Werror -W -Wall -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wwrite-strings -Wno-sign-compare -Waggregate-return -Wnested-externs -Wno-long-long -Wunused -Wfloat-equal -Wformat -fno-strict-aliasing"
 AC_SUBST(MODULE_CFLAGS)
 
 AC_CONFIG_FILES([Makefile \
-                 stub/Makefile \
                  src/Makefile \
-                 test/Makefile])
+                 test/Makefile \
+                 test/stub/Makefile \
+                 ])
 
 if test "x${with_test}" = "xyes" ; then
    AC_CONFIG_SUBDIRS(contrib/gtest-1.7.0)

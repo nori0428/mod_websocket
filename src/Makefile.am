@@ -11,7 +11,7 @@ libmod_websocket_la_SOURCES = \
 	mod_websocket_handshake.c \
 	mod_websocket_frame.c
 
-libmod_websocket_la_CFLAGS = -I$(top_srcdir)/stub $(MODULE_CFLAGS)
+libmod_websocket_la_CFLAGS = -I$(top_srcdir)/test/stub $(MODULE_CFLAGS)
 
 clean-local:
 	${RM} -f *~

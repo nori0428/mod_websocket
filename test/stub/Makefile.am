@@ -17,6 +17,3 @@ libstub_la_SOURCES = \
 
 clean-local:
 	${RM} -f *~
-
-distclean-local:
-	${RM} -f Makefile.in
