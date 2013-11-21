@@ -35,6 +35,6 @@ install-data-local:
 	@echo
 	@echo "$$ cd ${LIGHTTPD_LOCATION}"
 	@echo "$$ ./autogen.sh"
-	@echo "$$ ./configure --with-websocket[=ALL/RFC-6455/IETF-00]"
+	@echo "$$ ./configure --with-websocket[=all/rfc-6455/ietf-00]"
 	@echo "$$ make"
 	@echo

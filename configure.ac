@@ -44,9 +44,9 @@ AM_CONDITIONAL(WITH_TEST, test x$with_test != xno)
 
 AC_MSG_CHECKING(whether --with-websocket option specified)
 AC_ARG_WITH([websocket],
-            AC_HELP_STRING([--with-websocket@<:@=ALL/RFC-6455/IETF-00@:>@],
-                           [support WebSocket version@<:@default=ALL@:>@]),
-            [websocket="$withval"], [websocket=ALL])
+            AC_HELP_STRING([--with-websocket@<:@=all/rfc-6455/ietf-00@:>@],
+                           [support WebSocket version@<:@default=all@:>@]),
+            [websocket="$withval"], [websocket=all])
 AC_MSG_RESULT(${websocket})
 if test "x${websocket}" = "xall" -o "x${websocket}" = "xALL" ; then
    SUPPORT_VERSION_CFLAGS="-D_MOD_WEBSOCKET_SPEC_IETF_00_ -D_MOD_WEBSOCKET_SPEC_RFC_6455_"
@@ -55,15 +55,13 @@ elif test "x${websocket}" = "xrfc-6455" -o "x${websocket}" = "xRFC-6455" ; then
 elif test "x${websocket}" = "xietf-00" -o "x${websocket}" = "xIETF-00" ; then
    SUPPORT_VERSION_CFLAGS="-D_MOD_WEBSOCKET_SPEC_IETF_00_"
 elif test "x${websocket}" != "xno" ; then
-   AC_MSG_ERROR([websocket option is invalid. plz specify ALL, IETF-00, RFC-6455])
+   AC_MSG_ERROR([websocket option is invalid. plz specify all, ietf-00, rfc-6455])
 fi
 AC_SUBST(SUPPORT_VERSION_CFLAGS)
 
 AC_C_BIGENDIAN
 if test "x$ac_cv_c_bigendian" = "xyes"; then
    ENDIAN_CFLAGS="-DWORDS_BIGENDIAN"
-else
-   ENDIAN_CFLAGS=
 fi
 AC_CHECK_HEADERS([stdint.h pcre.h])
 AC_CHECK_LIB([pcre], [pcre_compile])

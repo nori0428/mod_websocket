@@ -23,3 +23,5 @@ contrib/gtest-1.7.0/
 supplement/config_parser/src/*.h
 supplement/config_parser/src/*.c
 supplement/config_parser/src/mod_websocket_config_validator
+
+workspace/
