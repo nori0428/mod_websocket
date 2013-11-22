@@ -1,7 +1,15 @@
 ## Changes
 
-- 2012-12-18
-  Add config parser for websocket.conf.
-   But this is not used in mod_websocket.
-   Functions that are defined in mod_websocket_config.h are for use in
-   other programs like a fastcgi application, for example.
+- 2.6 -> 2.7
+  1.add WebSocket Proxy mode.
+    Now you can use lighttpd as WebSocket Proxy.
+    - websocket module adds X-Forwarded-For header automatically.
+  2.make code simple for WebSocket-TCP Proxy mode.
+    - remove locale and subprotocol handling.
+  3.change configuration file format
+    - see sample/etc/lighttpd/conf.d/websocket.conf for more informations.
+  4.enable to use RegExp for websocket uri and origins
+  5.add configuration file format checker.
+    - check your configuration with
+      supplement/config_parser/src/mod_websocket_config_validator
+    # need lex and yacc such as flex and bison etc. to make

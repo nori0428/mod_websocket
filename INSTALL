@@ -1,61 +1,40 @@
-// $Id$
-
-- Install lighty with mod_websocket
+- How To Install
 
 1.Check your environment
   - dependent tools and libs[mandatory]
     1.autotools
-    exmaple for ubuntu.
-    $ sudo apt-get install automake
-    $ sudo apt-get install libtool
-
-    And I recommend you to install version 1.9 or later.
-
-    2.libev-dev
-    $ sudo apt-get install libev3 libev-dev
-
-    3.libcunit-dev ( http://cunit.sourceforge.net/ )
-    $ sudo apt-get install libcunit1 libcunit1-dev
-
-    4.libicu-dev ( http://site.icu-project.org/ )
-    $ sudo apt-get install libicu42 libicu-dev
-
-    5.libpcre-dev ( http://www.pcre.org/ )
-    $ sudo apt-get install libpcre3 libpcre3-dev
-
-    6.zlib-dev
-    $ sudo apt-get install zlib1g-dev
-
-    7.bzip2-dev
-    $ sudo apt-get install libbz2-dev
+      exmaple for ubuntu.
+      $ sudo apt-get install automake
+      $ sudo apt-get install libtool
 
   - dependent libs[optional]
-    8.openssl
-    If you want to use SSL and wss, install openssl and openssl lib.
-    $ sudo apt-get install openssl libssl-dev
+    2.libpcre-dev ( http://www.pcre.org/ )
+      for Regular Expressions.
+      $ sudo apt-get install libpcre3 libpcre3-dev
+
+    3.openssl
+      for https and wss scheme
+      $ sudo apt-get install openssl libssl-dev
 
 2.Test mod_websocket
   $ cd mod_websocket
   $ ./bootstrap
-  $ ./configure --with-websocket[=ALL, RFC-6455, IETF-00] --with-test
+  $ ./configure --with-websocket[=all, rfc-6455, ietf-00] --with-test
   $ make clean check
 
   If bootstrap or configure failed, check your environment again.
   If make check failed, plz send config.log and make check output to
   me.
 
-3.Get the lighttpd-1.4.30 source from
-  http://www.lighttpd.net/download/
+3.Get the lighttpd-1.4.xx source from http://www.lighttpd.net/download/
+  or https://github.com/lighttpd/lighttpd1.4.git
 
-  $ tar xzvf lighttpd-1.4.30.tar.gz
-
-4.Install mod_websocket into lighty's dir
+4.Install mod_websocket into lighty's dir.
 
   NOTICE:
   Lighttpd is applied some patches by installing this module.
 
   $ cd mod_websocket
-  $ ./bootstrap
   $ ./configure --with-lighttpd=/path/to/lighttpd_top_srcdir
   $ make install
 
@@ -63,141 +42,28 @@
 
   $ cd /path/to/lighttpd_top_srcdir
   $ ./autogen.sh
-  $ ./configure --with-websocket[=ALL, RFC-6455, IETF-00] [--without-libicu] [--with-openssl] ...
-
-  If you want to use latest spec, plz specify --with-websocket
-  And If you want not to use UTF-8 {validation, conversion},
-  plz specify --without-libicu (But this option may occur severe security hole.)
-
+  $ ./configure --with-websocket[=all, rfc-6455, ietf-00] [--with-openssl] ...
   $ make
   $ sudo make install
 
 6.Add setting for mod_websocket into lighttpd.conf
+  see sample/etc/lighttpd/conf.d/websocket.conf.sample for details.
 
-  6-1. add websocket module into server.modules section.
+7.Try easy
+  // must pass above 5 steps.
+  $ sh ./makesample.sh
+  $ cd sample
+  $ ./sbin/lighttpd -f ./etc/lighttpd.conf
 
-  server.modules              = ( "mod_websocket", ... )
+  // must enable to work ipython notebook on your environment
+  $ ipython notebook --pylab inline --no-browser
 
-  6-2. add websocket.server section like below.
-       "origins" treats IP Address and FQDN as another value.
+  // must enable to work socket.io and node.js on your environment
+  $ node ./bin/echo.js
 
-  websocket.server = (
-                     "/echo" =>    ( "host" => "127.0.0.1",
-                                     "port" => "echo" ),
-                     "/binary" =>  ( "host" => "127.0.0.1",
-                                     "port" => "7000",
-                                     "type" => "bin" ),
-                     "/func" =>    ( "host" => "192.168.0.10",
-                                     "port" => "8000" ),
-                     "/strict1" => ( "host" => "127.0.0.1",
-                                     "port" => "9000",
-                                     "origins" => ( "example.com" ) ),
-                     "/strict2" => ( "host" => "127.0.0.1",
-                                     "port" => "9001",
-                                     "origins" => ( "example.com",
-                                                    "192.168.0.1" ) ),
-                     "/subproto" => (
-                                     ( "host" => "127.0.0.1",
-                                       "port" => "9002",
-                                       "subproto" => "subproto1"
-                                     ),
-                                     ( "host" => "127.0.0.1",
-                                       "port" => "9003",
-                                       "subproto" => "subproto2"
-                                     )
-                                    ),
-                     "/locale" => (
-                                    "host" => "192.168.0.5",
-                                    "port" => "9000",
-                                    "locale" => "EUCJP"
-                                  )
-                     )
+  // must enable to work Ruby
+  $ ruby ./bin/echo.rb
 
-  6-3. locale
-       If a backend server uses non UTF-8 locale, plz set the locale
-       into configration.
-       If not set locale, mod_websocket treats all messages as UTF-8.
-
-  6-4. handling TIMEOUT
-       add websocket.timeout section.
-       default value is 30(sec). And if set to 0, never timeout
-       websocket connection.(be care!)
-
-  websocket.timeout = 30
-
-  6-5. send PING frame
-       This parameter becomes effective only at --with-websocket=RFC-6455.
-       add websocket.ping_interval section.(sec)
-       not send PING frame by default.
-
-  websocket.ping_interval = 5
-
-  6-6. write log
-       If something wrong, set websocket.debug to write error.log
-
-  websocket.debug = 0
-  # websocket.debug = 1 # LOG_ERR
-  # websocket.debug = 2 # LOG_WARNING
-  # websocket.debug = 3 # LOG_INFO
-  # websocket.debug = 4 # LOG_DEBUG
-
-7. websocket.server section format
-   "host"    = STRING            : FQDN or IPAddr [mandatory]
-   "service" = STRING or Integer : port number or service name [mandatory]
-   "type"    = "bin" or "text"   : backend server type [optional]
-                                   case insensitive, default = "text"
-
-                                   If specified "bin" when on IETF-00 spec,
-                                   mod_websocket {en, de}codes websocket payload
-                                   into base64 text automatically.
-                                   So *must* {en,de}code base64 text on clientside.
-   ex.
-   +---------+            +--------+            +------------------+
-   | browser | <--------> | lighty | <--------> | binary server    |
-   |         |  Internet  |        |  Localnet  | 192.168.0.2:9000 |
-   | hybi00  |            |        |            |                  |
-   +---------+            +--------+            +------------------+
-     must      <-------->      ^     <-------->
-     endecode    base64        |       binary
-     base64      text          |
-                               |
-   +---------+                 |
-   | browser | <---------------+
-   |         |  Internet
-   | rfc6455 |
-   +---------+
-               <--------------->
-                    binary
-                 (arraybuffer(view)/blob)
-
-   "origins" = STRING ARRAY  : part of domain or IPAddr [optional]
-                               enable to access only from specified origins.
-                               NOTE: it's easy to misrepresent origin by an
-                               original application.
-   "subproto" = STRING       : sub protocol [optional]
-   "locale" = STRING         : locale string [optional]
-                               If you use character encodings other than UTF-8
-                               on backend server, set this param properly.
-
-   ex.
-   +---------+            +--------+            +------------------+
-   | browser | <--------> | lighty | <--------> | CHAT server      |
-   |         |  Internet  |        |  Localnet  | 192.168.0.2:9000 |
-   |  UTF-8  |            |        |            | encoding = EUCJP |
-   +---------+            +--------+            +------------------+
-               <-------->            <-------->
-                  UTF-8                 EUCJP
-
-   websocket.server = (
-                       "/chat" => (
-                                    "host" => "192.168.0.2",
-                                    "port" => "9000",
-                                    "locale" => "EUCJP"
-                                  )
-                      )
-
-   and wrote javascript like this.
-
-   var ws = new WebSocket("ws://lighty.addr/chat");
-
-// EOF
+  Done all above,
+  Echo server is active at <URL: http://127.0.0.1:8080/>
+  and ipython notebook is active at <URL: http://127.0.0.1:8080/ipython/>

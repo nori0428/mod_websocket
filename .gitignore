@@ -25,3 +25,5 @@ supplement/config_parser/src/*.c
 supplement/config_parser/src/mod_websocket_config_validator
 
 workspace/
+
+!sample/etc/lighttpd.conf.in
