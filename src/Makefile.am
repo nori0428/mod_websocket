@@ -1,54 +1,17 @@
-## $Id$
+noinst_LTLIBRARIES = libmod_websocket.la
 
-BUILT_SOURCES = parser.h
-AM_YFLAGS = -d
-AM_LFLAGS = -i
-
-if WITH_TEST
-TESTS_DIR = tests
-endif
-
-if WITH_SAMPLE
-SAMPLES_DIR = samples
-endif
-
-SUBDIRS = \
-	. $(TESTS_DIR) $(SAMPLES_DIR)
-
-INCLUDES = \
-	-I${top_srcdir}/stub
-
-noinst_LTLIBRARIES = libwebsocket.la
-
-if WITH_LIBICU
-libwebsocket_la_SOURCES = \
-	scanner.l \
-	parser.y \
-	base64.h \
-	base64.c \
-	sha1.h \
-	sha1.c \
+libmod_websocket_la_SOURCES = \
+	mod_websocket_base64.h \
+	mod_websocket_base64.c \
+	mod_websocket_sha1.h \
+	mod_websocket_sha1.c \
 	mod_websocket.h \
-	mod_websocket_conv.c \
-	mod_websocket_connector.c \
+	mod_websocket_socket.h \
+	mod_websocket_socket.c \
 	mod_websocket_handshake.c \
 	mod_websocket_frame.c
-libwebsocket_la_CFLAGS = $(MODULE_CFLAGS)
-else
-libwebsocket_la_SOURCES = \
-	scanner.l \
-	parser.y \
-	base64.h \
-	base64.c \
-	sha1.h \
-	sha1.c \
-	mod_websocket.h \
-	mod_websocket_connector.c \
-	mod_websocket_handshake.c \
-	mod_websocket_frame.c
-libwebsocket_la_CFLAGS = $(MODULE_CFLAGS)
-endif
 
-include $(top_srcdir)/m4/Makefile.rules
+libmod_websocket_la_CFLAGS = -I$(top_srcdir)/test/stub $(MODULE_CFLAGS)
 
-## EOF
+clean-local:
+	${RM} -f *~

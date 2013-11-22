@@ -1,23 +1,29 @@
 # ignores
+
 *~
-*.m4
 m4/
+aclocal.m4
 autom4te*
-!m4/Makefile.rules
-stamp-h1
-libtool
 Makefile
-/config.h
 config.log
 config.status
 configure
+libtool
+
 .deps/
 .libs/
+config.h
+stamp-h1
 *.in
 *.o
 *.lo
 *.la
 
-src/scanner.c
-src/parser.h
-src/parser.c
+contrib/gtest-1.7.0/
+supplement/config_parser/src/*.h
+supplement/config_parser/src/*.c
+supplement/config_parser/src/mod_websocket_config_validator
+
+workspace/
+
+!sample/etc/lighttpd.conf.in

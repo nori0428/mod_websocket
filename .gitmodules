@@ -1,0 +1,4 @@
+[submodule "contrib/lighttpd1.4"]
+	path = contrib/lighttpd1.4
+	url = https://github.com/lighttpd/lighttpd1.4.git
+	ignore = untracked

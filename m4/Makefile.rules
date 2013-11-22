@@ -1,9 +1,0 @@
-## $Id$
-
-clean-local:
-	${RM} *~
-
-distclean-local:
-	${RM} Makefile.in scanner.c parser.{h,c}
-
-## EOF

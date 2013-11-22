@@ -1,18 +1,12 @@
 #!/bin/sh
-# $Id$
 
-HOST_OS=`uname -s`
-if test "x${HOST_OS}" = "xDarwin"; then
-	LIBTOOLIZE=glibtoolize
-else
-	LIBTOOLIZE=libtoolize
-fi
-set -x
-${LIBTOOLIZE} --force --copy
-aclocal -I m4 
-autoheader
-rm -f m4/config.guess # XXX
-automake --foreign --add-missing --copy
-autoconf
+set -e
 
-# EOF
+# lighttpd
+git submodule update --init
+
+# gtest
+unzip -n contrib/gtest-1.7.0.zip -d contrib/
+
+# reconf
+autoreconf --force --install --verbose
