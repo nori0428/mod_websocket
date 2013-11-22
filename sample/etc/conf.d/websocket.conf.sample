@@ -1,0 +1,85 @@
+# sample configuration file for mod_websocket
+
+websocket.server = ( # all the back of # is treated as a comment.
+
+                     # WebSocket-TCP Proxy,
+                     # mod_websocket takes over WebSocket protocol(handshake/frame) and
+                     # transfers only data payload between a backend server and a client.
+                     # See Figure at
+                     # <URL: https://picasaweb.google.com/lh/photo/fb97lbN-O1Q5VkfJXyqN2w>
+                     "/ipv4"         => ( "host" => "192.168.0.1", "port" => "10000" ),
+                     "/ipv6"         => ( "host" => "::1",         "port" => "10000" ),
+
+                     # enable to use Integer val for port section
+                     "/portnum"      => ( "host" => "192.168.0.2", "port" =>  10000  ),
+
+                     # You can use Perl RegExp for WebSocket uri key
+                     "^\/regExp\/.*" => ( "host" => "192.168.0.3", "port" => 10000 ),
+
+                     # Origin restriction
+                     "/origins"      => (
+                                          "host" => "192.168.0.4",
+                                          "port" => "10000",
+                                          # You can use Perl RegExp for origin restriction.
+                                          "origins" => ( "^http:\/\/192\.168\.0\..*",
+                                                         "^http:\/\/res2\.com\/.*" )
+                                        ),
+                     "/tcp"          => (
+                                          "host" => "192.168.0.5",
+                                          "port" => "10000",
+                                          # "proto"  => "tcp" # default value
+                                          # "base64" => false # default value
+                                        ),
+
+                     # If base64 section is set true, 
+                     # the data is subjected to base64 {en,de}code automatically
+                     # when a client uses hybi-00 WebSocket Protocol.
+                     #                    ^^^^^^^
+                     # client(encode base64) -> mod_websocket(decode base64) -> your app(recv binary)
+                     # client(decode base64) <- mod_websocket(encode base64) <- your app(send binary)
+                     #
+                     # This function is implemented for
+                     # <URL: https://github.com/nori0428/mod_websocket/issues/19>
+                     "/tcp-bin"      => (
+                                          "host" => "192.168.0.6",
+                                          "port" => "10000",
+                                          "proto" => "tcp",
+                                          "base64" => "true"
+                                        ),
+
+                     # WebSocket Proxy,
+                     # mod_websocket only transfers the data between a backend server and a client.
+                     # And X-Forwarded-For header is appended to an initial handshake request.
+                     "/websocket"    => (
+                                          "host"  => "192.168.0.7",
+                                          "port"  => "10000",
+                                          "proto" => "websocket",
+                                          # You can use origin restriction even if WebSocket Proxy.
+                                          # But, it's not necessary to use.
+                                          "origins" => ( "^http:\/\/192\.168\.0\..*" ),
+                                          # "base64" section has no meanings.
+                                          "base64" => "1"
+                                        )
+                   )
+}
+
+# RFC-6455: send WebSocket PING frame from a WebSocket Server(=lighttpd).
+# This section has no meanings when a client uses hybi-00 spec or
+# mod_websocket works as WebSocket Proxy mode.
+# If you don't want to send PING frame,
+# plz set this value 0 or just comment out this section.
+websocket.ping_interval = 20 # sec
+
+# RFC-6455: disconnect a client if not recv any frame from the client.
+# This section has no meanings when mod_websocket works as WebSocket Proxy mode.
+# If you don't want to disconnect the client when time out,
+# plz set this value 0 or just comment out this section.
+# (But cause to leak sockfd)
+websocket.timeout = 30 # sec
+
+# mod_websocket writes logs into server.error_log
+websocket.debug = 0 # LOG_NONE
+# websocket.debug = 1 # LOG_ERR
+# websocket.debug = 2 # LOG_WARNING
+# websocket.debug = 3 # LOG_INFO
+# websocket.debug = 4 # LOG_DEBUG

@@ -4,7 +4,6 @@ set -e
 
 # lighttpd
 git submodule update --init
-(mkdir -p ./sample; cp -r ./contrib/lighttpd1.4 ./sample/)
 
 # gtest
 unzip -n contrib/gtest-1.7.0.zip -d contrib/

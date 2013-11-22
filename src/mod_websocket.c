@@ -740,14 +740,13 @@ TRIGGER_FUNC(mod_websocket_handle_trigger) {
             continue;
         }
         hctx = con->plugin_ctx[p->id];
-        if (!hctx ||
-            hctx->mode != MOD_WEBSOCKET_TCP_PROXY ||
-            p->conf.ping_interval == 0 ||
-            hctx->handshake.version == 0) {
+        if (!hctx || hctx->mode != MOD_WEBSOCKET_TCP_PROXY) {
             continue;
         }
 
-        if (p->conf.ping_interval < (unsigned int)difftime(srv->cur_ts, hctx->ping_ts)) {
+        if (hctx->handshake.version != 0 &&
+            p->conf.ping_interval > 0 &&
+            p->conf.ping_interval < (unsigned int)difftime(srv->cur_ts, hctx->ping_ts)) {
             mod_websocket_frame_send(hctx, MOD_WEBSOCKET_FRAME_TYPE_PING, (char *)"ping", strlen("ping"));
             if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
 
@@ -771,7 +770,7 @@ TRIGGER_FUNC(mod_websocket_handle_trigger) {
             chunkqueue_remove_finished_chunks(hctx->tocli);
         }
         hctx->timeout_cnt += 1;
-        if (p->conf.timeout != 0 && hctx->timeout_cnt >= p->conf.timeout) {
+        if (p->conf.timeout > 0 && hctx->timeout_cnt >= p->conf.timeout) {
             DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO, "sds", "timeout client ( fd =", con->fd, ")");
             mod_websocket_frame_send(hctx, MOD_WEBSOCKET_FRAME_TYPE_CLOSE, NULL, 0);
             if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {

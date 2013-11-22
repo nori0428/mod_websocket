@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Echo Client</title>
+</head>
+<script type='text/javascript' src='socket.io.min.js'></script>
+<script>
+  var tcp, socketio;
+
+  function send() {
+    var data = document.getElementById('echo').value;
+    tcp.send(data + '\n');
+    socketio.emit('echo', data);
+  }
+  window.onload = function() {
+    tcp = new WebSocket('ws://' + location.host + '/tcp_proxy');
+    tcp.onmessage = function (e) {
+                      var text = document.createTextNode(e.data);
+                      document.getElementById('tcp').appendChild(text);
+                    };
+    socketio = io.connect();
+    socketio.on('echo-back', function (data) {
+                               var text = document.createTextNode(data);
+                               document.getElementById('socketio').appendChild(text);
+                             });
+  };
+</script>
+<body>
+  <h2>Echo Client</h2>
+  <input id="echo" type="text"></input>
+  <button onclick="send()">send</button>
+  <h2>echo back</h2>
+  <h3>from TCP</h3>
+  <div id="tcp"></div>
+  <h3>from Socket.io</h3>
+  <div id="socketio"></div>
+</body>
+</html>
