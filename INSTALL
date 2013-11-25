@@ -55,7 +55,8 @@
   $ cd sample
   $ ./sbin/lighttpd -f ./etc/lighttpd.conf
 
-  // must enable to work ipython notebook on your environment
+  // must enable to work ipython notebook with different url prefix on your environment
+  // see <URL: http://ipython.org/ipython-doc/dev/interactive/public_server.html#running-with-a-different-url-prefix>
   $ ipython notebook --pylab inline --no-browser
 
   // must enable to work socket.io and node.js on your environment
