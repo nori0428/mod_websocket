@@ -36,7 +36,14 @@ typedef li_MD5_CTX MD5_CTX;
 #  include <stdint.h>
 # endif
 
-# include "mod_websocket_sha1.h"
+# ifdef USE_OPENSSL
+#  include <openssl/sha.h>
+typedef unsigned char sha1_byte;
+# else
+#  include "mod_websocket_sha1.h"
+#  define	SHA_DIGEST_LENGTH	SHA1_DIGEST_LENGTH
+# endif
+
 # include "mod_websocket_base64.h"
 #endif	/* _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
@@ -351,7 +358,7 @@ static mod_websocket_errno_t create_response_rfc_6455(handler_ctx *hctx) {
     buffer *key;
     buffer *response = NULL;
     SHA_CTX sha;
-    unsigned char sha_digest[SHA1_DIGEST_LENGTH];
+    unsigned char sha_digest[SHA_DIGEST_LENGTH];
     unsigned char *accept_body;
     size_t accept_body_siz;
 
@@ -373,7 +380,7 @@ static mod_websocket_errno_t create_response_rfc_6455(handler_ctx *hctx) {
     buffer_free(key);
 
     /* get base64 encoded SHA1 hash */
-    if (mod_websocket_base64_encode(&accept_body, &accept_body_siz, sha_digest, SHA1_DIGEST_LENGTH) < 0) {
+    if (mod_websocket_base64_encode(&accept_body, &accept_body_siz, sha_digest, SHA_DIGEST_LENGTH) < 0) {
         DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
         return MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
     }
