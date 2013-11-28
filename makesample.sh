@@ -15,8 +15,12 @@ echo y | make install
 INSTALL_ROOT_DIR=`echo ${sample_dir} | sed -e "s/\//\\\\\\\\\\//g"`
 sed -e "s/_INSTALL_ROOT_DIR_/${INSTALL_ROOT_DIR}/" ./sample/etc/lighttpd.conf.in > ./sample/etc/lighttpd.conf
 
+if test "$1" = "--with-openssl"; then
+    echo "\$SERVER[\"socket\"] == \":8082\" { ssl.engine = \"enable\" ssl.pemfile = \"${sample_dir}/etc/certs/lighttpd.pem\" }" >> ./sample/etc/lighttpd.conf
+fi
+
 # install lighttpd to sample dir
 (cd ./workspace/lighttpd1.4; \
  sh ./autogen.sh; \
- ./configure --with-websocket --prefix=${sample_dir}; \
+ ./configure --with-websocket $1 --prefix=${sample_dir}; \
   make clean install)

@@ -5,19 +5,38 @@
 </head>
 <script type='text/javascript' src='socket.io.min.js'></script>
 <script>
-  var tcp, socketio;
+  var tcp, socketio, wss, wss_enabled = false;
 
   function send() {
     var data = document.getElementById('echo').value;
     tcp.send(data + '\n');
+    if (wss_enabled) {
+      wss.send(data + '\n');
+    }
     socketio.emit('echo', data);
   }
   window.onload = function() {
-    tcp = new WebSocket('ws://' + location.host + '/tcp_proxy');
+    var ws_host = location.hostname + ':8080', wss_host = location.hostname + ':8082';
+
+    tcp = new WebSocket('ws://' + ws_host + '/tcp_proxy');
     tcp.onmessage = function (e) {
                       var text = document.createTextNode(e.data);
                       document.getElementById('tcp').appendChild(text);
                     };
+    wss = new WebSocket('wss://' + wss_host + '/tcp_proxy');
+    wss.onopen = function(e) {
+      wss_enabled = true;
+      wss.onmessage = function (e) {
+                        var text = document.createTextNode(e.data);
+                        document.getElementById('tcp-wss').appendChild(text);
+                      };
+    }
+    wss.onclose = function() {
+      if (!wss_enabled) {
+        var text = document.createTextNode('wss scheme is not available');
+        document.getElementById('tcp-wss').appendChild(text);
+      }
+    }
     socketio = io.connect();
     socketio.on('echo-back', function (data) {
                                var text = document.createTextNode(data);
@@ -30,8 +49,10 @@
   <input id="echo" type="text"></input>
   <button onclick="send()">send</button>
   <h2>echo back</h2>
-  <h3>from TCP</h3>
+  <h3>from TCP with ws scheme</h3>
   <div id="tcp"></div>
+  <h3>from TCP with wss scheme</h3>
+  <div id="tcp-wss"></div>
   <h3>from Socket.io</h3>
   <div id="socketio"></div>
 </body>

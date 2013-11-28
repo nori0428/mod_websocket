@@ -1,7 +1,7 @@
 - How To Install
 
 1.Check your environment
-  - dependent tools and libs[mandatory]
+  - dependent tools[mandatory]
     1.autotools
       exmaple for ubuntu.
       $ sudo apt-get install automake
@@ -68,3 +68,34 @@
   Done all above,
   Echo server is active at <URL: http://127.0.0.1:8080/>
   and ipython notebook is active at <URL: http://127.0.0.1:8080/ipython/>
+
+8.Try https and wss
+  I often asked about https and wss. So I made a sample to use https and wss.
+
+  // must pass above 5 steps and you must install OpenSSL libs.
+  $ sh ./makesample.sh --with-openssl
+  $ cd sample
+  $ ./sbin/lighttpd -f ./etc/lighttpd.conf
+
+  // must enable to work socket.io and node.js on your environment
+  $ node ./bin/echo.js
+
+  // must enable to work Ruby
+  $ ruby ./bin/echo.rb
+
+  Done all above,
+  index.html is active at <URL: http://127.0.0.1:8080/>,
+  WebSocket is active at <URI: ws://127.0.0.1:8080/tcp_proxy>
+  and Secure-WebSocket is active at <URI: wss://127.0.0.1:8082/tcp_proxy>: cross origin
+
+  index.html (via ssl) is active at <URL: http://127.0.0.1:8082/>,
+  WebSocket is active at <URI: ws://127.0.0.1:8080/tcp_proxy>: cross origin
+  and Secure-WebSocket is active at <URI: wss://127.0.0.1:8082/tcp_proxy>
+
+  Unfortunately, I don't know how to use wss scheme on Socket.io.
+  plz try yourself.
+
+  At the end, *Do not use* sample/etc/certs/lighttpd.pem on the Internet.
+  This pem file is a self-signed certificate for sample.
+  You must read <URL: http://redmine.lighttpd.net/projects/lighttpd/wiki/Docs_SSL>
+  to use https validly.
