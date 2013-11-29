@@ -1,4 +1,4 @@
-AC_INIT([mod_websocket], [2.7], [nori.0428@gmail.com])
+AC_INIT([mod_websocket], [2.9], [nori.0428@gmail.com])
 AC_CONFIG_AUX_DIR([m4])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src/mod_websocket.h])
@@ -65,6 +65,7 @@ if test "x$ac_cv_c_bigendian" = "xyes"; then
 fi
 AC_CHECK_HEADERS([stdint.h pcre.h])
 AC_CHECK_LIB([pcre], [pcre_compile])
+AC_CHECK_LIB([pthread], [pthread_create])
 
 AC_MSG_CHECKING(whether --with-lighttpd option specified)
 AC_ARG_WITH([lighttpd],
