@@ -28,7 +28,7 @@ int yywrap() {
         MOD_WEBSOCKET_CONFIG_KEY_HOST,
         MOD_WEBSOCKET_CONFIG_KEY_PORT,
         MOD_WEBSOCKET_CONFIG_KEY_PROTO,
-        MOD_WEBSOCKET_CONFIG_KEY_BASE64,
+        MOD_WEBSOCKET_CONFIG_KEY_TYPE,
         MOD_WEBSOCKET_CONFIG_KEY_ORIGINS,
     } mod_websocket_key_t;
 
@@ -47,7 +47,7 @@ int yywrap() {
 }
 
 %token WEBSOCKET_SERVER
-%token KEY_HOST KEY_PORT KEY_PROTO KEY_BASE64 KEY_ORIGINS
+%token KEY_HOST KEY_PORT KEY_PROTO KEY_TYPE KEY_ORIGINS
 %token VALUE
 %token ASSIGN
 %token WEBSOCKET_PING_INTERVAL
@@ -113,7 +113,7 @@ backend:
                     $$->host = NULL;
                     $$->port = -1;
                     $$->proto = MOD_WEBSOCKET_BACKEND_PROTOCOL_TCP;
-                    $$->base64 = 0;
+                    $$->binary = 0;
                     $$->origins = NULL;
                     switch ($1.key) {
                     case MOD_WEBSOCKET_CONFIG_KEY_HOST:
@@ -139,12 +139,11 @@ backend:
                         }
                         free($1.val);
                         break;
-                    case MOD_WEBSOCKET_CONFIG_KEY_BASE64:
-                        if (strncasecmp((char *)$1.val, "true", strlen("true")) == 0 ||
-                            strncmp((char *)$1.val, "1", strlen("1")) == 0) {
-                            $$->base64 = 1;
+                    case MOD_WEBSOCKET_CONFIG_KEY_TYPE:
+                        if (strncasecmp((char *)$1.val, "binary", strlen("binary")) == 0) {
+                            $$->binary = 1;
                         } else {
-                            $$->base64 = 0;
+                            $$->binary = 0;
                         }
                         free($1.val);
                         break;
@@ -184,12 +183,11 @@ backend:
                         }
                         free($3.val);
                         break;
-                    case MOD_WEBSOCKET_CONFIG_KEY_BASE64:
-                        if (strncasecmp((char *)$3.val, "true", strlen("true")) == 0 ||
-                            strncmp((char *)$3.val, "1", strlen("1")) == 0) {
-                            $$->base64 = 1;
+                    case MOD_WEBSOCKET_CONFIG_KEY_TYPE:
+                        if (strncasecmp((char *)$3.val, "binary", strlen("binary")) == 0) {
+                            $$->binary = 1;
                         } else {
-                            $$->base64 = 0;
+                            $$->binary = 0;
                         }
                         free($3.val);
                         break;
@@ -218,9 +216,9 @@ keyvalue:
                     $$.key = MOD_WEBSOCKET_CONFIG_KEY_PROTO;
                     $$.val = (void *)$3;
                 }
-        |       KEY_BASE64 ASSIGN VALUE
+        |       KEY_TYPE ASSIGN VALUE
                 {
-                    $$.key = MOD_WEBSOCKET_CONFIG_KEY_BASE64;
+                    $$.key = MOD_WEBSOCKET_CONFIG_KEY_TYPE;
                     $$.val = (void *)$3;
                 }
         |       KEY_ORIGINS ASSIGN '(' origin ')'
@@ -363,10 +361,10 @@ void mod_websocket_config_print(mod_websocket_config_t *config) {
             fprintf(stdout, "\t\tproto = MOD_WEBSOCKET_BACKEND_PROTOCOL_TCP\n");
             break;
         }
-        if (backend->base64) {
-            fprintf(stdout, "\t\tbase64 = true");
+        if (backend->binary) {
+            fprintf(stdout, "\t\tbinary = true");
             if (backend->proto == MOD_WEBSOCKET_BACKEND_PROTOCOL_WEBSOCKET) {
-                fprintf(stdout, " // However, this does not have a meaning.\n");
+                fprintf(stdout, " # However, this does not have any meanings.\n");
             } else {
                 fprintf(stdout, "\n");
             }

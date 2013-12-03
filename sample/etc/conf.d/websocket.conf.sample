@@ -28,15 +28,17 @@ websocket.server = ( # all the back of # is treated as a comment.
                                           "host" => "192.168.0.5",
                                           "port" => "10000",
                                           # "proto"  => "tcp" # default value
-                                          # "base64" => false # default value
+                                          # "type" => "text" # default value
                                         ),
 
-                     # If base64 section is set true, 
-                     # the data is subjected to base64 {en,de}code automatically
-                     # when a client uses hybi-00 WebSocket Protocol.
-                     #                    ^^^^^^^
-                     # client(encode base64) -> mod_websocket(decode base64) -> your app(recv binary)
-                     # client(decode base64) <- mod_websocket(encode base64) <- your app(send binary)
+                     # If type section is set binary,
+                     # RFC-6455:
+                     #  mod_websocket sends data that are received from backend as binary data.
+                     #
+                     # hybi-00:
+                     #  mod_websocket sends data that are subjected to base64 {en,de}code automatically
+                     #   client(encode base64) -> mod_websocket(decode base64) -> your app(recv binary)
+                     #   client(decode base64) <- mod_websocket(encode base64) <- your app(send binary)
                      #
                      # This function is implemented for
                      # <URL: https://github.com/nori0428/mod_websocket/issues/19>
@@ -44,7 +46,7 @@ websocket.server = ( # all the back of # is treated as a comment.
                                           "host" => "192.168.0.6",
                                           "port" => "10000",
                                           "proto" => "tcp",
-                                          "base64" => "true"
+                                          "type" => "binary"
                                         ),
 
                      # WebSocket Proxy,
@@ -57,8 +59,8 @@ websocket.server = ( # all the back of # is treated as a comment.
                                           # You can use origin restriction even if WebSocket Proxy.
                                           # But, it's not necessary to use.
                                           "origins" => ( "^http:\/\/192\.168\.0\..*" ),
-                                          # "base64" section has no meanings.
-                                          "base64" => "1"
+                                          # "type" section has no meanings.
+                                          "type" => "binary"
                                         )
                    )
 }

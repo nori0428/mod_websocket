@@ -40,7 +40,7 @@ ASSIGN_STR			"=>"
 HOST_STR			"\"host\""
 PORT_STR			"\"port\""
 PROTO_STR			"\"proto\""
-BASE64_STR			"\"base64\""
+TYPE_STR			"\"type\""
 ORIGINS_STR			"\"origins\""
 
 %x STATE_COMMENT
@@ -192,12 +192,12 @@ ORIGINS_STR			"\"origins\""
     return KEY_PROTO;
 #endif
 }
-<STATE_SERVER>{BASE64_STR} {
+<STATE_SERVER>{TYPE_STR} {
 #if defined (DEBUG_LEX)
     fprintf(stderr, "STATE_SERVER: [%s]\n", yytext);
 #endif
 #if ! defined (DEBUG_LEX)
-    return KEY_BASE64;
+    return KEY_TYPE;
 #endif
 }
 <STATE_SERVER>{ORIGINS_STR} {

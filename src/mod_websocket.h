@@ -163,7 +163,7 @@ typedef struct {
 typedef struct {
     mod_websocket_frame_state_t state;
     mod_websocket_frame_control_t ctl;
-    mod_websocket_frame_type_t type, type_before;
+    mod_websocket_frame_type_t type, type_before, type_backend;
     buffer *payload;
 } mod_websocket_frame_t;
 

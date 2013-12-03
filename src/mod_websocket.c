@@ -64,6 +64,7 @@ static handler_ctx *handler_ctx_init(void) {
     hctx->frame.ctl.siz = 0;
     hctx->frame.type = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
     hctx->frame.type_before = MOD_WEBSOCKET_FRAME_TYPE_CLOSE;
+    hctx->frame.type_backend = MOD_WEBSOCKET_FRAME_TYPE_TEXT;
     hctx->frame.payload = buffer_init();
     hctx->tosrv = chunkqueue_init();
 
@@ -231,7 +232,7 @@ handler_t handle_backend(server *srv, void *ctx, int revents) {
         } else if (siz > 0) {
             DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "sdsx",
                       "recv data from backend ( fd =", hctx->fd, "), size =", siz);
-            if (mod_websocket_frame_send(hctx, hctx->frame.type, readbuf, (size_t)siz) < 0) {
+            if (mod_websocket_frame_send(hctx, hctx->frame.type_backend, readbuf, (size_t)siz) < 0) {
                 DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "fail to send data to client");
                 chunkqueue_reset(hctx->tocli);
             }
@@ -510,38 +511,36 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
             }
         }
 
-#ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
-        if (hctx->handshake.version == 0 && hctx->mode == MOD_WEBSOCKET_TCP_PROXY) {
-            du = array_get_element(hctx->ext->value, "base64");
+        if (hctx->mode == MOD_WEBSOCKET_TCP_PROXY) {
+            du = array_get_element(hctx->ext->value, "type");
             if (du == NULL) {
+                DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO, "s", "will recv text data from backend");
                 hctx->frame.type = MOD_WEBSOCKET_FRAME_TYPE_TEXT;
+                hctx->frame.type_before = MOD_WEBSOCKET_FRAME_TYPE_TEXT;
+                hctx->frame.type_backend = MOD_WEBSOCKET_FRAME_TYPE_TEXT;
             } else {
                 if (du->type == TYPE_STRING) {
-                    data_string *base64 = (data_string *)du;
-                    if (!buffer_is_empty(base64->value) &&
-                        (strncasecmp(base64->value->ptr, "true", strlen("true")) == 0 ||
-                         strncmp(base64->value->ptr, "1", strlen("1")) == 0)) {
-                        DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO, "s", "base64 endecoder enabled");
+                    data_string *type = (data_string *)du;
+                    if (!buffer_is_empty(type->value) &&
+                        (strncasecmp(type->value->ptr, "binary", strlen("binary")) == 0)) {
+                        DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO, "s", "will recv binary data from backend");
                         hctx->frame.type = MOD_WEBSOCKET_FRAME_TYPE_BIN;
+                        hctx->frame.type_before = MOD_WEBSOCKET_FRAME_TYPE_BIN;
+                        hctx->frame.type_backend = MOD_WEBSOCKET_FRAME_TYPE_BIN;
                     } else {
+                        DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO, "s", "will recv text data from backend");
                         hctx->frame.type = MOD_WEBSOCKET_FRAME_TYPE_TEXT;
-                    }
-                } else if (du->type == TYPE_INTEGER) {
-                    data_integer *base64 = (data_integer *)du;
-                    if (base64->value == 1) {
-                        DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO, "s", "base64 endecoder enabled");
-                        hctx->frame.type = MOD_WEBSOCKET_FRAME_TYPE_BIN;
-                    } else {
-                        hctx->frame.type = MOD_WEBSOCKET_FRAME_TYPE_TEXT;
+                        hctx->frame.type_before = MOD_WEBSOCKET_FRAME_TYPE_TEXT;
+                        hctx->frame.type_backend = MOD_WEBSOCKET_FRAME_TYPE_TEXT;
                     }
                 } else {
+                    DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO, "s", "will recv text data from backend");
                     hctx->frame.type = MOD_WEBSOCKET_FRAME_TYPE_TEXT;
+                    hctx->frame.type_before = MOD_WEBSOCKET_FRAME_TYPE_TEXT;
+                    hctx->frame.type_backend = MOD_WEBSOCKET_FRAME_TYPE_TEXT;
                 }
             }
-        } else {
-            hctx->frame.type = MOD_WEBSOCKET_FRAME_TYPE_TEXT;
         }
-#endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
         /* connect to backend server */
         if (connect_backend(hctx) < 0) {

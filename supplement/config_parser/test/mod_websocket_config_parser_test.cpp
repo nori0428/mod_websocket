@@ -21,7 +21,7 @@ void check_ipv4_resource(mod_websocket_backend_t *backend) {
   ASSERT_STREQ(test_backend.host, backend->host);
   ASSERT_EQ(test_backend.port, backend->port);
   ASSERT_EQ(test_backend.proto, backend->proto);
-  ASSERT_EQ(test_backend.base64, backend->base64);
+  ASSERT_EQ(test_backend.binary, backend->binary);
   ASSERT_TRUE(backend->origins == NULL);
 }
 
@@ -34,7 +34,7 @@ void check_ipv6_resource(mod_websocket_backend_t *backend) {
   ASSERT_STREQ(test_backend.host, backend->host);
   ASSERT_EQ(test_backend.port, backend->port);
   ASSERT_EQ(test_backend.proto, backend->proto);
-  ASSERT_EQ(test_backend.base64, backend->base64);
+  ASSERT_EQ(test_backend.binary, backend->binary);
   ASSERT_TRUE(backend->origins == NULL);
 }
 
@@ -47,7 +47,7 @@ void check_portnum_resource(mod_websocket_backend_t *backend) {
   ASSERT_STREQ(test_backend.host, backend->host);
   ASSERT_EQ(test_backend.port, backend->port);
   ASSERT_EQ(test_backend.proto, backend->proto);
-  ASSERT_EQ(test_backend.base64, backend->base64);
+  ASSERT_EQ(test_backend.binary, backend->binary);
   ASSERT_TRUE(backend->origins == NULL);
 }
 
@@ -60,7 +60,7 @@ void check_comment_resource(mod_websocket_backend_t *backend) {
   ASSERT_STREQ(test_backend.host, backend->host);
   ASSERT_EQ(test_backend.port, backend->port);
   ASSERT_EQ(test_backend.proto, backend->proto);
-  ASSERT_EQ(test_backend.base64, backend->base64);
+  ASSERT_EQ(test_backend.binary, backend->binary);
   ASSERT_TRUE(backend->origins == NULL);
 }
 
@@ -73,7 +73,7 @@ void check_regexp_resource(mod_websocket_backend_t *backend) {
   ASSERT_STREQ(test_backend.host, backend->host);
   ASSERT_EQ(test_backend.port, backend->port);
   ASSERT_EQ(test_backend.proto, backend->proto);
-  ASSERT_EQ(test_backend.base64, backend->base64);
+  ASSERT_EQ(test_backend.binary, backend->binary);
   ASSERT_TRUE(backend->origins == NULL);
 }
 
@@ -88,7 +88,7 @@ void check_origins_resource(mod_websocket_backend_t *backend) {
   ASSERT_STREQ(test_backend.host, backend->host);
   ASSERT_EQ(test_backend.port, backend->port);
   ASSERT_EQ(test_backend.proto, backend->proto);
-  ASSERT_EQ(test_backend.base64, backend->base64);
+  ASSERT_EQ(test_backend.binary, backend->binary);
   ASSERT_TRUE(backend->origins != NULL);
   mod_websocket_origin_t *origin = backend->origins;
   ASSERT_STREQ(origin2, origin->origin);
@@ -107,7 +107,7 @@ void check_tcp_resource(mod_websocket_backend_t *backend) {
   ASSERT_STREQ(test_backend.host, backend->host);
   ASSERT_EQ(test_backend.port, backend->port);
   ASSERT_EQ(test_backend.proto, backend->proto);
-  ASSERT_EQ(test_backend.base64, backend->base64);
+  ASSERT_EQ(test_backend.binary, backend->binary);
   ASSERT_TRUE(backend->origins == NULL);
 }
 
@@ -120,7 +120,7 @@ void check_tcp_bin_resource(mod_websocket_backend_t *backend) {
   ASSERT_STREQ(test_backend.host, backend->host);
   ASSERT_EQ(test_backend.port, backend->port);
   ASSERT_EQ(test_backend.proto, backend->proto);
-  ASSERT_EQ(test_backend.base64, backend->base64);
+  ASSERT_EQ(test_backend.binary, backend->binary);
   ASSERT_TRUE(backend->origins == NULL);
 }
 
@@ -133,7 +133,7 @@ void check_tcp_bin2_resource(mod_websocket_backend_t *backend) {
   ASSERT_STREQ(test_backend.host, backend->host);
   ASSERT_EQ(test_backend.port, backend->port);
   ASSERT_EQ(test_backend.proto, backend->proto);
-  ASSERT_EQ(test_backend.base64, backend->base64);
+  ASSERT_EQ(test_backend.binary, backend->binary);
   ASSERT_TRUE(backend->origins == NULL);
 }
 
@@ -146,7 +146,7 @@ void check_tcp_bin3_resource(mod_websocket_backend_t *backend) {
   ASSERT_STREQ(test_backend.host, backend->host);
   ASSERT_EQ(test_backend.port, backend->port);
   ASSERT_EQ(test_backend.proto, backend->proto);
-  ASSERT_EQ(test_backend.base64, backend->base64);
+  ASSERT_EQ(test_backend.binary, backend->binary);
   ASSERT_TRUE(backend->origins == NULL);
 }
 
@@ -160,7 +160,7 @@ void check_websocket_resource(mod_websocket_backend_t *backend) {
   ASSERT_STREQ(test_backend.host, backend->host);
   ASSERT_EQ(test_backend.port, backend->port);
   ASSERT_EQ(test_backend.proto, backend->proto);
-  ASSERT_EQ(test_backend.base64, backend->base64);
+  ASSERT_EQ(test_backend.binary, backend->binary);
   ASSERT_TRUE(backend->origins != NULL);
   ASSERT_STREQ(origin, backend->origins->origin);
   ASSERT_TRUE(backend->origins->next == NULL);
@@ -203,12 +203,6 @@ TEST_F(ModWebsocketConfigParserTest, all) {
     } else if (key == "/tcp-bin") {
       check_tcp_bin_resource(resource->backend);
       checked++;
-    } else if (key == "/tcp-bin2") {
-      check_tcp_bin2_resource(resource->backend);
-      checked++;
-    } else if (key == "/tcp-bin3") {
-      check_tcp_bin3_resource(resource->backend);
-      checked++;
     } else if (key == "/websocket") {
       check_websocket_resource(resource->backend);
       checked++;
@@ -216,7 +210,7 @@ TEST_F(ModWebsocketConfigParserTest, all) {
       ASSERT_FALSE(true);
     }
   }
-  ASSERT_EQ(11, checked);
+  ASSERT_EQ(9, checked);
   ASSERT_EQ(20, config->ping_interval);
   ASSERT_EQ(200, config->timeout);
   ASSERT_EQ(2, config->debug);
