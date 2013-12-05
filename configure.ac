@@ -1,4 +1,4 @@
-AC_INIT([mod_websocket], [3.1], [nori.0428@gmail.com])
+AC_INIT([mod_websocket], [3.2], [nori.0428@gmail.com])
 AC_CONFIG_AUX_DIR([m4])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src/mod_websocket.h])

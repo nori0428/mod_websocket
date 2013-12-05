@@ -38,7 +38,7 @@ Characteristics
 2. Supported protocols: hybi-00 and RFC-6455.  
   See [Can I use...](http://caniuse.com/#feat=websockets) for browser support.
 
-3.Automatic base64 {en, de}code on hybi-00 spec by setting "type" section "binary".  
+3. Automatic base64 {en, de}code on hybi-00 spec by setting "type" section "binary".  
   (my answer of https://github.com/nori0428/mod_websocket/issues/19)  
   A more detailed description has been described in the [INSTALL](https://github.com/nori0428/mod_websocket/blob/master/INSTALL) and [websocket.conf.sample](https://github.com/nori0428/mod_websocket/blob/master/sample/etc/conf.d/websocket.conf.sample).
 
