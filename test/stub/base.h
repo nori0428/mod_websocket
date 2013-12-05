@@ -10,6 +10,7 @@ typedef struct {
 } server;
 
 typedef struct {
+    buffer *request_line;
     buffer *request;
     buffer *uri;
     array  *headers;

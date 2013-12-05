@@ -16,21 +16,28 @@
 # define	SEC_WEBSOCKET_KEY2	"1_ tx7X d  <  nw  334J702) 7]o}` 0"
 # define	SEC_WEBSOCKET_KEY3	"Tm[K T2u"
 
-# define	REQ_HDR_IETF_00		"GET /chat HTTP/1.1\r\n"\
-					"Upgrade: WebSocket\r\n"\
-					"Connection: Upgrade\r\n"\
-					"Host: bar.com\r\n"\
-					"Origin: http://bar.com/foo\r\n"\
-					"Sec-WebSocket-Key1: " SEC_WEBSOCKET_KEY1 "\r\n"\
-					"Sec-WebSocket-Key2: " SEC_WEBSOCKET_KEY2 "\r\n\r\n"
-
 # define	REQ_IETF_00		"GET /chat HTTP/1.1\r\n"\
 					"Upgrade: WebSocket\r\n"\
 					"Connection: Upgrade\r\n"\
 					"Host: bar.com\r\n"\
 					"Origin: http://bar.com/foo\r\n"\
 					"Sec-WebSocket-Key1: " SEC_WEBSOCKET_KEY1 "\r\n"\
-					"Sec-WebSocket-Key2: " SEC_WEBSOCKET_KEY2 "\r\n\r\n"\
+					"Sec-WebSocket-Key2: " SEC_WEBSOCKET_KEY2 "\r\n"\
+					"X-Forwarded-Proto: http\r\n"\
+					"X-Forwarded-For: unknown:unknown\r\n"\
+					"X-Forwarded-Port: unknown\r\n\r\n"\
+					SEC_WEBSOCKET_KEY3
+
+# define	REQ_IETF_00_MULTI	"GET /chat HTTP/1.1\r\n"\
+					"Upgrade: WebSocket\r\n"\
+					"Connection: Upgrade\r\n"\
+					"Host: bar.com\r\n"\
+					"Origin: http://bar.com/foo\r\n"\
+					"Sec-WebSocket-Key1: " SEC_WEBSOCKET_KEY1 "\r\n"\
+					"Sec-WebSocket-Key2: " SEC_WEBSOCKET_KEY2 "\r\n"\
+					"X-Forwarded-Proto: http, http\r\n"\
+					"X-Forwarded-For: 192.168.0.1, unknown:unknown\r\n"\
+					"X-Forwarded-Port: 80, unknown\r\n\r\n"\
 					SEC_WEBSOCKET_KEY3
 
 # define	RESP_WS_IETF_00		"HTTP/1.1 101 Web Socket Protocol Handshake\r\n"\
@@ -59,7 +66,21 @@
 					"Host: bar.com\r\n"\
 					"Origin: http://bar.com/foo\r\n"\
 					"Sec-WebSocket-Key: " SEC_WEBSOCKET_KEY "\r\n"\
-					"Sec-WebSocket-Version: 13\r\n\r\n"
+					"Sec-WebSocket-Version: 13\r\n"\
+					"X-Forwarded-Proto: http\r\n"\
+					"X-Forwarded-For: unknown:unknown\r\n"\
+					"X-Forwarded-Port: unknown\r\n\r\n"
+
+# define	REQ_RFC_6455_MULTI	"GET /chat HTTP/1.1\r\n"\
+					"Upgrade: websocket\r\n"\
+					"Connection: Upgrade\r\n"\
+					"Host: bar.com\r\n"\
+					"Origin: http://bar.com/foo\r\n"\
+					"Sec-WebSocket-Key: " SEC_WEBSOCKET_KEY "\r\n"\
+					"Sec-WebSocket-Version: 13\r\n"\
+					"X-Forwarded-Proto: http, http\r\n"\
+					"X-Forwarded-For: 192.168.0.1, unknown:unknown\r\n"\
+					"X-Forwarded-Port: 80, unknown\r\n\r\n"
 
 # define	RESP_RFC_6455		"HTTP/1.1 101 Switching Protocols\r\n"\
 					"Upgrade: websocket\r\n"\
@@ -242,6 +263,7 @@ protected:
     // init connection
     con.fd = -1;
     con.read_queue = chunkqueue_init();
+    con.request.request_line = buffer_init();
     con.request.request = buffer_init();
     con.request.uri = buffer_init();
     con.request.headers = array_init();
@@ -284,6 +306,7 @@ protected:
     std::cerr << __PRETTY_FUNCTION__ << std::endl;
 
     chunkqueue_free(con.read_queue);
+    buffer_free(con.request.request_line);
     buffer_free(con.request.request);
     buffer_free(con.request.uri);
     array_free(con.request.headers);
@@ -331,7 +354,6 @@ TEST_F(ModWebsocketHandshakeCheckRequestTest, IETF_00) {
   buffer_copy_string(header->key, "Connection");
   buffer_copy_string(header->value, "Upgrade");
   array_insert_unique(con.request.headers, (data_unset *)header);
-  print_headers(con.request.headers);
   ret = mod_websocket_handshake_check_request(&hctx);
   ASSERT_EQ(MOD_WEBSOCKET_PRECONDITION_FAILED, ret);
 
@@ -339,7 +361,6 @@ TEST_F(ModWebsocketHandshakeCheckRequestTest, IETF_00) {
   buffer_copy_string(header->key, "Upgrade");
   buffer_copy_string(header->value, "WebSocket");
   array_insert_unique(con.request.headers, (data_unset *)header);
-  print_headers(con.request.headers);
   ret = mod_websocket_handshake_check_request(&hctx);
   ASSERT_EQ(MOD_WEBSOCKET_BAD_REQUEST, ret);
 
@@ -347,7 +368,6 @@ TEST_F(ModWebsocketHandshakeCheckRequestTest, IETF_00) {
   buffer_copy_string(header->key, "Host");
   buffer_copy_string(header->value, "bar.com");
   array_insert_unique(con.request.headers, (data_unset *)header);
-  print_headers(con.request.headers);
   ret = mod_websocket_handshake_check_request(&hctx);
   ASSERT_EQ(MOD_WEBSOCKET_BAD_REQUEST, ret);
 
@@ -355,7 +375,6 @@ TEST_F(ModWebsocketHandshakeCheckRequestTest, IETF_00) {
   buffer_copy_string(header->key, "Sec-WebSocket-Key1");
   buffer_copy_string(header->value, SEC_WEBSOCKET_KEY1);
   array_insert_unique(con.request.headers, (data_unset *)header);
-  print_headers(con.request.headers);
   ret = mod_websocket_handshake_check_request(&hctx);
   ASSERT_EQ(MOD_WEBSOCKET_BAD_REQUEST, ret);
 
@@ -429,7 +448,6 @@ TEST_F(ModWebsocketHandshakeCheckRequestTest, RFC_6455) {
   buffer_copy_string(header->key, "Sec-WebSocket-Version");
   buffer_copy_string(header->value, "13");
   array_insert_unique(con.request.headers, (data_unset *)header);
-  print_headers(con.request.headers);
   ret = mod_websocket_handshake_check_request(&hctx);
   ASSERT_EQ(MOD_WEBSOCKET_PRECONDITION_FAILED, ret);
 
@@ -437,7 +455,6 @@ TEST_F(ModWebsocketHandshakeCheckRequestTest, RFC_6455) {
   buffer_copy_string(header->key, "Connection");
   buffer_copy_string(header->value, "Upgrade");
   array_insert_unique(con.request.headers, (data_unset *)header);
-  print_headers(con.request.headers);
   ret = mod_websocket_handshake_check_request(&hctx);
   ASSERT_EQ(MOD_WEBSOCKET_PRECONDITION_FAILED, ret);
 
@@ -445,7 +462,6 @@ TEST_F(ModWebsocketHandshakeCheckRequestTest, RFC_6455) {
   buffer_copy_string(header->key, "Upgrade");
   buffer_copy_string(header->value, "WebSocket");
   array_insert_unique(con.request.headers, (data_unset *)header);
-  print_headers(con.request.headers);
   ret = mod_websocket_handshake_check_request(&hctx);
   ASSERT_EQ(MOD_WEBSOCKET_BAD_REQUEST, ret);
 
@@ -453,7 +469,6 @@ TEST_F(ModWebsocketHandshakeCheckRequestTest, RFC_6455) {
   buffer_copy_string(header->key, "Host");
   buffer_copy_string(header->value, "bar.com");
   array_insert_unique(con.request.headers, (data_unset *)header);
-  print_headers(con.request.headers);
   ret = mod_websocket_handshake_check_request(&hctx);
   ASSERT_EQ(MOD_WEBSOCKET_BAD_REQUEST, ret);
 
@@ -648,31 +663,189 @@ static int check_forward(chunkqueue *q, const char *exp) {
 #ifdef _MOD_WEBSOCKET_SPEC_IETF_00_
 TEST_F(ModWebsocketHandshakeForwardRequestTest, IETF_00) {
   mod_websocket_errno_t ret;
+  data_string *header;
 
   ret = mod_websocket_handshake_forward_request(NULL);
   ASSERT_EQ(MOD_WEBSOCKET_INTERNAL_SERVER_ERROR, ret);
 
+  buffer_copy_string(con.request.request_line, "GET /chat HTTP/1.1");
+  header = data_string_init();
+  buffer_copy_string(header->key, "Upgrade");
+  buffer_copy_string(header->value, "WebSocket");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Connection");
+  buffer_copy_string(header->value, "Upgrade");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Host");
+  buffer_copy_string(header->value, "bar.com");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Origin");
+  buffer_copy_string(header->value, "http://bar.com/foo");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Sec-WebSocket-Key1");
+  buffer_copy_string(header->value, SEC_WEBSOCKET_KEY1);
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Sec-WebSocket-Key2");
+  buffer_copy_string(header->value, SEC_WEBSOCKET_KEY2);
+  array_insert_unique(con.request.headers, (data_unset *)header);
   buffer_copy_string(hctx.handshake.key3, SEC_WEBSOCKET_KEY3);
-  buffer_copy_string(con.request.request, REQ_HDR_IETF_00);
 
   ret = mod_websocket_handshake_forward_request(&hctx);
+  print_headers(con.request.headers);
   ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
   ASSERT_EQ(0, check_forward(hctx.tosrv, REQ_IETF_00));
+}
+
+TEST_F(ModWebsocketHandshakeForwardRequestTest, IETF_00_MULTI) {
+  mod_websocket_errno_t ret;
+  data_string *header;
+
+  ret = mod_websocket_handshake_forward_request(NULL);
+  ASSERT_EQ(MOD_WEBSOCKET_INTERNAL_SERVER_ERROR, ret);
+
+  buffer_copy_string(con.request.request_line, "GET /chat HTTP/1.1");
+  header = data_string_init();
+  buffer_copy_string(header->key, "Upgrade");
+  buffer_copy_string(header->value, "WebSocket");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Connection");
+  buffer_copy_string(header->value, "Upgrade");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Host");
+  buffer_copy_string(header->value, "bar.com");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Origin");
+  buffer_copy_string(header->value, "http://bar.com/foo");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Sec-WebSocket-Key1");
+  buffer_copy_string(header->value, SEC_WEBSOCKET_KEY1);
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Sec-WebSocket-Key2");
+  buffer_copy_string(header->value, SEC_WEBSOCKET_KEY2);
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "X-Forwarded-Proto");
+  buffer_copy_string(header->value, "http");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "X-Forwarded-For");
+  buffer_copy_string(header->value, "192.168.0.1");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "X-Forwarded-Port");
+  buffer_copy_string(header->value, "80");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+
+  buffer_copy_string(hctx.handshake.key3, SEC_WEBSOCKET_KEY3);
+
+  ret = mod_websocket_handshake_forward_request(&hctx);
+  print_headers(con.request.headers);
+  ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
+  ASSERT_EQ(0, check_forward(hctx.tosrv, REQ_IETF_00_MULTI));
 }
 #endif
 
 #ifdef  _MOD_WEBSOCKET_SPEC_RFC_6455_
 TEST_F(ModWebsocketHandshakeForwardRequestTest, RFC_6455) {
   mod_websocket_errno_t ret;
+  data_string *header;
 
   ret = mod_websocket_handshake_forward_request(NULL);
   ASSERT_EQ(MOD_WEBSOCKET_INTERNAL_SERVER_ERROR, ret);
 
-  buffer_copy_string(con.request.request, REQ_RFC_6455);
+  buffer_copy_string(con.request.request_line, "GET /chat HTTP/1.1");
+  header = data_string_init();
+  buffer_copy_string(header->key, "Upgrade");
+  buffer_copy_string(header->value, "websocket");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Connection");
+  buffer_copy_string(header->value, "Upgrade");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Host");
+  buffer_copy_string(header->value, "bar.com");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Origin");
+  buffer_copy_string(header->value, "http://bar.com/foo");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Sec-WebSocket-Key");
+  buffer_copy_string(header->value, SEC_WEBSOCKET_KEY);
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Sec-WebSocket-Version");
+  buffer_copy_string(header->value, "13");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  print_headers(con.request.headers);
 
   ret = mod_websocket_handshake_forward_request(&hctx);
+  print_headers(con.request.headers);
   ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
   ASSERT_EQ(0, check_forward(hctx.tosrv, REQ_RFC_6455));
+}
+
+TEST_F(ModWebsocketHandshakeForwardRequestTest, RFC_6455_MULTI) {
+  mod_websocket_errno_t ret;
+  data_string *header;
+
+  ret = mod_websocket_handshake_forward_request(NULL);
+  ASSERT_EQ(MOD_WEBSOCKET_INTERNAL_SERVER_ERROR, ret);
+
+  buffer_copy_string(con.request.request_line, "GET /chat HTTP/1.1");
+  header = data_string_init();
+  buffer_copy_string(header->key, "Upgrade");
+  buffer_copy_string(header->value, "websocket");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Connection");
+  buffer_copy_string(header->value, "Upgrade");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Host");
+  buffer_copy_string(header->value, "bar.com");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Origin");
+  buffer_copy_string(header->value, "http://bar.com/foo");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Sec-WebSocket-Key");
+  buffer_copy_string(header->value, SEC_WEBSOCKET_KEY);
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "Sec-WebSocket-Version");
+  buffer_copy_string(header->value, "13");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "X-Forwarded-Proto");
+  buffer_copy_string(header->value, "http");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "X-Forwarded-For");
+  buffer_copy_string(header->value, "192.168.0.1");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  header = data_string_init();
+  buffer_copy_string(header->key, "X-Forwarded-Port");
+  buffer_copy_string(header->value, "80");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  print_headers(con.request.headers);
+
+  ret = mod_websocket_handshake_forward_request(&hctx);
+  print_headers(con.request.headers);
+  ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
+  ASSERT_EQ(0, check_forward(hctx.tosrv, REQ_RFC_6455_MULTI));
 }
 #endif
 

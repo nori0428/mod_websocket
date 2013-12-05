@@ -307,7 +307,7 @@ static mod_websocket_errno_t create_response_ietf_00(handler_ctx *hctx) {
     const char *const_hdr = "HTTP/1.1 101 Web Socket Protocol Handshake\r\n"
                             "Upgrade: WebSocket\r\n"
                             "Connection: Upgrade\r\n";
-    buffer *response = NULL;
+    buffer *resp = NULL;
     unsigned char md5sum[MD5_STRLEN];
 
     /* calc MD5 sum from keys */
@@ -315,37 +315,37 @@ static mod_websocket_errno_t create_response_ietf_00(handler_ctx *hctx) {
         DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "Sec-WebSocket-Key is invalid");
         return MOD_WEBSOCKET_BAD_REQUEST;
     }
-    response = chunkqueue_get_append_buffer(hctx->tocli);
-    if (response == NULL) {
+    resp = chunkqueue_get_append_buffer(hctx->tocli);
+    if (resp == NULL) {
         DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
         return MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
     }
-    buffer_append_string(response, const_hdr);
+    buffer_append_string(resp, const_hdr);
     /* Sec-WebSocket-Origin header */
     if (!buffer_is_empty(hctx->handshake.origin)) {
-        buffer_append_string(response, "Sec-WebSocket-Origin: ");
-        buffer_append_string_buffer(response, hctx->handshake.origin);
-        buffer_append_string(response, "\r\n");
+        buffer_append_string(resp, "Sec-WebSocket-Origin: ");
+        buffer_append_string_buffer(resp, hctx->handshake.origin);
+        buffer_append_string(resp, "\r\n");
     } else {
         DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "Origin header is invalid");
         return MOD_WEBSOCKET_BAD_REQUEST;
     }
     /* Sec-WebSocket-Location header */
-    buffer_append_string(response, "Sec-WebSocket-Location: ");
+    buffer_append_string(resp, "Sec-WebSocket-Location: ");
     if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
-        buffer_append_string(response, "wss://");
+        buffer_append_string(resp, "wss://");
     } else {
-        buffer_append_string(response, "ws://");
+        buffer_append_string(resp, "ws://");
     }
     if (!buffer_is_empty(hctx->handshake.host)) {
-        buffer_append_string_buffer(response, hctx->handshake.host);
+        buffer_append_string_buffer(resp, hctx->handshake.host);
     } else {
         DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "Host header does not exist");
         return MOD_WEBSOCKET_BAD_REQUEST;
     }
-    buffer_append_string_buffer(response, hctx->con->uri.path);
-    buffer_append_string(response, "\r\n\r\n");
-    buffer_append_string_len(response, (char *)md5sum, MD5_STRLEN);
+    buffer_append_string_buffer(resp, hctx->con->uri.path);
+    buffer_append_string(resp, "\r\n\r\n");
+    buffer_append_string_len(resp, (char *)md5sum, MD5_STRLEN);
     return MOD_WEBSOCKET_OK;
 }
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
@@ -356,7 +356,7 @@ static mod_websocket_errno_t create_response_rfc_6455(handler_ctx *hctx) {
                             "Upgrade: websocket\r\n"
                             "Connection: Upgrade\r\n";
     buffer *key;
-    buffer *response = NULL;
+    buffer *resp = NULL;
     SHA_CTX sha;
     unsigned char sha_digest[SHA_DIGEST_LENGTH];
     unsigned char *accept_body;
@@ -385,16 +385,16 @@ static mod_websocket_errno_t create_response_rfc_6455(handler_ctx *hctx) {
         return MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
     }
 
-    response = chunkqueue_get_append_buffer(hctx->tocli);
-    if (response == NULL) {
+    resp = chunkqueue_get_append_buffer(hctx->tocli);
+    if (resp == NULL) {
         free(accept_body);
         DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "no memory");
         return MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
     }
-    buffer_append_string(response, const_hdr);
-    buffer_append_string(response, "Sec-WebSocket-Accept: ");
-    buffer_append_string_len(response, (char *)accept_body, accept_body_siz);
-    buffer_append_string(response, "\r\n\r\n");
+    buffer_append_string(resp, const_hdr);
+    buffer_append_string(resp, "Sec-WebSocket-Accept: ");
+    buffer_append_string_len(resp, (char *)accept_body, accept_body_siz);
+    buffer_append_string(resp, "\r\n\r\n");
     free(accept_body);
     return MOD_WEBSOCKET_OK;
 }
@@ -422,56 +422,135 @@ mod_websocket_errno_t mod_websocket_handshake_create_response(handler_ctx *hctx)
     return MOD_WEBSOCKET_SERVICE_UNAVAILABLE;
 }
 
-static buffer* create_x_forwarded_for(handler_ctx *hctx) {
-    buffer *x_forwarded = NULL;
+/*
+ * append X-Forwarded-{For, Proto, Port}
+ */
+static void append_x_forwarded_headers(handler_ctx *hctx) {
+    size_t i;
     mod_websocket_sockinfo_t info;
+    array *hdrs;
+    data_string *hdr = NULL;
+    data_string *x_forwarded_proto = NULL;
+    data_string *x_forwarded_for = NULL;
+    data_string *x_forwarded_port = NULL;
+    buffer *addr = NULL;
+    buffer *port = NULL;
 
-    x_forwarded = buffer_init();
-    if (!x_forwarded) {
-        return NULL;
+    if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
+
+#ifdef USE_OPENSSL
+        if (mod_websocket_getsockinfo(SSL_get_fd(hctx->con->ssl), &info) < 0) {
+            addr = buffer_init_string("unknown");
+            port = buffer_init_string("unknown");
+        } else {
+            addr = buffer_init_string(info.peer.addr);
+            port = buffer_init();
+            buffer_append_long(port, info.peer.port);
+        }
+#else
+        addr = buffer_init_string("unknown");
+        port = buffer_init_string("unknown");
+#endif
+
+    } else {
+        if (mod_websocket_getsockinfo(hctx->con->fd, &info) < 0) {
+            addr = buffer_init_string("unknown");
+            port = buffer_init_string("unknown");
+        } else {
+            addr = buffer_init_string(info.peer.addr);
+            port = buffer_init();
+            buffer_append_long(port, info.peer.port);
+        }
     }
-    // for X-Forwarded-For: cli_addr:cli_port, serv_addr:serv_port
-    buffer_append_string(x_forwarded, "X-Forwarded-For: ");
-    if (mod_websocket_getsockinfo(hctx->con->fd, &info) < 0) {
-        buffer_free(x_forwarded);
-        return NULL;
+    hdrs = hctx->con->request.headers;
+    for (i = hdrs->used; i > 0; i--) {
+        hdr = (data_string *)hdrs->data[i - 1];
+        if (buffer_is_equal_string(hdr->key, CONST_STR_LEN("X-Forwarded-Proto"))) {
+            x_forwarded_proto = hdr;
+        }
+        if (buffer_is_equal_string(hdr->key, CONST_STR_LEN("X-Forwarded-For"))) {
+            x_forwarded_for = hdr;
+        }
+        if (buffer_is_equal_string(hdr->key, CONST_STR_LEN("X-Forwarded-Port"))) {
+            x_forwarded_port = hdr;
+        }
     }
-    buffer_append_string(x_forwarded, info.peer.addr);
-    buffer_append_string(x_forwarded, ":");
-    buffer_append_long(x_forwarded, info.peer.port);
-    buffer_append_string(x_forwarded, ", ");
-    buffer_append_string(x_forwarded, info.self.addr);
-    buffer_append_string(x_forwarded, ":");
-    buffer_append_long(x_forwarded, info.self.port);
-    DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "ss", "append header:", x_forwarded->ptr);
-    buffer_append_string(x_forwarded, "\r\n");
-    return x_forwarded;
+    if (x_forwarded_proto == NULL) {
+        x_forwarded_proto = data_string_init();
+        buffer_append_string(x_forwarded_proto->key, "X-Forwarded-Proto");
+        if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
+            buffer_append_string(x_forwarded_proto->value, "https");
+        } else {
+            buffer_append_string(x_forwarded_proto->value, "http");
+        }
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "ss", "append X-Forwarded-Proto:", x_forwarded_proto->value->ptr);
+        array_insert_unique(hdrs, (data_unset *)x_forwarded_proto);
+    } else {
+        if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
+            buffer_append_string(x_forwarded_proto->value, ", https");
+        } else {
+            buffer_append_string(x_forwarded_proto->value, ", http");
+        }
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "ss", "X-Forwarded-Proto:", x_forwarded_proto->value->ptr);
+    }
+    if (x_forwarded_for == NULL) {
+        x_forwarded_for = data_string_init();
+        buffer_append_string(x_forwarded_for->key, "X-Forwarded-For");
+        buffer_append_string_buffer(x_forwarded_for->value, addr);
+        buffer_append_string(x_forwarded_for->value, ":");
+        buffer_append_string_buffer(x_forwarded_for->value, port);
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "ss", "append X-Forwarded-For:", x_forwarded_for->value->ptr);
+        array_insert_unique(hdrs, (data_unset *)x_forwarded_for);
+    } else {
+        buffer_append_string(x_forwarded_for->value, ", ");
+        buffer_append_string_buffer(x_forwarded_for->value, addr);
+        buffer_append_string(x_forwarded_for->value, ":");
+        buffer_append_string_buffer(x_forwarded_for->value, port);
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "ss", "X-Forwarded-For:", x_forwarded_for->value->ptr);
+    }
+    if (x_forwarded_port == NULL) {
+        x_forwarded_port = data_string_init();
+        buffer_append_string(x_forwarded_port->key, "X-Forwarded-Port");
+        buffer_append_string_buffer(x_forwarded_port->value, port);
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "ss", "append X-Forwarded-Port:", x_forwarded_port->value->ptr);
+        array_insert_unique(hdrs, (data_unset *)x_forwarded_port);
+    } else {
+        buffer_append_string(x_forwarded_port->value, ", ");
+        buffer_append_string_buffer(x_forwarded_port->value, port);
+        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "ss", "X-Forwarded-Port:", x_forwarded_port->value->ptr);
+    }
+    buffer_free(addr);
+    buffer_free(port);
+    return;
 }
 
 mod_websocket_errno_t mod_websocket_handshake_forward_request(handler_ctx *hctx) {
-    buffer *src = NULL, *dst = NULL;
-    buffer *x_forwarded = NULL;
+    size_t i;
+    array *hdrs;
+    data_string *hdr = NULL;
+    buffer *new_request;
 
     if (!hctx || !hctx->con || !hctx->tosrv) {
         return MOD_WEBSOCKET_INTERNAL_SERVER_ERROR;
     }
-    src = buffer_init();
-    dst = chunkqueue_get_append_buffer(hctx->tosrv);
-    buffer_append_string_buffer(src, hctx->con->request.request);
-    // remove \r\n\0 from orig
-    buffer_append_string_len(dst, src->ptr, src->used - 3);
-    x_forwarded = create_x_forwarded_for(hctx);
-    if (x_forwarded) {
-        buffer_append_string_buffer(dst, x_forwarded);
+    append_x_forwarded_headers(hctx);
+    new_request = chunkqueue_get_append_buffer(hctx->tosrv);
+    buffer_append_string_buffer(new_request, hctx->con->request.request_line);
+    buffer_append_string(new_request, "\r\n");
+    hdrs = hctx->con->request.headers;
+    for (i = 0; i < hdrs->used; i++) {
+        hdr = (data_string *)hdrs->data[i];
+        buffer_append_string_buffer(new_request, hdr->key);
+        buffer_append_string(new_request, ": ");
+        buffer_append_string_buffer(new_request, hdr->value);
+        buffer_append_string(new_request, "\r\n");
     }
-    buffer_append_string(dst, "\r\n");
+    buffer_append_string(new_request, "\r\n");
 
 #ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
-    buffer_append_string_len(dst, hctx->handshake.key3->ptr, SEC_WEBSOCKET_KEY3_STRLEN);
+    buffer_append_string_len(new_request, hctx->handshake.key3->ptr, SEC_WEBSOCKET_KEY3_STRLEN);
 #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 
-    buffer_free(src);
-    buffer_free(x_forwarded);
     DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "s", "forward handshake request");
     return MOD_WEBSOCKET_OK;
 }
