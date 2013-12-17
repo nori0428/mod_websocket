@@ -121,7 +121,7 @@ static mod_websocket_bool_t is_allowed_origin(handler_ctx *hctx) {
             DEBUG_LOG(MOD_WEBSOCKET_LOG_WARN, "ss", allowed_origin->value->ptr, "is invalid RegExp");
             continue;
         }
-        rc = pcre_exec(re, NULL, hctx->handshake.origin->ptr, hctx->handshake.origin->used,
+        rc = pcre_exec(re, NULL, hctx->handshake.origin->ptr, hctx->handshake.origin->used - 1,
                        0, PCRE_ANCHORED, ovec, N);
         free(re);
         if (rc > 0) {

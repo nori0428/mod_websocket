@@ -319,7 +319,7 @@ static handler_t mod_websocket_check_extension(server *srv, connection *con, voi
 
 #ifdef	HAVE_PCRE_H
         re = pcre_compile(ext->key->ptr, 0, &err_str, &err_off, NULL);
-        rc = pcre_exec(re, NULL, con->uri.path->ptr, con->uri.path->size, 0, PCRE_ANCHORED, ovec, N);
+        rc = pcre_exec(re, NULL, con->uri.path->ptr, con->uri.path->used - 1, 0, PCRE_ANCHORED, ovec, N);
         free(re);
         if (rc > 0) {
             break;
