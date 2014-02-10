@@ -361,6 +361,7 @@ static mod_websocket_errno_t create_response_rfc_6455(handler_ctx *hctx) {
     unsigned char sha_digest[SHA_DIGEST_LENGTH];
     unsigned char *accept_body;
     size_t accept_body_siz;
+    data_unset *du;
 
     if (buffer_is_empty(hctx->handshake.key)) {
         DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "Sec-WebSocket-Key is invalid");
@@ -394,7 +395,14 @@ static mod_websocket_errno_t create_response_rfc_6455(handler_ctx *hctx) {
     buffer_append_string(resp, const_hdr);
     buffer_append_string(resp, "Sec-WebSocket-Accept: ");
     buffer_append_string_len(resp, (char *)accept_body, accept_body_siz);
-    buffer_append_string(resp, "\r\n\r\n");
+    buffer_append_string(resp, "\r\n");
+    du = array_get_element(hctx->ext->value, "subproto");
+    if (du && du->type == TYPE_STRING) {
+        buffer_append_string(resp, "Sec-WebSocket-Protocol: ");
+        buffer_append_string_buffer(resp, ((data_string *)du)->value);
+        buffer_append_string(resp, "\r\n");
+    }
+    buffer_append_string(resp, "\r\n");
     free(accept_body);
     return MOD_WEBSOCKET_OK;
 }

@@ -50,5 +50,5 @@ see  [COPYING](https://github.com/nori0428/mod_websocket/blob/master/COPYING).(s
 great thanks to
 ------
 
-Taiyo Fujii(@t_trace), Kensaku Komatsu(@komasshu), Toshiro Takahashi(@tohirot), Nobuyoshi Miyokawa(@nmiyo), Takezo(@velvetpass), Aaron Mitchell, Bejhan Jetha, Andrea D'Amore
+Taiyo Fujii(@t_trace), Kensaku Komatsu(@komasshu), Toshiro Takahashi(@tohirot), Nobuyoshi Miyokawa(@nmiyo), Takezo(@velvetpass), Aaron Mitchell, Bejhan Jetha, Andrea D'Amore, Doug Johnson
 and lighty developpers!
