@@ -395,7 +395,9 @@ static mod_websocket_errno_t create_response_rfc_6455(handler_ctx *hctx) {
     buffer_append_string(resp, const_hdr);
     buffer_append_string(resp, "Sec-WebSocket-Accept: ");
     buffer_append_string_len(resp, (char *)accept_body, accept_body_siz);
+    free(accept_body);
     buffer_append_string(resp, "\r\n");
+
     du = array_get_element(hctx->ext->value, "subproto");
     if (du && du->type == TYPE_STRING) {
         buffer_append_string(resp, "Sec-WebSocket-Protocol: ");
@@ -403,7 +405,6 @@ static mod_websocket_errno_t create_response_rfc_6455(handler_ctx *hctx) {
         buffer_append_string(resp, "\r\n");
     }
     buffer_append_string(resp, "\r\n");
-    free(accept_body);
     return MOD_WEBSOCKET_OK;
 }
 #endif	/* _MOD_WEBSOCKET_SPEC_RFC_6455_ */
