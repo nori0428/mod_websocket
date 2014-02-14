@@ -24,11 +24,13 @@ websocket.server = ( # all the back of # is treated as a comment.
                                           "origins" => ( "^http:\/\/192\.168\.0\..*",
                                                          "^http:\/\/res2\.com\/.*" )
                                         ),
+                     # default values
                      "/tcp"          => (
                                           "host" => "192.168.0.5",
                                           "port" => "10000",
                                           # "proto"  => "tcp" # default value
                                           # "type" => "text" # default value
+                                          # "subproto" => nil # noting 
                                         ),
 
                      # If type section is set binary,
@@ -49,18 +51,36 @@ websocket.server = ( # all the back of # is treated as a comment.
                                           "type" => "binary"
                                         ),
 
+                     # If subproto section is set some string,
+                     # RFC-6455:
+                     #  mod_websocket just reply specified string as Sec-WebSocket-Protocol at handshake response
+                     #  But a backend server application never knows Sec-WebSocket-Protocol comes from a client.
+                     #  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                     # hybi-00:
+                     #  no meanings. just ignored.
+                     #
+                     # This function is implemented for
+                     # <URL: https://github.com/nori0428/mod_websocket/issues/28>
+                     "/subproto"      => (
+                                          "host" => "192.168.0.7",
+                                          "port" => "10000",
+                                          "subproto" => "some_string"
+                                        ),
+
                      # WebSocket Proxy,
                      # mod_websocket only transfers the data between a backend server and a client.
                      # And X-Forwarded-For header is appended to an initial handshake request.
                      "/websocket"    => (
-                                          "host"  => "192.168.0.7",
+                                          "host"  => "192.168.0.8",
                                           "port"  => "10000",
                                           "proto" => "websocket",
                                           # You can use origin restriction even if WebSocket Proxy.
                                           # But, it's not necessary to use.
                                           "origins" => ( "^http:\/\/192\.168\.0\..*" ),
-                                          # "type" section has no meanings.
-                                          "type" => "binary"
+                                          # "type" section has no meanings.(just ignored)
+                                          "type" => "binary",
+                                          # "subproto" section has no meanings.(just ignored)
+                                          "subproto" => "foo"
                                         )
                    )
 }
