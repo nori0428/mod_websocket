@@ -87,6 +87,12 @@
 					"Connection: Upgrade\r\n"\
 					"Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n"\
 					"\r\n"
+# define	RESP_RFC_6455_SUBPROTO	"HTTP/1.1 101 Switching Protocols\r\n"\
+					"Upgrade: websocket\r\n"\
+					"Connection: Upgrade\r\n"\
+					"Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n"\
+					"Sec-WebSocket-Protocol: subprotocol2\r\n" \
+					"\r\n"
 #endif
 
 class ModWebsocketHandshakeCheckRequestTest : public testing::Test {
@@ -628,6 +634,21 @@ TEST_F(ModWebsocketHandshakeCreateResponseTest, RFC_6455) {
   ret = mod_websocket_handshake_create_response(&hctx);
   ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
   ASSERT_EQ(0, check_response(hctx.tocli, RESP_RFC_6455));
+
+  // check subproto
+  header = data_string_init();
+  buffer_copy_string(header->key, "Sec-WebSocket-Protocol");
+  buffer_copy_string(header->value, "subprotocol1, subprotocol2");
+  array_insert_unique(con.request.headers, (data_unset *)header);
+  print_headers(con.request.headers);
+  data_string* subproto = data_string_init();
+  buffer_copy_string(subproto->key, "subproto");
+  buffer_copy_string(subproto->value, "subprotocol2");
+  array_insert_unique(ext->value, (data_unset *)subproto);
+  chunkqueue_reset(hctx.tocli);
+  ret = mod_websocket_handshake_create_response(&hctx);
+  ASSERT_EQ(MOD_WEBSOCKET_OK, ret);
+  ASSERT_EQ(0, check_response(hctx.tocli, RESP_RFC_6455_SUBPROTO));
 }
 #endif
 
