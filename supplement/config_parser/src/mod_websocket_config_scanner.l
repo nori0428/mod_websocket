@@ -40,6 +40,7 @@ ASSIGN_STR			"=>"
 HOST_STR			"\"host\""
 PORT_STR			"\"port\""
 PROTO_STR			"\"proto\""
+SUBPROTO_STR			"\"subproto\""
 TYPE_STR			"\"type\""
 ORIGINS_STR			"\"origins\""
 
@@ -190,6 +191,14 @@ ORIGINS_STR			"\"origins\""
 #endif
 #if ! defined (DEBUG_LEX)
     return KEY_PROTO;
+#endif
+}
+<STATE_SERVER>{SUBPROTO_STR} {
+#if defined (DEBUG_LEX)
+    fprintf(stderr, "STATE_SERVER: [%s]\n", yytext);
+#endif
+#if ! defined (DEBUG_LEX)
+    return KEY_SUBPROTO;
 #endif
 }
 <STATE_SERVER>{TYPE_STR} {

@@ -28,6 +28,7 @@ int yywrap() {
         MOD_WEBSOCKET_CONFIG_KEY_HOST,
         MOD_WEBSOCKET_CONFIG_KEY_PORT,
         MOD_WEBSOCKET_CONFIG_KEY_PROTO,
+        MOD_WEBSOCKET_CONFIG_KEY_SUBPROTO,
         MOD_WEBSOCKET_CONFIG_KEY_TYPE,
         MOD_WEBSOCKET_CONFIG_KEY_ORIGINS,
     } mod_websocket_key_t;
@@ -47,7 +48,7 @@ int yywrap() {
 }
 
 %token WEBSOCKET_SERVER
-%token KEY_HOST KEY_PORT KEY_PROTO KEY_TYPE KEY_ORIGINS
+%token KEY_HOST KEY_PORT KEY_PROTO KEY_SUBPROTO KEY_TYPE KEY_ORIGINS
 %token VALUE
 %token ASSIGN
 %token WEBSOCKET_PING_INTERVAL
@@ -139,6 +140,9 @@ backend:
                         }
                         free($1.val);
                         break;
+                    case MOD_WEBSOCKET_CONFIG_KEY_SUBPROTO:
+                        $$->subproto = (char *)$1.val;
+                        break;
                     case MOD_WEBSOCKET_CONFIG_KEY_TYPE:
                         if (strncasecmp((char *)$1.val, "binary", strlen("binary")) == 0) {
                             $$->binary = 1;
@@ -183,6 +187,9 @@ backend:
                         }
                         free($3.val);
                         break;
+                    case MOD_WEBSOCKET_CONFIG_KEY_SUBPROTO:
+                        $$->subproto = (char *)$3.val;
+                        break;
                     case MOD_WEBSOCKET_CONFIG_KEY_TYPE:
                         if (strncasecmp((char *)$3.val, "binary", strlen("binary")) == 0) {
                             $$->binary = 1;
@@ -214,6 +221,11 @@ keyvalue:
         |       KEY_PROTO ASSIGN VALUE
                 {
                     $$.key = MOD_WEBSOCKET_CONFIG_KEY_PROTO;
+                    $$.val = (void *)$3;
+                }
+        |       KEY_SUBPROTO ASSIGN VALUE
+                {
+                    $$.key = MOD_WEBSOCKET_CONFIG_KEY_SUBPROTO;
                     $$.val = (void *)$3;
                 }
         |       KEY_TYPE ASSIGN VALUE
@@ -319,6 +331,9 @@ void mod_websocket_config_free(mod_websocket_config_t *config) {
             if (backend->host != NULL) {
                 free(backend->host);
             }
+            if (backend->subproto != NULL) {
+                free(backend->subproto);
+            }
             origin = backend->origins;
             while (origin) {
                 if (origin->origin) {
@@ -360,6 +375,9 @@ void mod_websocket_config_print(mod_websocket_config_t *config) {
         default:
             fprintf(stdout, "\t\tproto = MOD_WEBSOCKET_BACKEND_PROTOCOL_TCP\n");
             break;
+        }
+        if (backend->subproto) {
+            fprintf(stdout, "\t\tsubproto = \"%s\"\n", backend->subproto);
         }
         if (backend->binary) {
             fprintf(stdout, "\t\tbinary = true");

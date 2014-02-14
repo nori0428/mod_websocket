@@ -46,6 +46,7 @@ typedef struct _mod_websocket_backend_t {
     char *host;
     int port;
     mod_websocket_backend_protocol_t proto;
+    char *subproto;
     int binary;				/* 1: true, 0: false */
     mod_websocket_origin_t *origins;	/* null if not set */
 } mod_websocket_backend_t;
