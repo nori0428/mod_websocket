@@ -12,8 +12,7 @@ case $host_os in
               LDFLAGS="$LDFLAGS -L/opt/local/lib/"
               LIBS="$LIBS -lncurses";;
      * )
-              CFLAGS="$CFLAGS -I/usr/local/include/"
-              LDFLAGS="$LDFLAGS -L/usr/local/lib/"
+              ;;
 esac
 
 # Checks for programs.
