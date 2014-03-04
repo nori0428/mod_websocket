@@ -26,8 +26,5 @@ mod_websocket_config_validator_LDADD = \
 
 clean-local:
 	${RM} -f *~
-
-distclean-local:
-	${RM} -f Makefile.in config.h.in
 	${RM} -f mod_websocket_config_scanner.c
 	${RM} -f mod_websocket_config_parser.{h,c}
