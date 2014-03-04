@@ -12,9 +12,6 @@ case $host_os in
               CXXFLAGS="$CXXFLAGS -I/opt/local/include/"
               LDFLAGS="$LDFLAGS -L/opt/local/lib/";;
      * )
-              CFLAGS="$CFLAGS -I/usr/local/include/"
-              CXXFLAGS="$CXXFLAGS -I/usr/local/include/"
-              LDFLAGS="$LDFLAGS -L/usr/local/lib/"
 esac
 
 AC_PROG_CC
