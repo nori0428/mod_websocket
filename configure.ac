@@ -10,8 +10,10 @@ case $host_os in
      *darwin* )
               CFLAGS="$CFLAGS -I/opt/local/include/"
               CXXFLAGS="$CXXFLAGS -I/opt/local/include/"
-              LDFLAGS="$LDFLAGS -L/opt/local/lib/";;
+              LDFLAGS="$LDFLAGS -L/opt/local/lib/"
+              ;;
      * )
+              ;;
 esac
 
 AC_PROG_CC
