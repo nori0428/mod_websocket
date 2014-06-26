@@ -179,7 +179,7 @@ int connect_backend(handler_ctx *hctx) {
                       info.peer.addr, ":", info.peer.port, "( fd =", hctx->con->fd, ") ->",
                       host->ptr, ":", port->ptr, "( fd =", hctx->fd, ")");
         } else {
-            DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO, "ss", "connected");
+            DEBUG_LOG(MOD_WEBSOCKET_LOG_INFO, "s", "connected");
         }
     }
     buffer_free(port);
