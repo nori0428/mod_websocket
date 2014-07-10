@@ -340,6 +340,37 @@ static handler_t mod_websocket_check_extension(server *srv, connection *con, voi
         log_error_write(srv, __FILE__, __LINE__, "sss",
                         con->uri.path->ptr, "is match WebSocket extension:", ext->key->ptr);
     }
+
+    array *hdrs = NULL;
+    data_string *hdr = NULL;
+    buffer *connection_hdr_value = NULL;
+    buffer *upgrade_hdr_value = NULL;
+
+    hdrs = con->request.headers;
+    for (i = hdrs->used; i > 0; i--) {
+        hdr = (data_string *)hdrs->data[i - 1];
+        if (buffer_is_equal_string(hdr->key, CONST_STR_LEN("Connection"))) {
+            connection_hdr_value = hdr->value;
+        }
+        if (buffer_is_equal_string(hdr->key, CONST_STR_LEN("Upgrade"))) {
+            upgrade_hdr_value = hdr->value;
+        }
+    }
+    /*
+     * Connection: upgrade, keep-alive, ...
+     * Upgrade: WebSocket, ...
+     */
+    if (buffer_is_empty(connection_hdr_value) ||
+        buffer_is_empty(upgrade_hdr_value) ||
+        strcasestr(connection_hdr_value->ptr, "upgrade") == NULL ||
+        strcasestr(upgrade_hdr_value->ptr, "websocket") == NULL) {
+        if (p->conf.debug >= MOD_WEBSOCKET_LOG_INFO) {
+            log_error_write(srv, __FILE__, __LINE__, "ss",
+                            con->uri.path->ptr, "is not WebSocket Request");
+        }
+        return HANDLER_GO_ON;
+    }
+
     /* init handler-context */
     hctx = handler_ctx_init();
     if (!hctx) {
@@ -481,9 +512,7 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
         /* check request */
         err = mod_websocket_handshake_check_request(hctx);
         /* not my job */
-        if (err == MOD_WEBSOCKET_PRECONDITION_FAILED) {
-            return HANDLER_GO_ON;
-        } else if (err != MOD_WEBSOCKET_OK) {
+        if (err != MOD_WEBSOCKET_OK) {
             hctx->con->http_status = err;
             hctx->con->mode = DIRECT;
             return HANDLER_FINISHED;

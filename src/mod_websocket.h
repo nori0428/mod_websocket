@@ -70,7 +70,6 @@ typedef unsigned char mod_websocket_bool_t;
     GEN(BAD_REQUEST, 400)               \
     GEN(FORBIDDEN, 403)                 \
     GEN(NOT_FOUND, 404)                 \
-    GEN(PRECONDITION_FAILED, 412)       \
     GEN(INTERNAL_SERVER_ERROR, 500)     \
     GEN(SERVICE_UNAVAILABLE, 503)
 

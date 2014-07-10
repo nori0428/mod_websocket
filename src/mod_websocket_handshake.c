@@ -149,8 +149,6 @@ mod_websocket_errno_t mod_websocket_handshake_check_request(handler_ctx *hctx) {
     array *hdrs;
     data_string *hdr = NULL;
     mod_websocket_handshake_t *handshake;
-    buffer *connection_hdr_value = NULL;
-    buffer *upgrade_hdr_value = NULL;
     buffer *version_hdr_value = NULL;
 
     if (hctx == NULL || hctx->con == NULL) {
@@ -162,12 +160,6 @@ mod_websocket_errno_t mod_websocket_handshake_check_request(handler_ctx *hctx) {
     /* store necessary headers */
     for (i = hdrs->used; i > 0; i--) {
         hdr = (data_string *)hdrs->data[i - 1];
-        if (buffer_is_equal_string(hdr->key, CONST_STR_LEN("Connection"))) {
-            connection_hdr_value = hdr->value;
-        }
-        if (buffer_is_equal_string(hdr->key, CONST_STR_LEN("Upgrade"))) {
-            upgrade_hdr_value = hdr->value;
-        }
         if (buffer_is_equal_string(hdr->key, CONST_STR_LEN("Host"))) {
             handshake->host = hdr->value;
         }
@@ -194,16 +186,6 @@ mod_websocket_errno_t mod_websocket_handshake_check_request(handler_ctx *hctx) {
         }
 #endif	/* _MOD_WEBSOCKET_SPEC_RFC_6455_ */
 
-    }
-    /* check store headers */
-    if (buffer_is_empty(connection_hdr_value) || buffer_is_empty(upgrade_hdr_value)) {
-        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "s", "not WebSocket request");
-        return MOD_WEBSOCKET_PRECONDITION_FAILED;
-    }
-    /* firefox: Connection: upgrade, keep-alive */
-    if (strcasestr(connection_hdr_value->ptr, "upgrade") == NULL) {
-        DEBUG_LOG(MOD_WEBSOCKET_LOG_DEBUG, "s", "not WebSocket request");
-        return MOD_WEBSOCKET_PRECONDITION_FAILED;
     }
     if (buffer_is_empty(handshake->host)) {
         DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "Host header does not exist");
