@@ -360,9 +360,6 @@ TEST_F(ModWebsocketHandshakeCheckRequestTest, IETF_00) {
   buffer_copy_string(header->key, "Connection");
   buffer_copy_string(header->value, "Upgrade");
   array_insert_unique(con.request.headers, (data_unset *)header);
-  ret = mod_websocket_handshake_check_request(&hctx);
-  ASSERT_EQ(MOD_WEBSOCKET_PRECONDITION_FAILED, ret);
-
   header = data_string_init();
   buffer_copy_string(header->key, "Upgrade");
   buffer_copy_string(header->value, "WebSocket");
@@ -454,16 +451,10 @@ TEST_F(ModWebsocketHandshakeCheckRequestTest, RFC_6455) {
   buffer_copy_string(header->key, "Sec-WebSocket-Version");
   buffer_copy_string(header->value, "13");
   array_insert_unique(con.request.headers, (data_unset *)header);
-  ret = mod_websocket_handshake_check_request(&hctx);
-  ASSERT_EQ(MOD_WEBSOCKET_PRECONDITION_FAILED, ret);
-
   header = data_string_init();
   buffer_copy_string(header->key, "Connection");
   buffer_copy_string(header->value, "Upgrade");
   array_insert_unique(con.request.headers, (data_unset *)header);
-  ret = mod_websocket_handshake_check_request(&hctx);
-  ASSERT_EQ(MOD_WEBSOCKET_PRECONDITION_FAILED, ret);
-
   header = data_string_init();
   buffer_copy_string(header->key, "Upgrade");
   buffer_copy_string(header->value, "WebSocket");

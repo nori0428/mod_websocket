@@ -3,7 +3,7 @@
 <head>
     <title>Echo Client</title>
 </head>
-<script type='text/javascript' src='socket.io.min.js'></script>
+<script type='text/javascript' src='socket.io.js'></script>
 <script>
   var ws, wss, socketio, socketio_wss, ws_enabled = false, wss_enabled = false;
 
@@ -11,12 +11,12 @@
     var data = document.getElementById('echo').value;
     if (ws_enabled) {
       ws.send(data + '\n');
-      socketio.emit('echo', data);
     }
     if (wss_enabled) {
       wss.send(data + '\n');
-      socketio_wss.emit('echo', data);
     }
+    socketio.emit('echo', data);
+    socketio_wss.emit('echo', data);
   }
 
   window.onload = function() {
