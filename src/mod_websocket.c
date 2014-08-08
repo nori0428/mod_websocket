@@ -350,10 +350,12 @@ static handler_t mod_websocket_check_extension(server *srv, connection *con, voi
     for (i = hdrs->used; i > 0; i--) {
         hdr = (data_string *)hdrs->data[i - 1];
         if (buffer_is_equal_string(hdr->key, CONST_STR_LEN("Connection"))) {
-            connection_hdr_value = hdr->value;
+            connection_hdr_value = buffer_init_buffer(hdr->value);
+            buffer_to_lower(connection_hdr_value);
         }
         if (buffer_is_equal_string(hdr->key, CONST_STR_LEN("Upgrade"))) {
-            upgrade_hdr_value = hdr->value;
+            upgrade_hdr_value = buffer_init_buffer(hdr->value);
+            buffer_to_lower(upgrade_hdr_value);
         }
     }
     /*
@@ -362,14 +364,18 @@ static handler_t mod_websocket_check_extension(server *srv, connection *con, voi
      */
     if (buffer_is_empty(connection_hdr_value) ||
         buffer_is_empty(upgrade_hdr_value) ||
-        strcasestr(connection_hdr_value->ptr, "upgrade") == NULL ||
-        strcasestr(upgrade_hdr_value->ptr, "websocket") == NULL) {
+        strstr(connection_hdr_value->ptr, "upgrade") == NULL ||
+        strstr(upgrade_hdr_value->ptr, "websocket") == NULL) {
         if (p->conf.debug >= MOD_WEBSOCKET_LOG_INFO) {
             log_error_write(srv, __FILE__, __LINE__, "ss",
                             con->uri.path->ptr, "is not WebSocket Request");
         }
+        buffer_free(connection_hdr_value);
+        buffer_free(upgrade_hdr_value);
         return HANDLER_GO_ON;
     }
+    buffer_free(connection_hdr_value);
+    buffer_free(upgrade_hdr_value);
 
     /* init handler-context */
     hctx = handler_ctx_init();
