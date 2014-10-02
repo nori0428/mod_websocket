@@ -56,10 +56,19 @@ int mod_websocket_connect(const char *host, const char *service) {
         fde->fd = fd;
         fde->next = head;
         head = fde;
-        if (fde->fd > maxfd) {
-            maxfd = fde->fd;
+        /**
+         * for https://github.com/nori0428/mod_websocket/issues/40
+         * 'FD_SET' occurs buffer overflow when fd > 1024
+         *
+         * mod_websocket set only one fd into 'fd_set' in most cases,
+         * but fd number takes over 1024 when many websocket connection exist.
+         *
+         * http://stackoverflow.com/questions/7976388/increasing-limit-of-fd-setsize-and-select
+         */
+        if ((fde->fd % FD_SETSIZE) > maxfd) {
+            maxfd = fde->fd % FD_SETSIZE;
         }
-        FD_SET(fde->fd, &fds);
+        FD_SET((fde->fd % FD_SETSIZE), &fds);
         if (connect(fde->fd, ai->ai_addr, ai->ai_addrlen) < 0) {
             if (errno != EINPROGRESS) {
                 goto go_out;
@@ -73,7 +82,7 @@ int mod_websocket_connect(const char *host, const char *service) {
         goto go_out;
     } else {
         for (p = head; p; p = p->next) {
-            if (!FD_ISSET(p->fd, &fds)) {
+            if (!FD_ISSET((p->fd % FD_SETSIZE), &fds)) {
                 continue;
             }
             if (getsockopt(p->fd, SOL_SOCKET, SO_ERROR,
