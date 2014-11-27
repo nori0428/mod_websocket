@@ -34,7 +34,7 @@ int mod_websocket_connect(const char *host, const char *service) {
     for (ai = res; ai; ai = ai->ai_next) {
         fd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
         if (fd < 0) {
-          break;
+            break;
         }
         if ((flags = fcntl(fd, F_GETFL, 0)) < 0 ||
             fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
