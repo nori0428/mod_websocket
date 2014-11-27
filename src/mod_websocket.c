@@ -655,6 +655,9 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
             if (!chunkqueue_is_empty(hctx->fromcli)) {
                 hctx->timeout_cnt = 0;
                 if (mod_websocket_frame_recv(hctx) < 0) {
+                    if (hctx->mode == MOD_WEBSOCKET_WEBSOCKET_PROXY) {
+                        break;
+                    }
                     if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
 
 #ifdef	USE_OPENSSL
@@ -695,6 +698,9 @@ SUBREQUEST_FUNC(mod_websocket_handle_subrequest) {
         }
         if (hctx->fd < 0) {
             chunkqueue_reset(hctx->tocli);
+            if (hctx->mode == MOD_WEBSOCKET_WEBSOCKET_PROXY) {
+                break;
+            }
             if (((server_socket *)(hctx->con->srv_socket))->is_ssl) {
 
 #ifdef	USE_OPENSSL
