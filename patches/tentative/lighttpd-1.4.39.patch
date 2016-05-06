@@ -1,6 +1,6 @@
 diff -ur lighttpd1.4.orig/configure.ac lighttpd1.4.patched/configure.ac
---- lighttpd1.4.orig/configure.ac	2016-02-25 14:45:40.645089263 +0100
-+++ lighttpd1.4.patched/configure.ac	2016-02-25 14:49:20.345095830 +0100
+--- lighttpd1.4.orig/configure.ac	2016-05-06 15:58:16.141431916 +0200
++++ lighttpd1.4.patched/configure.ac	2016-05-06 15:58:16.169431915 +0200
 @@ -710,6 +710,33 @@
  LIGHTTPD_VERSION_ID=`echo $PACKAGE_VERSION | $AWK -F '.' '{print "(" $1 " << 16 | " $2 " << 8 | " $3 ")"}'`
  AC_DEFINE_UNQUOTED([LIGHTTPD_VERSION_ID], [$LIGHTTPD_VERSION_ID], [lighttpd-version-id])
@@ -50,8 +50,8 @@ diff -ur lighttpd1.4.orig/configure.ac lighttpd1.4.patched/configure.ac
  dnl output
  
 diff -ur lighttpd1.4.orig/src/base.h lighttpd1.4.patched/src/base.h
---- lighttpd1.4.orig/src/base.h	2016-02-25 14:45:40.649089263 +0100
-+++ lighttpd1.4.patched/src/base.h	2016-02-25 14:49:20.345095830 +0100
+--- lighttpd1.4.orig/src/base.h	2016-05-06 15:58:16.153431915 +0200
++++ lighttpd1.4.patched/src/base.h	2016-05-06 15:58:16.169431915 +0200
 @@ -340,7 +340,8 @@
  	CON_STATE_WRITE,
  	CON_STATE_RESPONSE_END,
@@ -63,8 +63,8 @@ diff -ur lighttpd1.4.orig/src/base.h lighttpd1.4.patched/src/base.h
  
  typedef enum { COND_RESULT_UNSET, COND_RESULT_FALSE, COND_RESULT_TRUE } cond_result_t;
 diff -ur lighttpd1.4.orig/src/connections.c lighttpd1.4.patched/src/connections.c
---- lighttpd1.4.orig/src/connections.c	2016-02-25 14:45:40.649089263 +0100
-+++ lighttpd1.4.patched/src/connections.c	2016-02-25 14:49:20.345095830 +0100
+--- lighttpd1.4.orig/src/connections.c	2016-05-06 15:58:16.153431915 +0200
++++ lighttpd1.4.patched/src/connections.c	2016-05-06 15:58:16.169431915 +0200
 @@ -1002,6 +1002,8 @@
  		}
  
@@ -123,8 +123,8 @@ diff -ur lighttpd1.4.orig/src/connections.c lighttpd1.4.patched/src/connections.
  		fdevent_event_del(srv->ev, &(con->fde_ndx), con->fd);
  		break;
 diff -ur lighttpd1.4.orig/src/connections-glue.c lighttpd1.4.patched/src/connections-glue.c
---- lighttpd1.4.orig/src/connections-glue.c	2016-02-25 14:45:40.649089263 +0100
-+++ lighttpd1.4.patched/src/connections-glue.c	2016-02-25 14:49:20.345095830 +0100
+--- lighttpd1.4.orig/src/connections-glue.c	2016-05-06 15:58:16.153431915 +0200
++++ lighttpd1.4.patched/src/connections-glue.c	2016-05-06 15:58:16.169431915 +0200
 @@ -14,6 +14,7 @@
  	case CON_STATE_REQUEST_END: return "req-end";
  	case CON_STATE_RESPONSE_START: return "resp-start";
@@ -142,8 +142,8 @@ diff -ur lighttpd1.4.orig/src/connections-glue.c lighttpd1.4.patched/src/connect
  	}
  }
 diff -ur lighttpd1.4.orig/src/Makefile.am lighttpd1.4.patched/src/Makefile.am
---- lighttpd1.4.orig/src/Makefile.am	2016-02-25 14:45:40.649089263 +0100
-+++ lighttpd1.4.patched/src/Makefile.am	2016-02-25 14:49:20.345095830 +0100
+--- lighttpd1.4.orig/src/Makefile.am	2016-05-06 15:58:16.149431916 +0200
++++ lighttpd1.4.patched/src/Makefile.am	2016-05-06 15:58:16.169431915 +0200
 @@ -267,6 +267,15 @@
  mod_accesslog_la_LDFLAGS = -module -export-dynamic -avoid-version
  mod_accesslog_la_LIBADD = $(common_libadd)
@@ -161,8 +161,8 @@ diff -ur lighttpd1.4.orig/src/Makefile.am lighttpd1.4.patched/src/Makefile.am
  hdr = server.h base64.h buffer.h network.h log.h keyvalue.h \
  	response.h request.h fastcgi.h chunk.h \
 diff -ur lighttpd1.4.orig/src/mod_websocket.c lighttpd1.4.patched/src/mod_websocket.c
---- lighttpd1.4.orig/src/mod_websocket.c	2016-02-25 13:14:10.000000000 +0100
-+++ lighttpd1.4.patched/src/mod_websocket.c	2016-02-25 14:49:20.345095830 +0100
+--- lighttpd1.4.orig/src/mod_websocket.c	2016-05-06 15:58:16.153431915 +0200
++++ lighttpd1.4.patched/src/mod_websocket.c	2016-05-06 15:58:16.169431915 +0200
 @@ -126,21 +126,9 @@
      }
      port = buffer_init();
@@ -206,8 +206,8 @@ diff -ur lighttpd1.4.orig/src/mod_websocket.c lighttpd1.4.patched/src/mod_websoc
              ext->is_index_key = ((data_array *)(da->value->data[j]))->is_index_key;
              array_insert_unique(s->exts, (data_unset *)ext);
 diff -ur lighttpd1.4.orig/src/mod_websocket_frame.c lighttpd1.4.patched/src/mod_websocket_frame.c
---- lighttpd1.4.orig/src/mod_websocket_frame.c	2016-02-25 13:14:10.000000000 +0100
-+++ lighttpd1.4.patched/src/mod_websocket_frame.c	2016-02-26 11:47:49.067352437 +0100
+--- lighttpd1.4.orig/src/mod_websocket_frame.c	2016-05-06 15:58:16.149431916 +0200
++++ lighttpd1.4.patched/src/mod_websocket_frame.c	2016-05-06 16:30:58.657349838 +0200
 @@ -43,40 +43,46 @@
      if (siz == 0 && (type == MOD_WEBSOCKET_FRAME_TYPE_TEXT || type == MOD_WEBSOCKET_FRAME_TYPE_BIN)) {
          return 0;
@@ -422,7 +422,7 @@ diff -ur lighttpd1.4.orig/src/mod_websocket_frame.c lighttpd1.4.patched/src/mod_
                      break;
                  case MOD_WEBSOCKET_FRAME_TYPE_PING:
                      if (hctx->frame.ctl.siz == 0) {
-@@ -490,14 +503,16 @@
+@@ -490,14 +503,15 @@
      if (payload == NULL || siz == 0) {
          return 0;
      }
@@ -433,16 +433,16 @@ diff -ur lighttpd1.4.orig/src/mod_websocket_frame.c lighttpd1.4.patched/src/mod_
          return -1;
      }
 -    buffer_append_memory(b, payload, siz);
-+    buffer_append_string_len(b, payload, siz);
-     /* needs '\0' char to send */
+-    /* needs '\0' char to send */
 -    buffer_append_memory(b, &endl, 1);
-+    buffer_append_string_len(b, &endl, 1);
++    /* '\0' included in buffer_append_string_len */
++    buffer_append_string_len(b, payload, siz);
 +    chunkqueue_append_buffer(hctx->tocli, b);
 +    buffer_free(b);
      return 0;
  }
  
-@@ -513,12 +528,14 @@
+@@ -513,12 +527,15 @@
          if (!frame) {
              continue;
          }
@@ -453,15 +453,16 @@ diff -ur lighttpd1.4.orig/src/mod_websocket_frame.c lighttpd1.4.patched/src/mod_
              return -1;
          }
 -        buffer_append_memory(b, frame->ptr, frame->used);
-+        buffer_append_string_len(b, frame->ptr, frame->used);
++        /* Don't include '\0' char in used buffer */
++        buffer_append_string_len(b, frame->ptr, frame->used - 1);
 +        chunkqueue_append_buffer(hctx->tosrv, b);
 +        buffer_free(b);
      }
      chunkqueue_reset(hctx->fromcli);
      return 0;
 diff -ur lighttpd1.4.orig/src/mod_websocket_handshake.c lighttpd1.4.patched/src/mod_websocket_handshake.c
---- lighttpd1.4.orig/src/mod_websocket_handshake.c	2016-02-25 13:14:10.000000000 +0100
-+++ lighttpd1.4.patched/src/mod_websocket_handshake.c	2016-02-25 14:50:28.673097871 +0100
+--- lighttpd1.4.orig/src/mod_websocket_handshake.c	2016-05-06 15:58:16.153431915 +0200
++++ lighttpd1.4.patched/src/mod_websocket_handshake.c	2016-05-06 16:49:40.653302913 +0200
 @@ -297,12 +297,12 @@
          DEBUG_LOG(MOD_WEBSOCKET_LOG_ERR, "s", "Sec-WebSocket-Key is invalid");
          return MOD_WEBSOCKET_BAD_REQUEST;
@@ -554,8 +555,11 @@ diff -ur lighttpd1.4.orig/src/mod_websocket_handshake.c lighttpd1.4.patched/src/
      buffer_append_string_buffer(new_request, hctx->con->request.request_line);
      buffer_append_string(new_request, "\r\n");
      hdrs = hctx->con->request.headers;
-@@ -541,7 +549,8 @@
+@@ -539,9 +547,11 @@
+     buffer_append_string(new_request, "\r\n");
+ 
  #ifdef	_MOD_WEBSOCKET_SPEC_IETF_00_
++    buffer_string_prepare_append(hctx->handshake.key3, SEC_WEBSOCKET_KEY3_STRLEN);
      buffer_append_string_len(new_request, hctx->handshake.key3->ptr, SEC_WEBSOCKET_KEY3_STRLEN);
  #endif	/* _MOD_WEBSOCKET_SPEC_IETF_00_ */
 -
@@ -565,8 +569,8 @@ diff -ur lighttpd1.4.orig/src/mod_websocket_handshake.c lighttpd1.4.patched/src/
      return MOD_WEBSOCKET_OK;
  }
 diff -ur lighttpd1.4.orig/src/plugin.c lighttpd1.4.patched/src/plugin.c
---- lighttpd1.4.orig/src/plugin.c	2016-02-25 14:45:40.649089263 +0100
-+++ lighttpd1.4.patched/src/plugin.c	2016-02-25 14:49:20.345095830 +0100
+--- lighttpd1.4.orig/src/plugin.c	2016-05-06 15:58:16.153431915 +0200
++++ lighttpd1.4.patched/src/plugin.c	2016-05-06 15:58:16.169431915 +0200
 @@ -45,6 +45,7 @@
  	PLUGIN_FUNC_INIT,
  	PLUGIN_FUNC_CLEANUP,
@@ -592,8 +596,8 @@ diff -ur lighttpd1.4.orig/src/plugin.c lighttpd1.4.patched/src/plugin.c
  		PLUGIN_TO_SLOT(PLUGIN_FUNC_SET_DEFAULTS, set_defaults);
  #undef PLUGIN_TO_SLOT
 diff -ur lighttpd1.4.orig/src/plugin.h lighttpd1.4.patched/src/plugin.h
---- lighttpd1.4.orig/src/plugin.h	2016-02-25 14:45:40.649089263 +0100
-+++ lighttpd1.4.patched/src/plugin.h	2016-02-25 14:49:20.345095830 +0100
+--- lighttpd1.4.orig/src/plugin.h	2016-05-06 15:58:16.153431915 +0200
++++ lighttpd1.4.patched/src/plugin.h	2016-05-06 15:58:16.169431915 +0200
 @@ -23,6 +23,7 @@
  #define PHYSICALPATH_FUNC  CONNECTION_FUNC
  #define REQUESTDONE_FUNC   CONNECTION_FUNC
