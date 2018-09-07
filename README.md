@@ -1,6 +1,14 @@
 mod_websocket [![Build Status](https://travis-ci.org/nori0428/mod_websocket.png?branch=master)](https://travis-ci.org/nori0428/mod_websocket)
 =============
 
+Notice
+-------
+
+DEAD.  
+use lighttpd v1.4.46 or after w/ mod_proxy and mod_wstunnnel.  
+
+Great thanks to lighty developpers.
+
 What is this?
 -------
 
